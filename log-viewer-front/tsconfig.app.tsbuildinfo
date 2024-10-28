@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/serviceworker/sw.ts"],"version":"5.6.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/theme.ts","./src/vite-env.d.ts","./src/serviceworker/sw.ts"],"version":"5.6.3"}
