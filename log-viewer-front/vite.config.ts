@@ -6,7 +6,18 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      devOptions: {
+        enabled: true,
+      },
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'service-worker.ts',
       registerType: 'autoUpdate',
+      injectManifest: {
+        swDest: 'dist/service-worker.js'
+      },
+
+
       includeAssets: ['favicon.svg', 'robots.txt'],
       manifest: {
         name: 'My PWA App',
