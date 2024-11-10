@@ -1,15 +1,12 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom/client';
+import { StyledEngineProvider } from '@mui/material/styles';
 import App from './App';
-import { ThemeProvider } from '@mui/material/styles';
-import theme from './theme';
-import './index.css';
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
+ReactDOM.createRoot(document.querySelector("#root")!).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
+    <StyledEngineProvider injectFirst>
       <App />
-    </ThemeProvider>
+    </StyledEngineProvider>
   </React.StrictMode>
 );
