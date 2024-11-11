@@ -1,16 +1,30 @@
 import * as React from 'react';
 import { extendTheme, styled } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import DescriptionIcon from '@mui/icons-material/Description';
-import LayersIcon from '@mui/icons-material/Layers';
 import { AppProvider, Navigation, Router } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 import { PageContainer } from '@toolpad/core/PageContainer';
 import Grid from '@mui/material/Grid2';
+import AddIcon from '@mui/icons-material/Add';
+import PreviewIcon from '@mui/icons-material/Preview';
+import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
+import PatternIcon from '@mui/icons-material/Pattern';
+import SettingsIcon from '@mui/icons-material/Settings';
+import InfoIcon from '@mui/icons-material/Info';
 
 const NAVIGATION: Navigation = [
+  {
+    kind: 'header',
+    title: 'Start',
+  },
+  {
+    segment: 'header',
+    title: 'Add new logs',
+    icon: <AddIcon />,
+  },
+  {
+    kind: 'divider',
+  },
   {
     kind: 'header',
     title: 'Main items',
@@ -21,9 +35,9 @@ const NAVIGATION: Navigation = [
     icon: <DashboardIcon />,
   },
   {
-    segment: 'orders',
-    title: 'Orders',
-    icon: <ShoppingCartIcon />,
+    segment: 'view-logs',
+    title: 'View logs',
+    icon: <PreviewIcon />,
   },
   {
     kind: 'divider',
@@ -33,28 +47,37 @@ const NAVIGATION: Navigation = [
     title: 'Analytics',
   },
   {
-    segment: 'reports',
-    title: 'Reports',
-    icon: <BarChartIcon />,
-    children: [
-      {
-        segment: 'sales',
-        title: 'Sales',
-        icon: <DescriptionIcon />,
-      },
-      {
-        segment: 'traffic',
-        title: 'Traffic',
-        icon: <DescriptionIcon />,
-      },
-    ],
+    segment: 'anomaly-search',
+    title: 'Anomaly Search',
+    icon: <TroubleshootIcon />,
   },
   {
-    segment: 'integrations',
-    title: 'Integrations',
-    icon: <LayersIcon />,
+    segment: 'сommon-patterns',
+    title: 'Common patterns',
+    icon: <PatternIcon />,
+  },
+  {
+    kind: 'divider',
+  },
+  {
+    kind: 'header',
+    title: 'Other',
+  },
+  {
+    segment: 'settings',
+    title: 'Settings',
+    icon: <SettingsIcon />,
+  },
+  {
+    segment: 'about',
+    title: 'About',
+    icon: <InfoIcon />,
   },
 ];
+
+const BRANDING = {
+  title: 'LogViewer',
+};
 
 const demoTheme = extendTheme({
   colorSchemes: { 
@@ -94,20 +117,16 @@ const Skeleton = styled('div')<{ height: number }>(({ theme, height }) => ({
   content: '" "',
 }));
 
-export default function DashboardLayoutBasic(props: any) {
-  const { window } = props;
+export default function DashboardLayoutBasic() {
 
   const router = useDemoRouter('/dashboard');
 
-  // Remove this const when copying and pasting into your project.
-  const demoWindow = window ? window() : undefined;
-
   return (
     <AppProvider
+      branding={BRANDING}
       navigation={NAVIGATION}
       router={router}
       theme={demoTheme}
-      window={demoWindow}
     >
       <DashboardLayout>
         <PageContainer>
