@@ -6,7 +6,6 @@ import { useState } from 'react';
 export default function MainLayout () {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const toggleSidebar = () => {
-        console.log('Sidebar toggled:', !isSidebarOpen);
         setSidebarOpen(!isSidebarOpen)
     };
 

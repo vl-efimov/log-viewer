@@ -5,11 +5,20 @@ import PreviewIcon from '@mui/icons-material/Preview';
 import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
 import PatternIcon from '@mui/icons-material/Pattern';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
 }
+
+const menuItems = [
+    { text: 'Add new logs', icon: <AddIcon />, divider: true },
+    { text: 'Dashboard', icon: <DashboardIcon /> },
+    { text: 'View logs', icon: <PreviewIcon />, divider: true },
+    { text: 'Anomaly Search', icon: <TroubleshootIcon /> },
+    { text: 'Common patterns', icon: <PatternIcon />, divider: true },
+    { text: 'Settings', icon: <SettingsIcon /> },
+];
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
     const [isRendered, setIsRendered] = useState(isSidebarOpen);
@@ -47,92 +56,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                 }}
             >
                 <List>
-                    <ListItemButton
-                        sx={{
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon>
-                            <AddIcon />
-                        </ListItemIcon>
-                        {isRendered && <ListItemText primary="Add new logs" />}
-                    </ListItemButton>
-                    <Divider />
-                    <ListItemButton
-                        sx={{
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon>
-                            <DashboardIcon />
-                        </ListItemIcon>
-                        {isRendered && <ListItemText primary="Dashboard" />}
-                    </ListItemButton>
-                    <ListItemButton
-                        sx={{
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon>
-                            <PreviewIcon />
-                        </ListItemIcon>
-                        {isRendered && <ListItemText primary="View logs" />}
-                    </ListItemButton>
-                    <Divider />
-                    <ListItemButton
-                        sx={{
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon>
-                            <TroubleshootIcon />
-                        </ListItemIcon>
-                        {isRendered && <ListItemText primary="Anomaly Search" />}
-                    </ListItemButton>
-                    <ListItemButton
-                        sx={{
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon>
-                            <PatternIcon />
-                        </ListItemIcon>
-                        {isRendered && <ListItemText primary="Common patterns" />}
-                    </ListItemButton>
-
-                    <Divider />
-                    <ListItemButton
-                        sx={{
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon>
-                            <SettingsIcon />
-                        </ListItemIcon>
-                        {isRendered && <ListItemText primary="Settings" />}
-                    </ListItemButton>
+                    {menuItems.map((item, index) => (
+                        <div key={index}>
+                            <ListItemButton
+                                sx={{
+                                    borderRadius: 2,
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                    height: '48px',
+                                }}
+                            >
+                                <ListItemIcon>{item.icon}</ListItemIcon>
+                                {isRendered && <ListItemText primary={item.text} />}
+                            </ListItemButton>
+                            {item.divider && <Divider sx={{ marginY: 1 }} />}
+                        </div>
+                    ))}
                 </List>
             </Box>
         </Drawer>
     );
-}
+};
 
 export default Sidebar;
