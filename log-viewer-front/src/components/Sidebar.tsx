@@ -1,4 +1,4 @@
-import { Drawer, List, ListItemIcon, ListItemText, Toolbar, Box, ListItemButton, Divider } from '@mui/material';
+import { Drawer, List, ListItemIcon, ListItemText, Toolbar, Box, ListItemButton, Divider, ListSubheader } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PreviewIcon from '@mui/icons-material/Preview';
@@ -11,15 +11,6 @@ interface SidebarProps {
     isSidebarOpen: boolean;
 }
 
-const menuItems = [
-    { text: 'Add new logs', icon: <AddIcon />, divider: true },
-    { text: 'Dashboard', icon: <DashboardIcon /> },
-    { text: 'View logs', icon: <PreviewIcon />, divider: true },
-    { text: 'Anomaly Search', icon: <TroubleshootIcon /> },
-    { text: 'Common patterns', icon: <PatternIcon />, divider: true },
-    { text: 'Settings', icon: <SettingsIcon /> },
-];
-
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
     const [isRendered, setIsRendered] = useState(isSidebarOpen);
 
@@ -31,6 +22,29 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
             return () => clearTimeout(timeout);
         }
     }, [isSidebarOpen]);
+
+    const topMenuItems = [
+        {
+            subheader: 'Start',
+            items: [
+                { text: 'Add new logs', icon: <AddIcon /> },
+            ]
+        },
+        {
+            subheader: 'Main items',
+            items: [
+                { text: 'Dashboard', icon: <DashboardIcon /> },
+                { text: 'View logs', icon: <PreviewIcon /> },
+            ]
+        },
+        {
+            subheader: 'Analytics',
+            items: [
+                { text: 'Anomaly Search', icon: <TroubleshootIcon /> },
+                { text: 'Common patterns', icon: <PatternIcon /> },
+            ]
+        },
+    ];
 
     return (
         <Drawer
@@ -53,25 +67,67 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                 sx={{
                     overflow: 'auto',
                     paddingX: 1,
+                    paddingTop: 1,
+
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                    height: '100%',
                 }}
             >
-                <List>
-                    {menuItems.map((item, index) => (
-                        <div key={index}>
-                            <ListItemButton
-                                sx={{
-                                    borderRadius: 2,
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                    height: '48px',
-                                }}
+                <div>
+                    {topMenuItems.map((category, index) => (
+                        <div key={`sidebar-category-${index}`}>
+                            <List
+                                sx={{ paddingY: 0 }}
+                                subheader={
+                                    <ListSubheader
+                                        component="div"
+                                        sx={{
+                                            lineHeight: '24px',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                            transition: 'height 0.3s ease',
+                                            height: isSidebarOpen ? '24px' : '0px',
+                                        }}
+                                    >
+                                        {isRendered && category.subheader}
+                                    </ListSubheader>
+                                }
                             >
-                                <ListItemIcon>{item.icon}</ListItemIcon>
-                                {isRendered && <ListItemText primary={item.text} />}
-                            </ListItemButton>
-                            {item.divider && <Divider sx={{ marginY: 1 }} />}
+                                {category.items?.map((item, index) => (
+                                    <div key={`sidebar-item-${index}`}>
+                                        <ListItemButton
+                                            sx={{
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                whiteSpace: 'nowrap',
+                                                height: '48px',
+                                            }}
+                                        >
+                                            <ListItemIcon>{item.icon}</ListItemIcon>
+                                            {isRendered && <ListItemText primary={item.text} />}
+                                        </ListItemButton>
+                                    </div>
+                                ))}
+                            </List>
+                            {index === topMenuItems.length - 1 || <Divider sx={{ marginY: 1 }} />}
                         </div>
                     ))}
+                </div>
+
+                <List>
+                    <ListItemButton
+                        sx={{
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            height: '48px',
+                        }}
+                    >
+                        <ListItemIcon><SettingsIcon /></ListItemIcon>
+                        {isRendered && <ListItemText primary={'Settings'} />}
+                    </ListItemButton>
                 </List>
             </Box>
         </Drawer>
