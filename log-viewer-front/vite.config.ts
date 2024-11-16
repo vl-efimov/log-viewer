@@ -16,22 +16,8 @@ export default defineConfig({
       injectManifest: {
         swDest: 'dist/service-worker.js'
       },
-
-
       includeAssets: ['favicon.svg', 'robots.txt'],
-      manifest: {
-        name: 'My PWA App',
-        short_name: 'PWA App',
-        description: 'A simple PWA built with React, TypeScript, and Vite',
-        theme_color: '#ffffff',
-        icons: [
-          {
-            src: '/pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-        ],
-      }
+      manifestFilename: './manifest.json',
     }),
   ],
 });
