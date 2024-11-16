@@ -1,4 +1,4 @@
-import { RouteObject } from 'react-router-dom';
+import { Navigate, RouteObject } from 'react-router-dom';
 
 import MainLayout from '../layouts/MainLayout';
 import AddLogsPage from '../pages/AddLogsPage';
@@ -14,6 +14,10 @@ const AppRoutes: RouteObject[] = [
         path: "/",
         element: <MainLayout />,
         children: [
+            {
+                path: "/",
+                element: <Navigate to="/add-logs" />,
+            },
             {
                 path: "/add-logs",
                 element: <AddLogsPage />,
