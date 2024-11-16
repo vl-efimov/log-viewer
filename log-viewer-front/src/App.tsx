@@ -1,8 +1,22 @@
-import MainLayout from './layouts/MainLayout';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
-export default function App() {
+import AppRoutes from './routes/AppRoutes';
 
+const router = createBrowserRouter(AppRoutes, {
+  future: {
+    v7_relativeSplatPath: true,
+    v7_fetcherPersist: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_skipActionErrorRevalidation: true,
+  },
+});
+
+export default function App () {
   return (
-    <MainLayout />
+    <RouterProvider
+      router={router}
+      future={{ v7_startTransition: true }}
+    />
   );
 }
