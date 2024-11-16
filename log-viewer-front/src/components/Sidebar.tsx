@@ -6,6 +6,7 @@ import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
 import PatternIcon from '@mui/icons-material/Pattern';
 import SettingsIcon from '@mui/icons-material/Settings';
 import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -13,6 +14,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
     const [isRendered, setIsRendered] = useState(isSidebarOpen);
+    const location = useLocation();
 
     useEffect(() => {
         if (isSidebarOpen) {
@@ -27,21 +29,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
         {
             subheader: 'Start',
             items: [
-                { text: 'Add new logs', icon: <AddIcon /> },
+                { text: 'Add new logs', icon: <AddIcon />, path: '/add-logs' },
             ]
         },
         {
             subheader: 'Main items',
             items: [
-                { text: 'Dashboard', icon: <DashboardIcon /> },
-                { text: 'View logs', icon: <PreviewIcon /> },
+                { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+                { text: 'View logs', icon: <PreviewIcon />, path: '/view-logs' },
             ]
         },
         {
             subheader: 'Analytics',
             items: [
-                { text: 'Anomaly Search', icon: <TroubleshootIcon /> },
-                { text: 'Common patterns', icon: <PatternIcon /> },
+                { text: 'Anomaly Search', icon: <TroubleshootIcon />, path: '/anomaly-search' },
+                { text: 'Common patterns', icon: <PatternIcon />, path: '/common-patterns' },
             ]
         },
     ];
@@ -98,6 +100,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                 {category.items?.map((item, index) => (
                                     <div key={`sidebar-item-${index}`}>
                                         <ListItemButton
+                                            component={Link}
+                                            to={item.path}
+                                            selected={location.pathname === item.path}
                                             sx={{
                                                 borderRadius: 2,
                                                 overflow: 'hidden',
@@ -118,6 +123,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
 
                 <List>
                     <ListItemButton
+                        component={Link}
+                        to={'/settings'}
+                        selected={location.pathname === '/settings'}
                         sx={{
                             borderRadius: 2,
                             overflow: 'hidden',
