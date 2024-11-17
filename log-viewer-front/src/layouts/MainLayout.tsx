@@ -1,4 +1,4 @@
-import { Box, Toolbar } from '@mui/material';
+import { Box } from '@mui/material';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { useState } from 'react';
@@ -20,7 +20,6 @@ export default function MainLayout () {
                 isSidebarOpen={isSidebarOpen}
             />
             <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-                <Toolbar />
                 <Outlet />
             </Box>
         </Box>
