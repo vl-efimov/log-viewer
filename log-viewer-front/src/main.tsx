@@ -1,6 +1,8 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
 import App from './App';
+import { Provider } from 'react-redux';
+import store from './redux/store';
 import { registerSW } from "virtual:pwa-register";
 
 const updateSW = registerSW({
@@ -13,6 +15,8 @@ const updateSW = registerSW({
 
 ReactDOM.createRoot(document.querySelector("#root")!).render(
   <React.StrictMode>
-    <App />
+    <Provider store={store}>
+      <App />
+    </Provider>
   </React.StrictMode>
 );

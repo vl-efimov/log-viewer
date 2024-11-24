@@ -1,4 +1,4 @@
-import { Box } from '@mui/material';
+import { Box, CssBaseline, Toolbar } from '@mui/material';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { useState } from 'react';
@@ -11,7 +11,13 @@ export default function MainLayout () {
     };
 
     return (
-        <Box sx={{ display: 'flex' }}>
+        <Box 
+            sx={{ 
+                display: 'flex',
+            }}
+        >
+            <CssBaseline />
+
             <Header
                 isSidebarOpen={isSidebarOpen}
                 toggleSidebar={toggleSidebar}
@@ -19,8 +25,20 @@ export default function MainLayout () {
             <Sidebar
                 isSidebarOpen={isSidebarOpen}
             />
-            <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-                <Outlet />
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                }}
+            >
+                <Toolbar />
+                <Box
+                    sx={{
+                        p: 3,
+                    }}
+                >
+                    <Outlet />
+                </Box>
             </Box>
         </Box>
 

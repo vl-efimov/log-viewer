@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/system';
+import { useDispatch } from 'react-redux';
+import { setFileData } from '../redux/slices/fileSlice';
 
 const Dropzone = styled('div')(() => ({
     border: '2px dashed #ccc',
@@ -21,12 +23,14 @@ const Dropzone = styled('div')(() => ({
 
 const FileUpload: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
+    const dispatch = useDispatch();
 
     const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
         const droppedFile = event.dataTransfer.files[0];
         if (validateFile(droppedFile)) {
             setFile(droppedFile);
+            readFileContent(droppedFile);
         } else {
             alert('Invalid file type. Please upload a text or JSON file.');
         }
@@ -36,32 +40,43 @@ const FileUpload: React.FC = () => {
         const selectedFile = event.target.files?.[0];
         if (selectedFile && validateFile(selectedFile)) {
             setFile(selectedFile);
+            readFileContent(selectedFile);
         } else {
             alert('Invalid file type. Please upload a text or JSON file.');
         }
     };
 
     const validateFile = (file: File) => {
-        const validTypes = ['text/plain', 'application/json', 'application/xml',];
+        const validTypes = ['text/plain', 'application/json', 'application/xml'];
         return validTypes.includes(file.type);
     };
 
+    const readFileContent = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const content = event.target?.result as string;
+            dispatch(setFileData(content));
+        };
+        reader.readAsText(file);
+    };
+
     return (
-        <Box sx={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <Dropzone
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={handleDrop}
-            >
-                <CloudUploadIcon 
-                    sx={{ 
-                        fontSize: 48, 
-                        color: '#ccc' 
-                    }} 
-                />
-                <Typography 
-                    variant="h6" 
-                    sx={{ mt: 2 }}
-                >
+        <Box sx={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center' 
+        }}>
+            {file && (
+                <Typography variant="body1" sx={{ mt: 2 }}>
+                    Selected file: {file.name}
+                </Typography>
+            )}
+            <Dropzone onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
+                <CloudUploadIcon sx={{ fontSize: 48, color: '#ccc' }} />
+                <Typography variant="h6" sx={{ mt: 2 }}>
                     Drag and drop your log file here
                 </Typography>
                 <input
@@ -72,20 +87,11 @@ const FileUpload: React.FC = () => {
                     onChange={handleFileSelect}
                 />
                 <label htmlFor="file-upload">
-                    <Button 
-                        variant="contained" 
-                        component="span" 
-                        sx={{ mt: 2 }}
-                    >
+                    <Button variant="contained" component="span" sx={{ mt: 2 }}>
                         Select File
                     </Button>
                 </label>
             </Dropzone>
-            {file && (
-                <Typography variant="body1" sx={{ mt: 2 }}>
-                    Selected file: {file.name}
-                </Typography>
-            )}
         </Box>
     );
 };
