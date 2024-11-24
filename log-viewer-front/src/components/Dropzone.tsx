@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Box, Button, Typography, IconButton } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/system';
 
-const Dropzone = styled('div')(({ theme }) => ({
+const Dropzone = styled('div')(() => ({
     border: '2px dashed #ccc',
     borderRadius: '4px',
     width: '100%',
