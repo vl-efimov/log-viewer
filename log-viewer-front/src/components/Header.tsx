@@ -1,6 +1,10 @@
-import { AppBar, Toolbar, IconButton, Typography, Switch, Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import { AppBar, Toolbar, IconButton, Typography, Select, MenuItem, SelectChangeEvent } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
+import { ColorModeEnum } from '../constants/ColorModeEnum';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import { useThemeMode } from '../hooks/useThemeMode';
 import { useState } from 'react';
 
 interface HeaderProps {
@@ -9,10 +13,9 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
-    const [isDarkTheme, setDarkTheme] = useState(false);
+    const { toggleTheme, mode } = useThemeMode();
     const [locale, setLocale] = useState('en');
 
-    const toggleTheme = () => setDarkTheme(!isDarkTheme);
     const handleLocaleChange = (event: SelectChangeEvent<string>) => setLocale(event.target.value as string);
 
     return (
@@ -42,13 +45,10 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     LogViewer
                 </Typography>
                 <IconButton 
-                    sx={{ 
-                        marginRight: 1,
-                    }} 
-                    color="inherit" 
-                    onClick={toggleTheme}
+                    onClick={toggleTheme} 
+                    color="inherit"
                 >
-                    <Switch checked={isDarkTheme} />
+                    {mode === ColorModeEnum.Dark ? <Brightness7Icon /> : <Brightness4Icon />}
                 </IconButton>
                 <Select 
                     value={locale} 

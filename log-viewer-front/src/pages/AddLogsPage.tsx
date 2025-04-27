@@ -1,8 +1,9 @@
-import Dropzone from '../components/Dropzone';
+// import Dropzone from '../components/Dropzone';
 
 const AddLogsPage: React.FC = () => {
     return (
-        <Dropzone />
+        <span> Hi </span>
+        // <Dropzone />
     );
 }
 
