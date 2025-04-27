@@ -2,30 +2,27 @@ import { useState } from 'react';
 import { Select, MenuItem, SelectChangeEvent } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import Flag from './Flag';
+import { Languages } from '../constants/LanguagesEnum';
 
+const LANGUAGES = [Languages.EN, Languages.RU, Languages.CZ];
 
+const flagStyle = { marginRight: 8, width: 20, height: 15 };
 
 const LanguageSelect = () => {
     const { i18n } = useTranslation();
-    const [open, setOpen] = useState(false);
-    const [locale, setLocale] = useState('en');
+    const [locale, setLocale] = useState(Languages.EN);
 
     const handleLocaleChange = (event: SelectChangeEvent<string>) => {
-        const newLocale = event.target.value;
+        const newLocale = event.target.value as Languages;
         setLocale(newLocale);
         i18n.changeLanguage(newLocale);
-        setOpen(false);
     };
-
 
     return (
         <Select
             value={locale}
             onChange={handleLocaleChange}
-            open={open}
-            IconComponent={() => null}
-            onMouseEnter={() => setOpen(true)}
-            onMouseLeave={() => setOpen(false)}
+            IconComponent={() => <span style={{ display: 'none' }} />}
             MenuProps={{
                 PaperProps: {
                     sx: {
@@ -42,28 +39,18 @@ const LanguageSelect = () => {
                 },
             }}
         >
-            <MenuItem value="en">
-                <Flag
-                    language="gb"
-                    style={{ marginRight: '8px', width: '20px', height: '15px' }}
-                />
-                EN
-            </MenuItem>
-            <MenuItem value="ru">
-                <Flag
-                    language="ru"
-
-                    style={{ marginRight: '8px', width: '20px', height: '15px' }}
-                />
-                RU
-            </MenuItem>
-            <MenuItem value="cz">
-                <Flag
-                    language="cz"
-                    style={{ marginRight: '8px', width: '20px', height: '15px' }}
-                />
-                CZ
-            </MenuItem>
+            {LANGUAGES.map((lang) => (
+                <MenuItem
+                    key={lang}
+                    value={lang}
+                >
+                    <Flag
+                        language={lang === Languages.EN ? 'gb' : lang}
+                        style={flagStyle}
+                    />
+                    {lang.toUpperCase()}
+                </MenuItem>
+            ))}
         </Select>
     );
 };
