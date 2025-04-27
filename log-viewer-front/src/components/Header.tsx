@@ -1,11 +1,12 @@
-import { AppBar, Toolbar, IconButton, Typography, Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import { AppBar, Toolbar, IconButton, Typography, FormControl } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import { ColorModeEnum } from '../constants/ColorModeEnum';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useThemeMode } from '../hooks/useThemeMode';
-import { useState } from 'react';
+import LanguageSelect from './LanguageSelect';
+import { useTranslation } from 'react-i18next';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -14,49 +15,48 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const { toggleTheme, mode } = useThemeMode();
-    const [locale, setLocale] = useState('en');
-
-    const handleLocaleChange = (event: SelectChangeEvent<string>) => setLocale(event.target.value as string);
+    const { i18n } = useTranslation();
 
     return (
-        <AppBar 
-            position='fixed' 
-            sx={{ 
-                zIndex: (theme) => theme.zIndex.drawer + 1 
+        <AppBar
+            position='fixed'
+            sx={{
+                zIndex: (theme) => theme.zIndex.drawer + 1
             }}
         >
             <Toolbar>
-                <IconButton 
-                    sx={{ 
+                <IconButton
+                    sx={{
                         marginRight: 2,
                     }}
-                    color="inherit" 
-                    aria-label="menu" 
+                    color="inherit"
+                    aria-label="menu"
                     onClick={toggleSidebar}
                 >
                     {isSidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
                 </IconButton>
-                <Typography 
-                    sx={{ 
+                <Typography
+                    sx={{
                         flexGrow: 1,
-                    }} 
+                    }}
                     variant="h6"
                 >
-                    LogViewer
+                    {i18n.t('appTitle')}
                 </Typography>
-                <IconButton 
-                    onClick={toggleTheme} 
+
+                <IconButton
+                    onClick={toggleTheme}
                     color="inherit"
+                    sx={{
+                        marginRight: 2,
+                    }}
                 >
                     {mode === ColorModeEnum.Dark ? <Brightness7Icon /> : <Brightness4Icon />}
                 </IconButton>
-                <Select 
-                    value={locale} 
-                    onChange={handleLocaleChange}
-                >
-                    <MenuItem value="en">EN</MenuItem>
-                    <MenuItem value="ru">RU</MenuItem>
-                </Select>
+
+                <FormControl sx={{ minWidth: 100 }}>
+                    <LanguageSelect />
+                </FormControl>
             </Toolbar>
         </AppBar>
     );

@@ -6,6 +6,7 @@ import store from './redux/store';
 import { registerSW } from "virtual:pwa-register";
 import { ThemeProvider } from './components/ThemeProvider';
 
+import './locales/i18n';
 import './styles/theme.css';
 
 const updateSW = registerSW({
