@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import { useTranslation } from 'react-i18next';
 import Flag from './Flag';
 import { Languages } from '../constants/LanguagesEnum';

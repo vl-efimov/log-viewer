@@ -1,4 +1,6 @@
-import { Box, CssBaseline, Toolbar } from '@mui/material';
+import Box from '@mui/material/Box';
+import CssBaseline from '@mui/material/CssBaseline';
+import Toolbar from '@mui/material/Toolbar';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { useState } from 'react';

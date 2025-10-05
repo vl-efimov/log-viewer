@@ -1,11 +1,19 @@
-import { Drawer, List, ListItemIcon, ListItemText, Toolbar, Box, ListItemButton, Divider, ListSubheader } from '@mui/material';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Toolbar from '@mui/material/Toolbar';
+import Box from '@mui/material/Box';
+import ListItemButton from '@mui/material/ListItemButton';
+import Divider from '@mui/material/Divider';
+import ListSubheader from '@mui/material/ListSubheader';
 import AddIcon from '@mui/icons-material/Add';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PreviewIcon from '@mui/icons-material/Preview';
 import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
 import PatternIcon from '@mui/icons-material/Pattern';
 import SettingsIcon from '@mui/icons-material/Settings';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {

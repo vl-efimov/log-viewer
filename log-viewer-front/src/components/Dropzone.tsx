@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/system';
 import { useDispatch } from 'react-redux';
@@ -74,7 +76,7 @@ const FileUpload: React.FC = () => {
                     Selected file: {file.name}
                 </Typography>
             )}
-            <Dropzone onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
+            <Dropzone onDragOver={(event: React.DragEvent<HTMLDivElement>) => event.preventDefault()} onDrop={handleDrop}>
                 <CloudUploadIcon sx={{ fontSize: 48, color: '#ccc' }} />
                 <Typography variant="h6" sx={{ mt: 2 }}>
                     Drag and drop your log file here
