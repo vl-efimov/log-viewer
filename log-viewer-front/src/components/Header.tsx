@@ -1,4 +1,4 @@
-import { AppBar, Toolbar, IconButton, Typography, FormControl } from '@mui/material';
+import { AppBar, Toolbar, IconButton, Typography, FormControl, Slide } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import { ColorModeEnum } from '../constants/ColorModeEnum';
@@ -47,11 +47,30 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 <IconButton
                     onClick={toggleTheme}
                     color="inherit"
-                    sx={{
-                        marginRight: 2,
-                    }}
+                    sx={{ marginRight: 2, position: 'relative', width: 40, height: 40, overflow: 'hidden' }}
                 >
-                    {mode === ColorModeEnum.Dark ? <Brightness7Icon /> : <Brightness4Icon />}
+                    <Slide
+                        direction="right"
+                        in={mode === ColorModeEnum.Dark}
+                        mountOnEnter
+                        unmountOnExit
+                        timeout={300}
+                    >
+                        <span style={{ position: 'absolute', left: 0, top: 0, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Brightness7Icon />
+                        </span>
+                    </Slide>
+                    <Slide
+                        direction="left"
+                        in={mode !== ColorModeEnum.Dark}
+                        mountOnEnter
+                        unmountOnExit
+                        timeout={300}
+                    >
+                        <span style={{ position: 'absolute', left: 0, top: 0, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Brightness4Icon />
+                        </span>
+                    </Slide>
                 </IconButton>
 
                 <FormControl sx={{ minWidth: 100 }}>

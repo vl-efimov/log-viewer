@@ -1,35 +1,53 @@
 import { createTheme } from '@mui/material/styles';
 
+
 export const lightTheme = createTheme({
     palette: {
         mode: 'light',
         primary: {
-            main: '#1976d2',
+            main: '#6366f1',
         },
         secondary: {
-            main: '#dc004e',
+            main: '#06b6d4',
         },
+        background: {
+            default: '#f8fafc',
+            paper: '#fff',
+        },
+        text: {
+            primary: '#1e293b',
+            secondary: '#64748b',
+        },
+    },
+    typography: {
+        fontFamily: [
+            'Inter',
+            'Roboto',
+            'Helvetica',
+            'Arial',
+            'sans-serif',
+        ].join(','),
     },
 });
 
 export const darkTheme = createTheme({
     palette: {
         mode: 'dark',
-        background: {
-            default: '#0D1117',
-            paper: '#161B22',
-        },
         primary: {
-            main: '#61dafb',
+            main: '#8b5cf6',
         },
         secondary: {
-            main: '#8b949e',
+            main: '#22d3ee',
+        },
+        background: {
+            default: '#18181b',
+            paper: '#23272f',
         },
         text: {
-            primary: '#c9d1d9',
-            secondary: '#8b949e',
+            primary: '#f1f5f9',
+            secondary: '#94a3b8',
         },
-        divider: '#30363d',
+        divider: '#334155',
     },
     typography: {
         fontFamily: [
