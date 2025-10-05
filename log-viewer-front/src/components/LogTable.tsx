@@ -25,10 +25,10 @@ const LogTable: React.FC = () => {
     return (
         <Box>
             <Typography variant="h6">Log Data</Typography>
-            <TableContainer 
-                component={Paper} 
-                sx={{ 
-                    marginTop: 2 
+            <TableContainer
+                component={Paper}
+                sx={{
+                    marginTop: 2
                 }}
             >
                 <Table>

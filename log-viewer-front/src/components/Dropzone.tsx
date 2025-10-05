@@ -63,14 +63,15 @@ const FileUpload: React.FC = () => {
     };
 
     return (
-        <Box sx={{ 
-            width: '100%', 
-            height: '100%', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
-        }}>
+        <Box
+            sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}>
             {file && (
                 <Typography variant="body1" sx={{ mt: 2 }}>
                     Selected file: {file.name}

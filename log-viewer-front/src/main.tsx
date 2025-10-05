@@ -10,19 +10,19 @@ import './locales/i18n';
 import './styles/theme.css';
 
 const updateSW = registerSW({
-	onNeedRefresh () {
-		if (confirm("New content available. Reload?")) {
-			updateSW(true);
-		}
-	},
+    onNeedRefresh () {
+        if (confirm("New content available. Reload?")) {
+            updateSW(true);
+        }
+    },
 });
 
 ReactDOM.createRoot(document.querySelector("#root")!).render(
-	<React.StrictMode>
-		<Provider store={store}>
-			<ThemeProvider>
-				<App />
-			</ThemeProvider>
-		</Provider>
-	</React.StrictMode>
+    <React.StrictMode>
+        <Provider store={store}>
+            <ThemeProvider>
+                <App />
+            </ThemeProvider>
+        </Provider>
+    </React.StrictMode>
 );
