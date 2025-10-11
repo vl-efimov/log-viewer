@@ -1,6 +1,5 @@
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
-import Toolbar from '@mui/material/Toolbar';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { useState, useCallback, useEffect } from 'react';
@@ -30,10 +29,9 @@ export default function MainLayout () {
     }, []);
 
     const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        console.log('ondrop');
-        
         e.preventDefault();
         e.stopPropagation();
+
         const file = e.dataTransfer.files[0];
         if (file && file.type === 'text/plain') {
             const reader = new FileReader();
@@ -76,18 +74,20 @@ export default function MainLayout () {
                 component="main"
                 sx={{
                     flexGrow: 1,
+                    pt: { xs: '56px', sm: '64px' },
+                    overflow: 'hidden',
+                    display: 'flex',
                 }}
             >
-                <Toolbar />
-                <Box
-                    sx={{
-                        p: 3,
+                <Box 
+                    sx={{ 
+                        p: 2,
+                        overflow: 'hidden',
                     }}
                 >
                     <Outlet />
                 </Box>
             </Box>
         </Box>
-
     );
 }

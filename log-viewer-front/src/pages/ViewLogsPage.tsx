@@ -11,7 +11,13 @@ const ViewLogsPage: React.FC = () => {
         return <Typography variant="body1">Перетащите текстовый файл с логами на приложение</Typography>;
     }
     return (
-        <Box>
+        <Box 
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+            }}
+        >
             <Typography variant="h6">{logFile.name}</Typography>
             <Typography 
                 variant="body2" 
@@ -24,7 +30,6 @@ const ViewLogsPage: React.FC = () => {
                     p: 2, 
                     whiteSpace: 'pre-wrap', 
                     overflow: 'auto',
-                    maxHeight: '80%'
                 }}
             >
                 {logFile.content}
