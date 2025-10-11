@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import fileReducer from './slices/fileSlice';
+import logFileReducer from './slices/logFileSlice';
 
 const store = configureStore({
     reducer: {
         file: fileReducer,
+        logFile: logFileReducer,
     },
 });
 

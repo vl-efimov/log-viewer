@@ -3,20 +3,65 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Toolbar from '@mui/material/Toolbar';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { setLogFile } from '../redux/slices/logFileSlice';
 import { Outlet } from 'react-router-dom';
+
 
 export default function MainLayout () {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const dispatch = useDispatch();
     const toggleSidebar = () => {
         setSidebarOpen(!isSidebarOpen);
     };
 
+    useEffect(() => {
+        const preventDefault = (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        window.addEventListener('dragover', preventDefault);
+        window.addEventListener('drop', preventDefault);
+        return () => {
+            window.removeEventListener('dragover', preventDefault);
+            window.removeEventListener('drop', preventDefault);
+        };
+    }, []);
+
+    const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        console.log('ondrop');
+        
+        e.preventDefault();
+        e.stopPropagation();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'text/plain') {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                dispatch(setLogFile({
+                    name: file.name,
+                    size: file.size,
+                    content: event.target?.result as string,
+                }));
+            };
+            reader.readAsText(file);
+        }
+    }, [dispatch]);
+
+    const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
     return (
-        <Box 
+        <Box
             sx={{ 
                 display: 'flex',
+                height: '100vh',
+                border: '1px solid red'
             }}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
         >
             <CssBaseline />
 
