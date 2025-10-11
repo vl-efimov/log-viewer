@@ -18,13 +18,6 @@ const ViewLogsPage: React.FC = () => {
                 height: '100%',
             }}
         >
-            <Typography variant="h6">{logFile.name}</Typography>
-            <Typography 
-                variant="body2" 
-                color="text.secondary"
-            >
-                Размер: {logFile.size} байт
-            </Typography>
             <Paper 
                 sx={{ 
                     p: 2, 

@@ -2,7 +2,6 @@ import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton';
 import Divider from '@mui/material/Divider';
@@ -69,10 +68,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'width 0.3s ease',
+                    position: 'relative',
                 },
             }}
         >
-            <Toolbar />
             <Box
                 sx={{
                     overflow: 'auto',

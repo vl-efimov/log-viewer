@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import AppStatusBar from '../components/AppStatusBar';
 import { useState, useCallback, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setLogFile } from '../redux/slices/logFileSlice';
@@ -53,8 +54,9 @@ export default function MainLayout () {
 
     return (
         <Box
-            sx={{ 
+            sx={{
                 display: 'flex',
+                flexDirection: 'column',
                 height: '100vh',
                 border: '1px solid red'
             }}
@@ -67,27 +69,36 @@ export default function MainLayout () {
                 isSidebarOpen={isSidebarOpen}
                 toggleSidebar={toggleSidebar}
             />
-            <Sidebar
-                isSidebarOpen={isSidebarOpen}
-            />
-            <Box
-                component="main"
-                sx={{
+            <Box 
+                sx={{ 
+                    display: 'flex', 
                     flexGrow: 1,
-                    pt: { xs: '56px', sm: '64px' },
                     overflow: 'hidden',
-                    display: 'flex',
+                    pt: { xs: '56px', sm: '64px' },
                 }}
             >
-                <Box 
-                    sx={{ 
-                        p: 2,
+                <Sidebar
+                    isSidebarOpen={isSidebarOpen}
+                />
+                <Box
+                    component="main"
+                    sx={{
+                        flexGrow: 1,
                         overflow: 'hidden',
+                        display: 'flex',
                     }}
                 >
-                    <Outlet />
+                    <Box
+                        sx={{
+                            p: 2,
+                            overflow: 'hidden',
+                        }}
+                    >
+                        <Outlet />
+                    </Box>
                 </Box>
             </Box>
+            <AppStatusBar />
         </Box>
     );
 }
