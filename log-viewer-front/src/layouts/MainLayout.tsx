@@ -6,6 +6,7 @@ import AppStatusBar from '../components/AppStatusBar';
 import { useState, useCallback, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setLogFile } from '../redux/slices/logFileSlice';
+import { clearLogs, addLogs } from '../utils/logDb';
 import { Outlet } from 'react-router-dom';
 
 
@@ -36,12 +37,17 @@ export default function MainLayout () {
         const file = e.dataTransfer.files[0];
         if (file && file.type === 'text/plain') {
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
+                const content = event.target?.result as string;
                 dispatch(setLogFile({
                     name: file.name,
                     size: file.size,
-                    content: event.target?.result as string,
+                    content,
                 }));
+
+                await clearLogs();
+                const lines = content.split(/\r?\n/);
+                await addLogs(lines);
             };
             reader.readAsText(file);
         }
