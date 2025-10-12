@@ -1,26 +1,26 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-
-import { useSelector } from 'react-redux';
-import { RootState } from '../redux/store';
 import { useEffect, useState } from 'react';
 import { getAllLogs } from '../utils/logDb';
 
 
 const ViewLogsPage: React.FC = () => {
-    const logFile = useSelector((state: RootState) => state.logFile);
     const [lines, setLines] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (logFile.loaded) {
-            getAllLogs().then(logs => setLines(logs.map(l => l.line)));
-        } else {
-            setLines([]);
-        }
-    }, [logFile.loaded]);
+        setLoading(true);
+        getAllLogs().then(logs => {
+            setLines(logs.map(l => l.line));
+            setLoading(false);
+        });
+    }, []);
 
-    if (!logFile.loaded) {
+    if (loading) {
+        return <Typography variant="body1">Загрузка...</Typography>;
+    }
+    if (lines.length === 0) {
         return <Typography variant="body1">Перетащите текстовый файл с логами на приложение</Typography>;
     }
     return (
