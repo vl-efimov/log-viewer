@@ -9,9 +9,13 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import { ColorModeEnum } from '../constants/ColorModeEnum';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
-import { useThemeMode } from '../hooks/useThemeMode';
+import PaletteIcon from '@mui/icons-material/Palette';
+// import { useThemeMode } from '../hooks/useThemeMode';
 import LanguageSelect from './LanguageSelect';
 import { useTranslation } from 'react-i18next';
+import React, { useState, useContext, useEffect } from 'react';
+import { ThemeContext } from '../contexts/ThemeContext';
+import ThemePaletteDrawer from './ThemePaletteDrawer';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -19,8 +23,16 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
-    const { toggleTheme, mode } = useThemeMode();
     const { i18n } = useTranslation();
+    const themeCtx = useContext(ThemeContext);
+    if (!themeCtx) return null;
+    const { toggleTheme, mode, primaryColor, setPrimaryColor } = themeCtx;
+    const [drawerOpen, setDrawerOpen] = useState(false);
+
+    // TODO: Replace with context/provider for real theme switching
+    useEffect(() => {
+        document.body.style.setProperty('--mui-primary-main', primaryColor);
+    }, [primaryColor]);
 
     return (
         <AppBar
@@ -52,7 +64,13 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 <IconButton
                     onClick={toggleTheme}
                     color="inherit"
-                    sx={{ marginRight: 2, position: 'relative', width: 40, height: 40, overflow: 'hidden' }}
+                    sx={{
+                        marginRight: 2,
+                        position: 'relative',
+                        width: 40,
+                        height: 40,
+                        overflow: 'hidden',
+                    }}
                 >
                     <Slide
                         direction="right"
@@ -61,7 +79,18 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                         unmountOnExit
                         timeout={300}
                     >
-                        <span style={{ position: 'absolute', left: 0, top: 0, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span
+                            style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                width: 40,
+                                height: 40,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
                             <Brightness7Icon />
                         </span>
                     </Slide>
@@ -72,16 +101,41 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                         unmountOnExit
                         timeout={300}
                     >
-                        <span style={{ position: 'absolute', left: 0, top: 0, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span
+                            style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                width: 40,
+                                height: 40,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
                             <Brightness4Icon />
                         </span>
                     </Slide>
+                </IconButton>
+
+                <IconButton
+                    color="inherit"
+                    aria-label="theme palette"
+                    onClick={() => setDrawerOpen(true)}
+                    sx={{ marginRight: 2 }}
+                >
+                    <PaletteIcon />
                 </IconButton>
 
                 <FormControl sx={{ minWidth: 100 }}>
                     <LanguageSelect />
                 </FormControl>
             </Toolbar>
+            <ThemePaletteDrawer
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                onPrimaryChange={setPrimaryColor}
+                currentPrimary={primaryColor}
+            />
         </AppBar>
     );
 }
