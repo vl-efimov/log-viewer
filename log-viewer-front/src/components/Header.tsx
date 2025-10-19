@@ -10,10 +10,9 @@ import { ColorModeEnum } from '../constants/ColorModeEnum';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import PaletteIcon from '@mui/icons-material/Palette';
-// import { useThemeMode } from '../hooks/useThemeMode';
 import LanguageSelect from './LanguageSelect';
 import { useTranslation } from 'react-i18next';
-import React, { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import { ThemeContext } from '../contexts/ThemeContext';
 import ThemePaletteDrawer from './ThemePaletteDrawer';
 
@@ -28,11 +27,6 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     if (!themeCtx) return null;
     const { toggleTheme, mode, primaryColor, setPrimaryColor } = themeCtx;
     const [drawerOpen, setDrawerOpen] = useState(false);
-
-    // TODO: Replace with context/provider for real theme switching
-    useEffect(() => {
-        document.body.style.setProperty('--mui-primary-main', primaryColor);
-    }, [primaryColor]);
 
     return (
         <AppBar

@@ -5,6 +5,7 @@ import type { SelectChangeEvent } from '@mui/material/Select';
 import { useTranslation } from 'react-i18next';
 import Flag from './Flag';
 import { Languages } from '../constants/LanguagesEnum';
+import Typography from '@mui/material/Typography';
 
 const LANGUAGES = [Languages.EN, Languages.RU, Languages.CZ];
 
@@ -50,7 +51,13 @@ const LanguageSelect = () => {
                         language={lang === Languages.EN ? 'gb' : lang}
                         style={flagStyle}
                     />
-                    {lang.toUpperCase()}
+                    <Typography
+                        variant="body1"
+                        component="span"
+                    >
+                        {lang.toUpperCase()}
+                    </Typography>
+                    
                 </MenuItem>
             ))}
         </Select>

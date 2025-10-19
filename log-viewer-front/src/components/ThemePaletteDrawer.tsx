@@ -32,11 +32,38 @@ const PRIMARY_COLORS = [
 
 const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, onPrimaryChange, currentPrimary }) => {
     return (
-        <Drawer anchor="right" open={open} onClose={onClose}>
-            <div style={{ width: 280, padding: 24 }}>
-                <Typography variant="h6" gutterBottom>Theme Settings</Typography>
-                <Typography variant="subtitle1" gutterBottom>Primary Color</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap',  gap: 1, marginBottom: 16 }}>
+        <Drawer
+            anchor="right"
+            open={open}
+            onClose={onClose}
+        >
+            <Box
+                sx={{
+                    pt: { xs: '56px', sm: '64px' },
+                    px: 2,
+                    width: 280
+                }}
+            >
+                <Typography
+                    variant="h6"
+                    gutterBottom
+                >
+                    Theme Settings
+                </Typography>
+                <Typography 
+                    variant="subtitle1" 
+                    gutterBottom
+                >
+                    Primary Color
+                </Typography>
+                <Box 
+                    sx={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: 1, 
+                        marginBottom: 16 
+                    }}
+                >
                     {PRIMARY_COLORS.map(color => (
                         <div
                             key={color}
@@ -53,7 +80,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         />
                     ))}
                 </Box>
-            </div>
+            </Box>
         </Drawer>
     );
 };

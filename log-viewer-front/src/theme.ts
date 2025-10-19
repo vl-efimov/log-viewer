@@ -1,11 +1,12 @@
 
 import { createTheme, Theme } from '@mui/material/styles';
+import { ColorModeEnum } from './constants/ColorModeEnum';
 
 export const getCustomTheme = (
-    mode: 'light' | 'dark',
+    mode: ColorModeEnum,
     primary: string,
 ): Theme => {
-    const isLight = mode === 'light';
+    const isLight = mode === ColorModeEnum.Light;
     return createTheme({
         palette: {
             mode,
@@ -37,5 +38,5 @@ export const getCustomTheme = (
 };
 
 // For backward compatibility
-export const lightTheme = getCustomTheme('light', '#6366f1');
-export const darkTheme = getCustomTheme('dark', '#8b5cf6');
+export const lightTheme = getCustomTheme(ColorModeEnum.Light, '#6366f1');
+export const darkTheme = getCustomTheme(ColorModeEnum.Dark, '#8b5cf6');

@@ -13,7 +13,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const storedMode = localStorage.getItem('theme');
-        const initialMode = storedMode ? (storedMode as ColorModeEnum) : ColorModeEnum.Dark;
+        const initialMode = (storedMode as ColorModeEnum) || ColorModeEnum.Dark;
         setMode(initialMode);
 
         const storedPrimary = localStorage.getItem('primaryColor');
@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('primaryColor', color);
     };
 
-    const theme = getCustomTheme(mode === ColorModeEnum.Dark ? 'dark' : 'light', primaryColor);
+    const theme = getCustomTheme(mode === ColorModeEnum.Dark ? ColorModeEnum.Dark : ColorModeEnum.Light, primaryColor);
 
     return (
         <ThemeContext.Provider

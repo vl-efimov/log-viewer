@@ -9,9 +9,4 @@ export interface ThemeContextProps {
     setPrimaryColor: (color: string) => void;
 }
 
-export const ThemeContext = React.createContext<ThemeContextProps>({
-    mode: ColorModeEnum.Dark,
-    toggleTheme: () => {},
-    primaryColor: '#1976d2',
-    setPrimaryColor: () => {},
-});
+export const ThemeContext = React.createContext<ThemeContextProps | undefined>(undefined);
