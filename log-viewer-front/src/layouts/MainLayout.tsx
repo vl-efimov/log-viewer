@@ -6,7 +6,7 @@ import AppStatusBar from '../components/AppStatusBar';
 import { useState, useCallback, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setLogFile } from '../redux/slices/logFileSlice';
-import { clearLogs, addLogs } from '../utils/logDb';
+import { addFileWithLogs } from '../utils/logDb';
 import { Outlet } from 'react-router-dom';
 
 
@@ -39,15 +39,17 @@ export default function MainLayout () {
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const content = event.target?.result as string;
+                const lines = content.split(/\r?\n/);
+                
+                // Add file with logs to IndexedDB
+                await addFileWithLogs(file.name, file.size, lines);
+                
+                // Update Redux state
                 dispatch(setLogFile({
                     name: file.name,
                     size: file.size,
                     content,
                 }));
-
-                await clearLogs();
-                const lines = content.split(/\r?\n/);
-                await addLogs(lines);
             };
             reader.readAsText(file);
         }

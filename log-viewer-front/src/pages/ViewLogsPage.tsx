@@ -2,19 +2,41 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import { useEffect, useState } from 'react';
-import { getAllLogs } from '../utils/logDb';
+import { getAllFiles, getAllLogs } from '../utils/logDb';
 
 
 const ViewLogsPage: React.FC = () => {
     const [lines, setLines] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const [fileName, setFileName] = useState<string>('');
 
     useEffect(() => {
-        setLoading(true);
-        getAllLogs().then(logs => {
-            setLines(logs.map(l => l.line));
-            setLoading(false);
-        });
+        const loadLogs = async () => {
+            setLoading(true);
+            try {
+                // Get all files and show the latest one
+                const files = await getAllFiles();
+                if (files.length === 0) {
+                    setLines([]);
+                    setLoading(false);
+                    return;
+                }
+                
+                // Get the latest file (last in array)
+                const latestFile = files[files.length - 1];
+                setFileName(latestFile.name);
+                
+                // Load logs for this file
+                const logs = await getAllLogs(latestFile.id!);
+                setLines(logs.map(l => l.line));
+            } catch (error) {
+                console.error('Error loading logs:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadLogs();
     }, []);
 
     if (loading) {
@@ -31,11 +53,15 @@ const ViewLogsPage: React.FC = () => {
                 height: '100%',
             }}
         >
+            <Typography variant="h6" sx={{ mb: 2 }}>
+                {fileName}
+            </Typography>
             <Paper
                 sx={{
                     p: 2,
                     whiteSpace: 'pre-wrap',
                     overflow: 'auto',
+                    flexGrow: 1,
                 }}
             >
                 {lines.map((line, i) => (
