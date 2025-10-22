@@ -33,25 +33,18 @@ const AppStatusBar: React.FC = () => {
             >
                 {logFile.loaded ? (
                     <>
-                        <Typography
-                            sx={{ 
-                                color: VSCODE_TEXT 
-                            }}
-                        >
+                        <Typography sx={{ color: VSCODE_TEXT }}>
                             {logFile.name}
                         </Typography>
-                        <Typography
-                            sx={{ 
-                                color: VSCODE_TEXT 
-                            }}
-                        >
+                        <Typography sx={{ color: VSCODE_TEXT }}>
                             {`${(logFile.size / (1024 * 1024)).toFixed(2)} МБ`}
+                        </Typography>
+                        <Typography sx={{ color: VSCODE_TEXT }}>
+                            {logFile.format === 'Unknown format' ? 'Unknown format' : logFile.format}
                         </Typography>
                     </>
                 ) : (
-                    <Typography
-                        sx={{ color: VSCODE_TEXT }}
-                    >
+                    <Typography sx={{ color: VSCODE_TEXT }}>
                         Файл не выбран
                     </Typography>
                 )}
@@ -63,9 +56,7 @@ const AppStatusBar: React.FC = () => {
                     gap: 2
                 }}
             >
-                <Typography
-                    sx={{ color: VSCODE_TEXT }}
-                >
+                <Typography sx={{ color: VSCODE_TEXT }}>
                     Готово
                 </Typography>
             </Box>

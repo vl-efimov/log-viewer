@@ -1,4 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { getLogFieldsForFormat, parseLogLine } from './logFormatFields';
 
 const DB_NAME = 'log-viewer-db';
 const STORE_FILE_INFO = 'fileInfo';
@@ -16,13 +17,8 @@ export interface FileInfo {
     uploadedAt: number; // timestamp
 }
 
-/**
- * Single log line entry
- */
-export interface LogLine {
-    id: number;
-    line: string;
-}
+// Parsed log line with dynamic fields
+export type LogLine = { id: number } & Record<string, string>;
 
 interface LogDB extends DBSchema {
     fileInfo: {
@@ -69,14 +65,12 @@ export const getLogDB = async (forceReopen = false): Promise<IDBPDatabase<LogDB>
  * Creates a new logs table for a specific file
  * @param storeName Name of the store to create
  */
-const createLogsStore = async (storeName: string): Promise<void> => {
+const createLogsStore = async (storeName: string, fields: string[]): Promise<void> => {
     if (dbInstance) {
         dbInstance.close();
         dbInstance = null;
     }
-
     dbVersion++;
-
     // Use untyped openDB for dynamic store creation
     const db = await openDB(DB_NAME, dbVersion, {
         upgrade(db) {
@@ -88,58 +82,55 @@ const createLogsStore = async (storeName: string): Promise<void> => {
                 });
                 fileStore.createIndex('by-name', 'name');
             }
-
-            // Create the new logs store dynamically
+            // Create the new logs store dynamically, with keyPath 'id'
             if (!db.objectStoreNames.contains(storeName)) {
                 db.createObjectStore(storeName, { keyPath: 'id' });
             }
         },
     });
-    
     dbInstance = db as IDBPDatabase<LogDB>;
 };
 
 /**
- * Adds a new file with its logs to the database
+ * Adds a new file with its parsed logs to the database
  * @param name File name
  * @param size File size
- * @param lines Array of log lines
+ * @param lines Array of log lines (raw)
+ * @param format Detected log format
  * @returns File ID
  */
 export const addFileWithLogs = async (
     name: string,
     size: number,
-    lines: string[]
+    lines: string[],
+    format: string
 ): Promise<number> => {
     // Generate unique store name for this file's logs
     const timestamp = Date.now();
     const logsStoreName = `${LOGS_STORE_PREFIX}${timestamp}`;
-    
+    // Get fields for this format
+    const fields = getLogFieldsForFormat(format);
     // Create logs store for this file (this upgrades DB version and reopens connection)
-    await createLogsStore(logsStoreName);
-    
+    await createLogsStore(logsStoreName, fields);
     // Force reopen DB to get the instance with the new store
     const db = await getLogDB(true);
-    
     // Add file info
     const fileInfo: FileInfo = {
         name,
         size,
-        format: '', // empty for now
+        format,
         logsStoreName,
         uploadedAt: timestamp,
     };
-    
     const fileId = await db.add(STORE_FILE_INFO, fileInfo);
-    
-    // Add logs to the file's store using fresh DB instance
+    // Add parsed logs to the file's store using fresh DB instance
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tx = db.transaction(logsStoreName as any, 'readwrite');
     for (let i = 0; i < lines.length; i++) {
-        await tx.store.put({ id: i, line: lines[i] });
+        const parsed = parseLogLine(lines[i], format);
+        await tx.store.put({ id: i, ...parsed });
     }
     await tx.done;
-    
     return fileId as number;
 };
 
