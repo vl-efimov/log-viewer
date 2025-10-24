@@ -8,11 +8,7 @@ import { useDispatch } from 'react-redux';
 import { setLogFile } from '../redux/slices/logFileSlice';
 import { addFileWithLogs } from '../utils/logDb';
 
-// Log format detection utility
 function detectLogFormat(content: string): string {
-    // Apache error log: [Sun Dec 04 04:47:44 2005] [notice] ...
-    const apacheErrorRegex = /^\[[A-Za-z]{3} [A-Za-z]{3} \d{2} \d{2}:\d{2}:\d{2} \d{4}\] \[[a-z]+\]/m;
-    // Более универсальный вариант для error-логов Apache (разрешает пустое сообщение)
     const apacheErrorUniversalRegex = /^\[.*\] \[[a-z]+\](?: \[client [^\]]+\])?(?: .*)?$/m;
     // Apache access log: IP - - [date:time ...] ... "...HTTP/1.1" ...
     // Nginx access log: IP - - [date:time ...] ... "...HTTP/1.1" ...
@@ -39,23 +35,17 @@ function detectLogFormat(content: string): string {
     // Syslog: Oct 11 22:14:15 mymachine su: ...
     const syslogRegex = /^\w{3} +\d{1,2} \d{2}:\d{2}:\d{2} /m;
 
-    // Для ускорения: анализируем только первые 50 строк файла
     const preview = content.split(/\r?\n/).slice(0, 50).join('\n');
 
-    // Сначала ищем Apache error log (универсально)
     if (apacheErrorUniversalRegex.test(preview)) return 'Apache';
-    // Nginx access log (IP - - [date:...]) — приоритет выше Apache access
     if (nginxRegex.test(preview)) return 'Nginx';
-    // Apache access log: IP - - [date:...]
     if (apacheAccessRegex.test(preview)) {
-        // Look for 'nginx' in user-agent or referer (in quotes at end of line)
         const lines = preview.split(/\r?\n/);
         for (const line of lines) {
             if (nginxAgentRegex.test(line)) {
                 return 'Nginx';
             }
         }
-        // If не найдено nginx — это Apache access
         return 'Apache';
     }
     if (hdfsV2Regex.test(preview)) return 'HDFS';
@@ -107,7 +97,7 @@ export default function MainLayout () {
 
 
                 // Add file with logs to IndexedDB (pass format)
-                await addFileWithLogs(file.name, file.size, lines, format);
+                const fileId = await addFileWithLogs(file.name, file.size, lines, format);
 
                 // Update Redux state
                 dispatch(setLogFile({
@@ -116,6 +106,13 @@ export default function MainLayout () {
                     content,
                     format,
                 }));
+
+                // Notify UI that a new file was added so it can become active immediately
+                try {
+                    window.dispatchEvent(new CustomEvent('logviewer:file-added', { detail: { id: fileId } }));
+                } catch {
+                    // ignore if CustomEvent isn't supported in environment
+                }
             };
             reader.readAsText(file);
         }

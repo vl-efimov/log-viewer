@@ -28,7 +28,6 @@ interface LogDB extends DBSchema {
     };
 }
 
-let dbVersion = 1;
 let dbInstance: IDBPDatabase<LogDB> | null = null;
 
 /**
@@ -36,28 +35,36 @@ let dbInstance: IDBPDatabase<LogDB> | null = null;
  * @param forceReopen Force reopening the database (use after version upgrade)
  */
 export const getLogDB = async (forceReopen = false): Promise<IDBPDatabase<LogDB>> => {
-    if (dbInstance && !forceReopen) {
-        return dbInstance;
-    }
+    if (dbInstance && !forceReopen) return dbInstance;
 
-    if (forceReopen && dbInstance) {
+    if (dbInstance) {
         dbInstance.close();
         dbInstance = null;
     }
 
-    dbInstance = await openDB<LogDB>(DB_NAME, dbVersion, {
-        upgrade(db) {
-            // Create FileInfo store if it doesn't exist
-            if (!db.objectStoreNames.contains(STORE_FILE_INFO)) {
-                const fileStore = db.createObjectStore(STORE_FILE_INFO, {
-                    keyPath: 'id',
-                    autoIncrement: true,
-                });
-                fileStore.createIndex('by-name', 'name');
-            }
-        },
-    });
+    // Open DB (untyped) to inspect current version and stores
+    const dbAny = await openDB(DB_NAME);
 
+    // If fileInfo store is missing, bump version by 1 and create it
+    if (!dbAny.objectStoreNames.contains(STORE_FILE_INFO)) {
+        const currentVersion = dbAny.version;
+        dbAny.close();
+        const dbTyped = await openDB<LogDB>(DB_NAME, currentVersion + 1, {
+            upgrade(upgDb) {
+                if (!upgDb.objectStoreNames.contains(STORE_FILE_INFO)) {
+                    const fileStore = upgDb.createObjectStore(STORE_FILE_INFO, {
+                        keyPath: 'id',
+                        autoIncrement: true,
+                    });
+                    fileStore.createIndex('by-name', 'name');
+                }
+            },
+        });
+        dbInstance = dbTyped as IDBPDatabase<LogDB>;
+        return dbInstance;
+    }
+
+    dbInstance = dbAny as IDBPDatabase<LogDB>;
     return dbInstance;
 };
 
@@ -65,29 +72,39 @@ export const getLogDB = async (forceReopen = false): Promise<IDBPDatabase<LogDB>
  * Creates a new logs table for a specific file
  * @param storeName Name of the store to create
  */
-const createLogsStore = async (storeName: string, fields: string[]): Promise<void> => {
+const createLogsStore = async (storeName: string, _fields: string[]): Promise<void> => {
+    // acknowledge unused parameter
+    void _fields;
+    // Close existing instance so we can perform a versioned upgrade
     if (dbInstance) {
         dbInstance.close();
         dbInstance = null;
     }
-    dbVersion++;
-    // Use untyped openDB for dynamic store creation
-    const db = await openDB(DB_NAME, dbVersion, {
-        upgrade(db) {
-            // Create FileInfo store if needed
-            if (!db.objectStoreNames.contains(STORE_FILE_INFO)) {
-                const fileStore = db.createObjectStore(STORE_FILE_INFO, {
+    // Open DB (untyped) to learn current version
+    const infoDb = await openDB(DB_NAME);
+    const currentVersion = infoDb.version;
+    infoDb.close();
+
+    const newVersion = currentVersion + 1;
+
+    const db = await openDB<LogDB>(DB_NAME, newVersion, {
+        upgrade(upgDb) {
+            // Ensure FileInfo store exists
+            if (!upgDb.objectStoreNames.contains(STORE_FILE_INFO)) {
+                const fileStore = upgDb.createObjectStore(STORE_FILE_INFO, {
                     keyPath: 'id',
                     autoIncrement: true,
                 });
                 fileStore.createIndex('by-name', 'name');
             }
             // Create the new logs store dynamically, with keyPath 'id'
-            if (!db.objectStoreNames.contains(storeName)) {
-                db.createObjectStore(storeName, { keyPath: 'id' });
+            const idb = upgDb as unknown as IDBDatabase;
+            if (!idb.objectStoreNames.contains(storeName)) {
+                idb.createObjectStore(storeName, { keyPath: 'id' });
             }
         },
     });
+
     dbInstance = db as IDBPDatabase<LogDB>;
 };
 
@@ -202,16 +219,55 @@ export const deleteFile = async (fileId: number): Promise<void> => {
     if (!fileInfo) {
         return;
     }
-    
-    const db = await getLogDB();
-    
-    // Delete logs store (Note: IndexedDB doesn't support deleteObjectStore at runtime)
-    // We'll just clear it and delete the file info
-    const tx = db.transaction(fileInfo.logsStoreName as never, 'readwrite');
-    await tx.objectStore(fileInfo.logsStoreName as never).clear();
-    
-    // Delete file info
-    await db.delete(STORE_FILE_INFO, fileId);
+
+    if (dbInstance) {
+        try {
+            dbInstance.close();
+        } catch {
+            // ignore
+        }
+        dbInstance = null;
+    }
+
+    // Open untyped DB to get current version
+    const dbAny = await openDB(DB_NAME);
+    const currentVersion = dbAny.version;
+    dbAny.close();
+
+    const newVersion = currentVersion + 1;
+
+    // Perform upgrade and delete the logs store
+    const db = await openDB<LogDB>(DB_NAME, newVersion, {
+        upgrade(upgDb) {
+            // Ensure fileInfo store exists
+            if (!upgDb.objectStoreNames.contains(STORE_FILE_INFO)) {
+                const fileStore = upgDb.createObjectStore(STORE_FILE_INFO, {
+                    keyPath: 'id',
+                    autoIncrement: true,
+                });
+                fileStore.createIndex('by-name', 'name');
+            }
+            // delete the logs store if it exists
+            const idb = upgDb as unknown as IDBDatabase;
+            if (idb.objectStoreNames.contains(fileInfo.logsStoreName)) {
+                try {
+                    idb.deleteObjectStore(fileInfo.logsStoreName);
+                } catch {
+                    // ignore deletion errors (shouldn't normally happen)
+                }
+            }
+        },
+    });
+
+    // Replace cached instance
+    dbInstance = db as IDBPDatabase<LogDB>;
+
+    // Finally remove the fileInfo entry
+    try {
+        await db.delete(STORE_FILE_INFO, fileId);
+    } catch (e) {
+        console.error('Failed to delete fileInfo after dropping store', e);
+    }
 };
 
 /**
