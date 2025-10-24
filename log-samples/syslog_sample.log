@@ -1,0 +1,450 @@
+Oct 19 04:07:07 db1 rsyslogd[735]: error: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 22:53:07 ci-runner kernel[3168]: info: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 20 03:50:42 web1 systemd[945]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 17:06:50 web1 app-service[7100]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 20 05:21:07 ci-runner rsyslogd[2038]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=1973)
+Oct 19 09:11:46 web2 kernel[637]: crit: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=629)
+Oct 19 11:10:13 db1 sshd[7567]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 23:15:14 proxy rsyslogd[254]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 20 08:32:09 web2 kernel[8107]: warning: systemd: Started User Manager for UID 1000 src=10.0.0.5
+Oct 18 17:43:54 db1 sshd[6272]: crit: Accepted password for bob from 192.168.1.50 port 56522 ssh2 src=192.168.1.50
+Oct 19 04:53:26 ci-runner cron[6048]: info: systemd: Started User Manager for UID 1000 (uid=636)
+Oct 18 10:32:06 web2 app-service[1181]: info: app-service: Connection to database timed out after 12000ms
+Oct 20 05:53:29 proxy cron[7478]: notice: app-service: Connection to database timed out after 12000ms
+Oct 18 21:14:40 proxy app-service[3261]: warning: systemd: Started User Manager for UID 1000
+Oct 19 19:26:05 web1 rsyslogd[2533]: info: systemd: Started User Manager for UID 1000
+Oct 19 15:03:02 proxy app-service[5836]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 20 07:01:11 web1 systemd[2547]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 07:07:53 db1 kernel[7357]: info: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 20 03:32:52 ci-runner kernel[8693]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2 src=192.168.1.50
+Oct 20 09:17:13 proxy systemd[5382]: crit: app-service: Connection to database timed out after 12000ms src=10.0.0.5
+Oct 18 13:13:51 ci-runner rsyslogd[4934]: error: pam_unix(sshd:session): session closed for user carol src=203.0.113.7
+Oct 18 21:28:51 db1 kernel[6103]: info: systemd: Started User Manager for UID 1000 (uid=1688)
+Oct 19 15:57:20 db1 cron[3134]: error: Started Session 123 of user alice
+Oct 19 03:06:55 db1 sshd[1193]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=663)
+Oct 19 02:36:38 db1 systemd[9717]: info: app-service: Connection to database timed out after 12000ms
+Oct 19 03:56:20 db1 sshd[2569]: info: Accepted password for bob from 192.168.1.50 port 56522 ssh2 src=203.0.113.7
+Oct 20 04:34:30 ci-runner systemd[7434]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 21:15:38 web1 systemd[3447]: warning: systemd: Started User Manager for UID 1000
+Oct 19 13:54:02 db1 rsyslogd[6041]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 23:18:24 web1 sshd[1590]: error: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 15:44:55 db1 kernel[4531]: error: systemd: Started User Manager for UID 1000
+Oct 19 16:52:56 ci-runner kernel[8628]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 15:11:36 web2 sshd[8447]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 13:38:13 db1 sshd[3071]: error: Started Session 123 of user alice src=192.168.1.50
+Oct 18 15:09:15 proxy cron[9139]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 00:45:39 proxy systemd[1580]: warning: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 15:15:25 db1 rsyslogd[8579]: crit: pam_unix(sshd:session): session closed for user carol (uid=1172)
+Oct 19 09:21:45 proxy sshd[992]: notice: Started Session 123 of user alice
+Oct 19 13:52:53 ci-runner cron[5900]: info: systemd: Started User Manager for UID 1000
+Oct 19 18:03:02 proxy systemd[2700]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 22:09:04 ci-runner kernel[7277]: error: app-service: Connection to database timed out after 12000ms
+Oct 20 08:53:06 db1 app-service[9767]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 23:53:38 ci-runner app-service[1096]: notice: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 21:34:39 web2 kernel[3362]: error: systemd: Started User Manager for UID 1000
+Oct 18 20:45:18 ci-runner systemd[2780]: notice: pam_unix(sshd:session): session closed for user carol src=192.168.1.50
+Oct 19 11:31:03 web1 app-service[1258]: info: systemd: Started User Manager for UID 1000
+Oct 19 23:08:25 db1 kernel[406]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=444)
+Oct 18 20:24:03 web2 systemd[7503]: error: app-service: Connection to database timed out after 12000ms
+Oct 18 20:41:19 ci-runner sshd[5999]: crit: Started Session 123 of user alice (uid=1375)
+Oct 19 12:32:55 db1 cron[8639]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=934)
+Oct 18 14:59:19 db1 app-service[4523]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 02:10:41 web1 kernel[1942]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=831)
+Oct 19 17:28:59 db1 sshd[1093]: crit: systemd: Started User Manager for UID 1000
+Oct 19 12:16:53 db1 systemd[1918]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 00:10:50 proxy cron[9213]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=232)
+Oct 19 02:38:02 web1 app-service[9628]: notice: app-service: Connection to database timed out after 12000ms src=203.0.113.7
+Oct 19 10:24:04 proxy systemd[2114]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 18:50:13 db1 systemd[8283]: notice: app-service: Connection to database timed out after 12000ms (uid=237) src=203.0.113.7
+Oct 19 02:07:55 web1 systemd[8565]: notice: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 15:20:06 ci-runner app-service[8343]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 14:46:29 db1 cron[798]: notice: pam_unix(sshd:session): session closed for user carol (uid=1515)
+Oct 19 22:23:47 web2 kernel[4801]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 20 08:47:40 proxy systemd[3591]: warning: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 11:28:12 web2 cron[3065]: crit: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 08:28:18 web1 rsyslogd[4877]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 12:36:30 web1 cron[9916]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 18:39:30 web2 kernel[8453]: info: app-service: Connection to database timed out after 12000ms
+Oct 18 22:07:35 web1 systemd[7276]: info: pam_unix(sshd:session): session closed for user carol
+Oct 19 15:54:52 proxy rsyslogd[2802]: crit: Started Session 123 of user alice
+Oct 20 02:44:58 web2 kernel[9787]: error: pam_unix(sshd:session): session closed for user carol
+Oct 20 06:21:53 db1 cron[4355]: crit: app-service: Connection to database timed out after 12000ms
+Oct 19 23:18:21 web2 kernel[3887]: error: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 14:40:15 ci-runner sshd[4908]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 19 10:14:20 web2 rsyslogd[2040]: warning: Started Session 123 of user alice
+Oct 20 08:49:45 db1 app-service[8589]: info: app-service: Connection to database timed out after 12000ms
+Oct 18 17:03:15 web1 kernel[3633]: notice: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 21:25:50 web1 cron[4517]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 06:01:43 ci-runner cron[3063]: warning: systemd: Started User Manager for UID 1000 (uid=1630)
+Oct 18 19:11:19 web1 kernel[9700]: notice: systemd: Started User Manager for UID 1000
+Oct 20 01:04:43 ci-runner app-service[2576]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 08:02:49 db1 rsyslogd[2295]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 11:35:02 db1 kernel[4445]: error: app-service: Connection to database timed out after 12000ms
+Oct 18 12:19:04 proxy systemd[2491]: warning: Started Session 123 of user alice
+Oct 18 20:18:07 db1 app-service[366]: info: pam_unix(sshd:session): session closed for user carol
+Oct 20 08:17:04 web2 cron[6534]: info: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 13:49:09 web2 rsyslogd[3059]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 src=10.0.0.5
+Oct 19 08:22:13 proxy sshd[1282]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=1687)
+Oct 20 02:52:06 ci-runner systemd[7732]: warning: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 13:19:10 proxy sshd[5522]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=1291)
+Oct 19 06:23:15 proxy sshd[4328]: info: pam_unix(sshd:session): session closed for user carol
+Oct 20 00:43:49 proxy sshd[9171]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 18 13:25:13 web1 kernel[4856]: error: systemd: Started User Manager for UID 1000
+Oct 20 06:08:21 ci-runner rsyslogd[3159]: crit: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 20 01:52:25 web1 systemd[7826]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 20 03:32:39 db1 kernel[6352]: notice: systemd: Started User Manager for UID 1000
+Oct 20 06:37:06 proxy rsyslogd[5901]: notice: Started Session 123 of user alice
+Oct 19 00:01:03 web1 kernel[1053]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 06:13:21 ci-runner sshd[6086]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=1972)
+Oct 20 07:54:20 web2 rsyslogd[5280]: crit: rsyslogd: action 'action 1' resumed (module 'omfile') (uid=1665) src=192.168.1.50
+Oct 18 20:53:04 db1 kernel[117]: warning: Started Session 123 of user alice
+Oct 19 03:51:59 web1 app-service[6709]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=1083)
+Oct 20 02:10:04 web2 rsyslogd[7755]: warning: systemd: Started User Manager for UID 1000 src=203.0.113.7
+Oct 18 15:39:45 web1 rsyslogd[5842]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 13:50:45 db1 systemd[5559]: info: systemd: Started User Manager for UID 1000
+Oct 19 10:32:32 web2 kernel[7771]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 08:56:20 web1 systemd[8186]: notice: app-service: Connection to database timed out after 12000ms
+Oct 18 15:14:45 web2 rsyslogd[8563]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 01:22:07 proxy app-service[7979]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 09:57:32 proxy kernel[8474]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 03:50:44 web2 rsyslogd[7870]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 23:07:42 proxy cron[550]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 19 19:02:37 db1 kernel[3074]: notice: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=961) src=203.0.113.7
+Oct 18 12:44:17 proxy cron[864]: crit: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 20 04:53:08 db1 kernel[2851]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 23:05:29 web2 kernel[7530]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 12:55:02 web1 app-service[4197]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 19:21:34 web1 systemd[5265]: warning: pam_unix(sshd:session): session closed for user carol (uid=223)
+Oct 19 10:14:16 web2 app-service[8005]: warning: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 06:10:23 db1 systemd[2658]: info: systemd: Started User Manager for UID 1000
+Oct 20 03:20:06 ci-runner kernel[127]: warning: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 20 08:16:59 web1 app-service[3983]: info: pam_unix(sshd:session): session closed for user carol (uid=1027)
+Oct 19 07:56:04 web1 rsyslogd[9430]: notice: systemd: Started User Manager for UID 1000
+Oct 20 04:48:45 proxy sshd[8854]: info: app-service: Connection to database timed out after 12000ms
+Oct 19 19:33:13 db1 rsyslogd[3053]: notice: pam_unix(sshd:session): session closed for user carol src=203.0.113.7
+Oct 18 11:30:53 db1 app-service[2493]: info: app-service: Connection to database timed out after 12000ms
+Oct 19 12:01:20 db1 systemd[2418]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=1553)
+Oct 19 16:44:08 web1 cron[587]: info: app-service: Connection to database timed out after 12000ms
+Oct 19 09:02:53 ci-runner rsyslogd[6872]: warning: systemd: Started User Manager for UID 1000
+Oct 19 02:02:57 web1 systemd[570]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 09:12:39 ci-runner kernel[1716]: crit: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 19:40:26 ci-runner sshd[8359]: notice: Started Session 123 of user alice
+Oct 18 12:32:08 db1 kernel[1342]: error: pam_unix(sshd:session): session closed for user carol (uid=969)
+Oct 18 15:08:02 db1 rsyslogd[8627]: info: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 20:37:56 web1 systemd[1680]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 11:56:36 web2 kernel[6484]: warning: app-service: Connection to database timed out after 12000ms
+Oct 20 03:33:18 ci-runner rsyslogd[253]: error: app-service: Connection to database timed out after 12000ms
+Oct 19 01:34:52 web2 app-service[135]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 18:45:58 ci-runner rsyslogd[2754]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 19 10:47:22 web2 sshd[7745]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 20 05:41:58 proxy rsyslogd[3840]: crit: app-service: Connection to database timed out after 12000ms
+Oct 19 01:52:45 db1 app-service[4587]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 21:15:16 web1 sshd[6786]: notice: systemd: Started User Manager for UID 1000
+Oct 19 18:21:16 db1 cron[2107]: notice: systemd: Started User Manager for UID 1000
+Oct 18 18:31:22 web1 rsyslogd[9754]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 17:06:54 web1 rsyslogd[8509]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 08:03:27 web1 cron[4846]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 07:27:46 ci-runner kernel[7977]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=1382)
+Oct 18 17:27:10 ci-runner cron[317]: info: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 14:31:40 db1 sshd[2430]: info: pam_unix(sshd:session): session closed for user carol
+Oct 20 01:07:35 proxy systemd[3496]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=853)
+Oct 19 23:28:50 proxy app-service[9301]: notice: systemd: Started User Manager for UID 1000 (uid=1006)
+Oct 18 19:58:35 web2 cron[8526]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 06:08:48 proxy systemd[1900]: warning: pam_unix(sshd:session): session closed for user carol src=10.0.0.5
+Oct 19 19:36:26 proxy app-service[5380]: error: systemd: Started User Manager for UID 1000 (uid=755) src=10.0.0.5
+Oct 20 08:08:33 ci-runner cron[4924]: info: systemd: Started User Manager for UID 1000
+Oct 19 22:46:12 db1 rsyslogd[5954]: crit: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=809)
+Oct 19 07:21:18 ci-runner cron[6563]: error: systemd: Started User Manager for UID 1000
+Oct 19 01:47:16 proxy app-service[7456]: info: pam_unix(sshd:session): session closed for user carol
+Oct 19 17:27:51 db1 sshd[3688]: warning: app-service: Connection to database timed out after 12000ms
+Oct 19 04:01:56 proxy rsyslogd[5322]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 19:31:04 db1 sshd[5220]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 15:09:46 web1 app-service[7833]: error: Started Session 123 of user alice (uid=1803)
+Oct 20 09:45:01 ci-runner sshd[8052]: notice: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 18:39:22 web2 kernel[8055]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=639)
+Oct 19 13:40:46 proxy app-service[2489]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 20:03:52 db1 cron[953]: info: systemd: Started User Manager for UID 1000
+Oct 19 13:00:35 db1 cron[8361]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 15:48:57 web1 kernel[3307]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 15:27:38 db1 cron[1991]: info: rsyslogd: action 'action 1' resumed (module 'omfile') (uid=1264)
+Oct 19 10:34:29 db1 systemd[1948]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 22:18:40 ci-runner cron[5385]: error: app-service: Connection to database timed out after 12000ms
+Oct 19 14:16:16 ci-runner kernel[345]: error: pam_unix(sshd:session): session closed for user carol
+Oct 20 09:03:39 web1 sshd[8646]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 18 19:05:10 proxy app-service[4212]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 14:33:52 db1 cron[2058]: notice: app-service: Connection to database timed out after 12000ms
+Oct 20 08:37:02 db1 app-service[8813]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=554)
+Oct 18 09:54:04 proxy kernel[1155]: crit: rsyslogd: action 'action 1' resumed (module 'omfile') (uid=1837)
+Oct 19 02:31:43 ci-runner rsyslogd[3854]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 03:41:40 ci-runner kernel[8815]: notice: systemd: Started User Manager for UID 1000
+Oct 20 03:33:54 web2 rsyslogd[3031]: info: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=1779)
+Oct 20 06:38:32 proxy systemd[1843]: warning: systemd: Started User Manager for UID 1000 (uid=994)
+Oct 18 23:14:21 web2 sshd[9669]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 20:06:38 web2 kernel[4773]: warning: pam_unix(sshd:session): session closed for user carol (uid=1751)
+Oct 19 11:25:28 proxy rsyslogd[9046]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 17:15:51 web2 rsyslogd[5575]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=1415)
+Oct 18 13:51:08 db1 rsyslogd[2611]: crit: pam_unix(sshd:session): session closed for user carol (uid=1418)
+Oct 19 20:22:31 db1 rsyslogd[8522]: error: Started Session 123 of user alice src=192.168.1.50
+Oct 20 05:06:34 web1 sshd[5923]: notice: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 16:48:23 ci-runner cron[732]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 21:35:31 db1 app-service[7051]: notice: Started Session 123 of user alice
+Oct 20 01:11:29 proxy sshd[2630]: crit: app-service: Connection to database timed out after 12000ms src=192.168.1.50
+Oct 19 12:49:39 db1 rsyslogd[3172]: info: pam_unix(sshd:session): session closed for user carol (uid=825)
+Oct 18 23:46:31 web2 systemd[7187]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 16:45:31 web2 app-service[234]: crit: app-service: Connection to database timed out after 12000ms
+Oct 18 16:46:26 web1 kernel[7156]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 08:08:27 db1 rsyslogd[5822]: info: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 18:44:41 db1 sshd[7020]: warning: rsyslogd: action 'action 1' resumed (module 'omfile') src=192.168.1.50
+Oct 20 08:51:10 web1 systemd[6996]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 15:10:20 ci-runner kernel[9779]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 00:14:07 db1 systemd[4496]: warning: systemd: Started User Manager for UID 1000
+Oct 20 03:43:00 ci-runner systemd[4527]: error: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 21:37:20 db1 systemd[2967]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=1920)
+Oct 18 21:29:35 db1 sshd[5273]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 19 20:33:45 ci-runner app-service[5011]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 06:11:41 ci-runner kernel[6134]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=1900)
+Oct 18 10:30:32 proxy cron[7616]: crit: app-service: Connection to database timed out after 12000ms
+Oct 18 21:18:05 web1 app-service[2542]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 08:02:15 web1 rsyslogd[8768]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 19:29:23 proxy cron[4382]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 03:43:11 web2 rsyslogd[9725]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 05:54:24 web1 systemd[754]: info: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 23:04:06 db1 app-service[6573]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) src=10.0.0.5
+Oct 19 16:14:21 ci-runner kernel[3899]: notice: Started Session 123 of user alice
+Oct 19 10:33:34 ci-runner app-service[6584]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 18 18:58:03 web1 app-service[7698]: info: app-service: Connection to database timed out after 12000ms
+Oct 19 08:22:29 web1 cron[5585]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=376)
+Oct 19 06:14:26 web2 rsyslogd[7995]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 21:38:13 ci-runner cron[2321]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 14:10:59 web1 systemd[7575]: notice: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=1604)
+Oct 19 03:46:08 db1 app-service[2683]: notice: systemd: Started User Manager for UID 1000
+Oct 19 01:05:36 ci-runner sshd[9284]: warning: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 15:14:01 proxy systemd[9719]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=1248)
+Oct 19 21:21:23 ci-runner rsyslogd[8334]: info: systemd: Started User Manager for UID 1000
+Oct 20 03:37:47 ci-runner systemd[6438]: warning: pam_unix(sshd:session): session closed for user carol src=203.0.113.7
+Oct 19 05:05:32 db1 sshd[1935]: notice: pam_unix(sshd:session): session closed for user carol
+Oct 19 14:10:55 db1 systemd[7729]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 14:00:08 web1 cron[9410]: warning: Started Session 123 of user alice
+Oct 18 22:51:03 web2 rsyslogd[4378]: warning: systemd: Started User Manager for UID 1000
+Oct 19 03:37:35 web2 systemd[7610]: error: Started Session 123 of user alice
+Oct 19 10:07:49 web1 sshd[5475]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 19:50:47 web2 rsyslogd[2972]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 01:07:16 ci-runner systemd[9730]: info: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 08:10:49 web1 app-service[4406]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 10:28:47 ci-runner cron[7972]: info: Started Session 123 of user alice (uid=1532)
+Oct 19 21:25:34 web2 cron[9656]: notice: Started Session 123 of user alice
+Oct 19 10:17:55 ci-runner kernel[524]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 18 18:52:39 proxy systemd[8463]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 18:11:15 ci-runner kernel[7624]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 00:58:02 web1 app-service[9992]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 15:40:21 web1 sshd[2033]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 22:15:26 db1 cron[4696]: crit: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 13:36:15 ci-runner app-service[6605]: warning: app-service: Connection to database timed out after 12000ms (uid=206)
+Oct 19 15:15:36 web1 rsyslogd[5787]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=1511)
+Oct 19 10:20:00 web1 systemd[5639]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=1142)
+Oct 19 09:03:29 web1 app-service[4019]: crit: app-service: Connection to database timed out after 12000ms (uid=1113)
+Oct 19 21:35:23 ci-runner rsyslogd[2408]: notice: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 11:49:28 db1 cron[5823]: warning: Started Session 123 of user alice src=10.0.0.5
+Oct 19 23:02:58 db1 rsyslogd[3632]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 03:37:22 proxy rsyslogd[7053]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=988)
+Oct 20 08:19:05 db1 rsyslogd[5846]: warning: systemd: Started User Manager for UID 1000
+Oct 18 14:33:08 web2 rsyslogd[5245]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=1375)
+Oct 18 14:51:46 db1 rsyslogd[6413]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 02:40:45 web2 systemd[8964]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=456)
+Oct 19 12:50:52 web1 rsyslogd[1638]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 09:50:14 web2 rsyslogd[8252]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 00:41:34 web2 sshd[7350]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) src=10.0.0.5
+Oct 19 08:23:13 proxy app-service[1690]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 00:26:51 web2 app-service[8227]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 05:09:06 db1 kernel[3231]: info: Started Session 123 of user alice (uid=1237)
+Oct 18 20:10:54 proxy cron[9519]: info: pam_unix(sshd:session): session closed for user carol
+Oct 19 21:02:49 web2 sshd[3109]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 10:15:11 ci-runner systemd[6408]: error: rsyslogd: action 'action 1' resumed (module 'omfile') (uid=1702)
+Oct 20 08:21:26 web2 sshd[2337]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 17:54:45 ci-runner app-service[3547]: notice: pam_unix(sshd:session): session closed for user carol
+Oct 18 15:28:32 web2 kernel[8937]: crit: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 04:29:14 ci-runner app-service[3140]: error: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) src=203.0.113.7
+Oct 18 16:12:03 web1 rsyslogd[9863]: info: pam_unix(sshd:session): session closed for user carol src=203.0.113.7
+Oct 19 05:21:53 web2 cron[6480]: error: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 18 10:15:21 web1 app-service[7947]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=1368)
+Oct 18 18:00:44 proxy rsyslogd[5277]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 src=10.0.0.5
+Oct 19 00:47:36 web2 cron[4049]: error: systemd: Started User Manager for UID 1000 src=192.168.1.50
+Oct 20 01:28:59 db1 cron[3242]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 23:35:56 web1 app-service[568]: notice: app-service: Connection to database timed out after 12000ms
+Oct 20 06:38:24 ci-runner sshd[1331]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=929)
+Oct 19 04:30:02 db1 app-service[8163]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 09:56:35 proxy kernel[1452]: error: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 23:50:57 web2 app-service[5630]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=261)
+Oct 20 09:37:19 db1 sshd[1533]: warning: systemd: Started User Manager for UID 1000 src=192.168.1.50
+Oct 18 17:11:28 web2 rsyslogd[745]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 08:03:50 db1 rsyslogd[9430]: info: Started Session 123 of user alice
+Oct 19 15:43:33 db1 kernel[3907]: error: Started Session 123 of user alice
+Oct 19 19:34:02 proxy kernel[2829]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 11:10:07 web1 app-service[3911]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 08:16:31 ci-runner systemd[7633]: warning: app-service: Connection to database timed out after 12000ms
+Oct 18 15:30:57 db1 rsyslogd[9680]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 07:23:45 web2 systemd[1652]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 src=203.0.113.7
+Oct 18 20:59:55 web2 sshd[4626]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 src=192.168.1.50
+Oct 18 15:34:36 ci-runner sshd[7284]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 08:23:04 ci-runner rsyslogd[5347]: crit: pam_unix(sshd:session): session closed for user carol src=10.0.0.5
+Oct 19 00:35:42 db1 kernel[1442]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=1943)
+Oct 19 08:49:30 ci-runner sshd[1551]: info: pam_unix(sshd:session): session closed for user carol src=203.0.113.7
+Oct 19 03:01:29 web1 systemd[1126]: info: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 11:45:43 proxy cron[7724]: notice: pam_unix(sshd:session): session closed for user carol
+Oct 19 10:29:03 ci-runner sshd[2722]: notice: systemd: Started User Manager for UID 1000
+Oct 19 16:44:04 ci-runner sshd[8248]: notice: Started Session 123 of user alice (uid=1827)
+Oct 19 13:49:19 ci-runner cron[4488]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 23:48:40 proxy kernel[2924]: info: Started Session 123 of user alice
+Oct 19 00:22:54 db1 kernel[3412]: error: pam_unix(sshd:session): session closed for user carol
+Oct 19 02:16:21 db1 systemd[6027]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=1652)
+Oct 19 00:17:58 ci-runner cron[1415]: warning: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 10:22:53 ci-runner sshd[2767]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 20 02:21:29 db1 app-service[6700]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 17:55:40 web1 sshd[4719]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 09:27:07 ci-runner cron[3560]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 14:21:13 web2 sshd[1711]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 19 16:32:37 ci-runner app-service[4623]: notice: pam_unix(sshd:session): session closed for user carol
+Oct 20 03:28:55 web2 app-service[5284]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 21:41:37 web2 sshd[9370]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=627)
+Oct 18 12:02:42 db1 app-service[6912]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 06:07:17 web2 rsyslogd[1470]: info: Started Session 123 of user alice
+Oct 18 17:37:51 proxy kernel[1302]: info: pam_unix(sshd:session): session closed for user carol
+Oct 19 21:26:33 proxy sshd[737]: info: Started Session 123 of user alice src=192.168.1.50
+Oct 18 16:39:01 web1 rsyslogd[6126]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 20 09:34:15 db1 app-service[2070]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 20 03:07:00 db1 systemd[170]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 18 13:34:53 web2 rsyslogd[3899]: notice: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 src=192.168.1.50
+Oct 18 17:59:44 proxy kernel[260]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 05:01:43 db1 systemd[2123]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 20 05:57:54 db1 kernel[3312]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=1134)
+Oct 20 08:21:27 web2 sshd[6261]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) src=10.0.0.5
+Oct 20 03:43:03 db1 systemd[9727]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 21:28:50 web1 cron[951]: warning: Started Session 123 of user alice (uid=1901)
+Oct 19 16:47:21 proxy app-service[419]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=1544)
+Oct 19 16:21:35 web2 rsyslogd[1506]: error: app-service: Connection to database timed out after 12000ms
+Oct 18 10:19:41 db1 rsyslogd[6638]: crit: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 21:33:59 web2 sshd[1886]: notice: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 12:22:16 web2 kernel[6524]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=124)
+Oct 18 21:48:24 web1 sshd[766]: notice: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 04:36:18 proxy rsyslogd[5966]: error: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 11:16:14 proxy sshd[7101]: crit: systemd: Started User Manager for UID 1000
+Oct 20 06:34:07 web1 rsyslogd[7937]: crit: app-service: Connection to database timed out after 12000ms
+Oct 19 08:51:34 db1 systemd[8648]: error: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 12:15:20 proxy systemd[8752]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 12:11:58 db1 sshd[2822]: notice: Accepted password for bob from 192.168.1.50 port 56522 ssh2 src=192.168.1.50
+Oct 18 13:53:39 web1 kernel[1328]: notice: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=1074) src=203.0.113.7
+Oct 19 07:03:22 proxy cron[9320]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=133)
+Oct 19 10:23:29 db1 kernel[1265]: warning: Started Session 123 of user alice (uid=1012)
+Oct 19 02:52:24 ci-runner sshd[4243]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=1827)
+Oct 19 01:51:40 db1 kernel[7865]: error: rsyslogd: action 'action 1' resumed (module 'omfile') src=192.168.1.50
+Oct 18 16:05:03 web2 app-service[567]: crit: Started Session 123 of user alice
+Oct 19 21:29:22 web1 rsyslogd[2536]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 06:59:29 web2 systemd[8853]: info: app-service: Connection to database timed out after 12000ms
+Oct 18 18:42:55 ci-runner cron[7879]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 20 00:22:55 db1 app-service[7057]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 22:14:17 web1 cron[4434]: notice: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 11:23:01 ci-runner kernel[4737]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 src=10.0.0.5
+Oct 19 19:52:45 web1 rsyslogd[7808]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=395)
+Oct 19 02:20:22 ci-runner kernel[4641]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 04:25:16 web2 sshd[4669]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 src=203.0.113.7
+Oct 19 12:54:59 web2 app-service[5874]: crit: app-service: Connection to database timed out after 12000ms
+Oct 19 11:22:13 ci-runner kernel[6727]: notice: pam_unix(sshd:session): session closed for user carol src=203.0.113.7
+Oct 19 14:54:00 ci-runner cron[1076]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=996) src=10.0.0.5
+Oct 19 20:13:04 db1 sshd[1602]: info: systemd: Started User Manager for UID 1000
+Oct 20 09:02:24 ci-runner systemd[1868]: notice: rsyslogd: action 'action 1' resumed (module 'omfile') (uid=1362) src=10.0.0.5
+Oct 19 13:00:19 proxy rsyslogd[3175]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 01:49:56 web2 systemd[6743]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 16:14:52 web2 kernel[238]: notice: app-service: Connection to database timed out after 12000ms
+Oct 20 03:56:35 web1 cron[6045]: crit: Started Session 123 of user alice
+Oct 19 10:52:23 web2 cron[2262]: info: app-service: Connection to database timed out after 12000ms
+Oct 19 14:17:24 db1 app-service[9011]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 02:13:01 web2 app-service[1115]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) src=192.168.1.50
+Oct 18 15:29:03 ci-runner kernel[6482]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 18 13:10:45 web2 systemd[7043]: notice: Started Session 123 of user alice
+Oct 20 00:01:37 proxy systemd[6255]: crit: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 23:39:36 web2 kernel[6675]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 20 08:50:27 proxy kernel[9202]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=514)
+Oct 19 03:05:27 web2 systemd[522]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 22:01:55 web1 rsyslogd[8555]: info: pam_unix(sshd:session): session closed for user carol (uid=563) src=192.168.1.50
+Oct 20 05:57:03 web2 rsyslogd[4027]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 18:08:32 web1 kernel[2163]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 09:54:54 ci-runner app-service[4829]: info: Started Session 123 of user alice
+Oct 19 16:42:13 web1 cron[3823]: error: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 02:59:59 web1 systemd[5378]: info: Started Session 123 of user alice
+Oct 18 22:33:11 web1 cron[2698]: crit: Started Session 123 of user alice
+Oct 18 11:31:25 ci-runner app-service[5834]: info: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 03:32:54 db1 sshd[348]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 23:14:35 db1 sshd[2729]: info: pam_unix(sshd:session): session closed for user carol (uid=1654)
+Oct 18 22:13:15 ci-runner sshd[2023]: warning: pam_unix(sshd:session): session closed for user carol
+Oct 20 00:26:28 web2 cron[1588]: crit: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 04:29:01 proxy kernel[7773]: error: app-service: Connection to database timed out after 12000ms (uid=1083) src=192.168.1.50
+Oct 18 14:10:16 web1 app-service[4012]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=629)
+Oct 20 02:56:28 proxy app-service[7303]: info: Started Session 123 of user alice (uid=1499)
+Oct 18 23:24:25 proxy kernel[6126]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 23:14:47 db1 app-service[4581]: notice: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=851)
+Oct 19 08:53:09 db1 app-service[1087]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=328)
+Oct 20 09:37:34 db1 kernel[308]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 18 23:04:21 proxy kernel[2390]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 13:01:40 web2 rsyslogd[670]: error: pam_unix(sshd:session): session closed for user carol (uid=1665)
+Oct 19 11:49:21 db1 sshd[9755]: error: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 02:56:01 db1 kernel[4181]: warning: pam_unix(sshd:session): session closed for user carol
+Oct 19 15:16:50 ci-runner systemd[9484]: warning: app-service: Connection to database timed out after 12000ms
+Oct 19 23:16:53 web1 rsyslogd[7024]: info: pam_unix(sshd:session): session closed for user carol
+Oct 19 04:22:13 proxy sshd[9999]: info: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 21:00:58 ci-runner cron[8825]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh) (uid=1459)
+Oct 19 23:12:38 web2 cron[2739]: info: Started Session 123 of user alice
+Oct 19 22:32:36 ci-runner systemd[2310]: info: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=681)
+Oct 19 10:12:49 db1 systemd[2028]: warning: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 18 22:50:49 proxy systemd[1866]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 18:41:21 web1 systemd[8247]: error: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=1282)
+Oct 18 14:34:44 ci-runner sshd[3801]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 18 16:47:10 web2 kernel[7954]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 21:56:21 ci-runner rsyslogd[5749]: info: pam_unix(sshd:session): session closed for user carol
+Oct 18 11:57:04 db1 rsyslogd[8394]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=792)
+Oct 19 01:53:55 ci-runner sshd[6199]: crit: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 00:48:34 db1 sshd[1437]: notice: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 20 06:12:53 web1 cron[6460]: crit: Started Session 123 of user alice
+Oct 20 04:55:27 proxy kernel[9116]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 01:29:51 proxy sshd[8128]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 (uid=403)
+Oct 19 14:19:44 ci-runner app-service[7970]: notice: systemd: Started User Manager for UID 1000 src=192.168.1.50
+Oct 18 23:11:53 db1 cron[9885]: error: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 17:57:53 web2 rsyslogd[200]: info: rsyslogd: action 'action 1' resumed (module 'omfile') src=203.0.113.7
+Oct 19 21:08:28 db1 app-service[9780]: crit: pam_unix(sshd:session): session closed for user carol
+Oct 20 00:54:55 ci-runner cron[658]: notice: systemd: Started User Manager for UID 1000
+Oct 20 01:07:54 ci-runner rsyslogd[3410]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0 src=192.168.1.50
+Oct 20 04:03:34 web2 kernel[5723]: crit: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 18 14:11:53 db1 app-service[8992]: error: Accepted password for bob from 192.168.1.50 port 56522 ssh2 src=203.0.113.7
+Oct 19 21:27:07 ci-runner cron[5026]: notice: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 20 02:35:03 web1 kernel[5700]: error: Started Session 123 of user alice src=10.0.0.5
+Oct 18 13:37:39 web2 app-service[7863]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2 (uid=596)
+Oct 19 14:56:42 web2 sshd[5532]: warning: systemd: Started User Manager for UID 1000
+Oct 19 20:24:54 db1 kernel[3709]: notice: pam_unix(sshd:session): session closed for user carol src=10.0.0.5
+Oct 19 05:32:33 ci-runner systemd[3855]: notice: systemd: Started User Manager for UID 1000
+Oct 19 21:51:36 proxy cron[4053]: crit: rsyslogd: action 'action 1' resumed (module 'omfile')
+Oct 19 06:29:15 proxy systemd[7568]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 12:12:51 ci-runner cron[5955]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 20 06:54:07 ci-runner app-service[7424]: info: app-service: Connection to database timed out after 12000ms src=192.168.1.50
+Oct 19 22:55:01 ci-runner app-service[4982]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 04:55:29 ci-runner app-service[8466]: info: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2 (uid=1606) src=203.0.113.7
+Oct 20 02:57:56 proxy systemd[5033]: warning: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 18 10:24:36 proxy sshd[8724]: notice: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 06:06:00 web2 app-service[9764]: error: Started Session 123 of user alice
+Oct 19 02:10:02 web1 sshd[9271]: crit: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 15:03:44 db1 rsyslogd[8586]: notice: rsyslogd: action 'action 1' resumed (module 'omfile') (uid=1647)
+Oct 18 12:22:53 web2 cron[9383]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 19 08:56:44 web2 kernel[2899]: info: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 19 10:08:54 db1 systemd[4717]: error: pam_unix(sshd:session): session closed for user carol
+Oct 19 20:34:00 ci-runner sshd[7116]: crit: Started Session 123 of user alice src=192.168.1.50
+Oct 19 13:13:14 ci-runner cron[8787]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10
+Oct 18 15:11:42 db1 app-service[3462]: info: Started Session 123 of user alice
+Oct 18 16:39:37 web2 systemd[4085]: error: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 06:24:47 ci-runner sshd[8519]: warning: DHCPDISCOVER from 00:11:22:33:44:55 via eth0
+Oct 20 01:35:07 web2 kernel[370]: crit: Started Session 123 of user alice src=203.0.113.7
+Oct 19 15:02:54 web1 sshd[1836]: notice: app-service: Connection to database timed out after 12000ms
+Oct 19 02:21:03 web2 sshd[8865]: warning: CRON[2245]: (root) CMD (/usr/local/bin/backup.sh)
+Oct 20 08:30:27 web2 rsyslogd[3048]: crit: kernel: [UFW BLOCK] IN=eth0 OUT= MAC=de:ad:be:ef SRC=10.0.0.5 DST=10.0.0.10 (uid=279)
+Oct 20 02:09:43 web2 rsyslogd[6452]: notice: Failed password for invalid user guest from 10.10.5.3 port 40211 ssh2
+Oct 19 21:52:38 web2 app-service[9917]: error: Started Session 123 of user alice src=10.0.0.5
+Oct 19 03:19:19 web2 systemd[2469]: error: systemd: Started User Manager for UID 1000
+Oct 19 13:47:34 db1 cron[6477]: crit: Accepted password for bob from 192.168.1.50 port 56522 ssh2
+Oct 19 23:22:16 ci-runner app-service[3619]: notice: DHCPDISCOVER from 00:11:22:33:44:55 via eth0

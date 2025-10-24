@@ -1,0 +1,400 @@
+2025-10-21 03:08:18,866 INFO org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 16:30:06,866 INFO org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 19:18:05,866 ERROR org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-21 09:27:02,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 19:24:45,866 INFO org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 14:59:15,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 09:02:10,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: NameNode RPC handler starting
+2025-10-20 14:19:38,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 02:04:15,866 ERROR org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-21 04:45:04,866 ERROR org.apache.hadoop.ipc.Server: Registered DataNode at 10.0.0.12:9866
+2025-10-21 09:42:43,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-21 00:09:04,866 INFO org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-21 09:46:47,866 INFO org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-20 12:49:15,866 ERROR org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 07:01:26,866 INFO org.apache.hadoop.security.UserGroupInformation: Starting DataNode
+2025-10-20 17:51:11,866 INFO org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 21:49:33,866 WARN org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 05:50:41,866 ERROR org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 20:22:49,866 INFO org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 07:03:51,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-20 16:46:52,866 INFO org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-20 12:53:24,866 WARN org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 22:05:42,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 04:40:43,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: NameNode RPC handler starting
+2025-10-20 16:17:03,866 WARN org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 15:27:24,866 ERROR org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 06:24:39,866 ERROR org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 11:35:21,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 13:33:07,866 WARN org.apache.hadoop.ipc.Server: Registered DataNode at 10.0.0.12:9866
+2025-10-21 03:04:16,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 01:48:47,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 00:21:05,866 INFO org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 21:02:28,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 23:49:19,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-20 20:20:45,866 WARN org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 09:27:28,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-20 21:32:42,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: IOException while reading block file
+2025-10-21 09:15:51,866 ERROR org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 06:24:24,866 ERROR org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 09:46:15,866 ERROR org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-21 04:46:20,866 ERROR org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-21 08:29:50,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-21 04:12:29,866 ERROR org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-21 10:29:16,866 ERROR org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 22:14:44,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-20 15:31:07,866 INFO org.apache.hadoop.security.UserGroupInformation: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 18:03:24,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 08:21:54,866 ERROR org.apache.hadoop.hdfs.StateChange: IOException while reading block file
+2025-10-20 20:22:47,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 19:34:11,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 03:33:04,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-20 22:29:42,866 ERROR org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-20 22:27:29,866 WARN org.apache.hadoop.ipc.Server: Registered DataNode at 10.0.0.12:9866
+2025-10-21 03:06:51,866 INFO org.apache.hadoop.security.UserGroupInformation: NameNode RPC handler starting
+2025-10-21 07:04:01,866 INFO org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 09:38:41,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 12:22:40,866 ERROR org.apache.hadoop.security.UserGroupInformation: NameNode RPC handler starting
+2025-10-20 13:13:31,866 INFO org.apache.hadoop.ipc.Server: Starting DataNode
+2025-10-20 20:35:36,866 INFO org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-21 01:09:19,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-21 02:27:40,866 INFO org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-21 05:46:54,866 ERROR org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 06:12:05,866 INFO org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 21:10:43,866 ERROR org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-21 02:31:00,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: IOException while reading block file
+2025-10-21 10:28:38,866 ERROR org.apache.hadoop.ipc.Server: Registered DataNode at 10.0.0.12:9866
+2025-10-21 01:15:52,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 05:24:58,866 WARN org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-21 07:21:11,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 20:00:19,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 06:30:48,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-21 07:09:45,866 WARN org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-21 03:27:30,866 WARN org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-21 00:09:28,866 INFO org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-20 18:13:31,866 WARN org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-21 04:58:18,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-20 16:08:20,866 ERROR org.apache.hadoop.security.UserGroupInformation: NameNode RPC handler starting
+2025-10-20 12:04:34,866 WARN org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 15:26:03,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-20 18:13:04,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 08:44:15,866 INFO org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-20 18:46:08,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 04:39:21,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 13:40:50,866 INFO org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 23:36:25,866 WARN org.apache.hadoop.security.UserGroupInformation: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 04:44:15,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 02:24:37,866 WARN org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-20 17:48:38,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 10:55:17,866 INFO org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-20 23:24:21,866 ERROR org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 02:58:22,866 WARN org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 21:59:00,866 WARN org.apache.hadoop.security.UserGroupInformation: NameNode RPC handler starting
+2025-10-20 12:15:32,866 WARN org.apache.hadoop.security.UserGroupInformation: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 09:26:09,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 04:52:33,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 07:56:41,866 WARN org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 02:36:26,866 ERROR org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 20:52:52,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 02:25:22,866 ERROR org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 19:27:04,866 WARN org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 23:24:49,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 23:48:10,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-21 01:04:43,866 WARN org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 18:12:32,866 INFO org.apache.hadoop.security.UserGroupInformation: Starting DataNode
+2025-10-21 06:58:22,866 ERROR org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-21 09:23:47,866 WARN org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 21:34:34,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-21 06:20:58,866 ERROR org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-20 20:58:16,866 INFO org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 15:27:58,866 INFO org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 11:41:04,866 INFO org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 23:39:26,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 15:39:39,866 WARN org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 01:00:11,866 INFO org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 12:08:35,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 07:26:02,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-21 00:40:17,866 ERROR org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 06:01:25,866 INFO org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-21 00:27:07,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 17:46:53,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 17:05:55,866 INFO org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 06:18:43,866 WARN org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-20 18:01:15,866 ERROR org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-21 10:26:47,866 ERROR org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 07:19:00,866 ERROR org.apache.hadoop.security.UserGroupInformation: Starting DataNode
+2025-10-21 08:02:06,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 03:13:40,866 WARN org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 10:15:06,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 13:57:45,866 INFO org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 15:02:53,866 ERROR org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-20 20:04:50,866 WARN org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 02:35:35,866 ERROR org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 09:53:30,866 WARN org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 15:26:15,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 23:30:57,866 WARN org.apache.hadoop.ipc.Server: NameNode RPC handler starting
+2025-10-20 20:29:44,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 22:34:56,866 WARN org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 19:18:02,866 WARN org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-21 10:36:14,866 INFO org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 16:31:47,866 INFO org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 05:14:44,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-20 16:10:40,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-20 18:28:04,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-21 05:45:12,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 22:53:10,866 WARN org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-20 13:13:19,866 WARN org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-21 00:27:37,866 ERROR org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-20 21:16:00,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-20 19:30:28,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-21 05:05:09,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 21:06:55,866 INFO org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 17:09:23,866 WARN org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-20 16:48:09,866 INFO org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 10:29:21,866 INFO org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-20 18:09:48,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-20 17:06:25,866 ERROR org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-21 03:37:27,866 WARN org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 11:55:01,866 INFO org.apache.hadoop.security.UserGroupInformation: NameNode RPC handler starting
+2025-10-21 07:55:41,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: IOException while reading block file
+2025-10-21 00:44:23,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Registered DataNode at 10.0.0.12:9866
+2025-10-21 10:09:55,866 WARN org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 23:48:22,866 ERROR org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 17:20:34,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-20 17:26:50,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 04:24:54,866 ERROR org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-21 04:53:45,866 WARN org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-21 10:51:06,866 INFO org.apache.hadoop.security.UserGroupInformation: Starting DataNode
+2025-10-20 19:10:16,866 INFO org.apache.hadoop.ipc.Server: NameNode RPC handler starting
+2025-10-20 23:56:15,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 00:27:31,866 INFO org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 03:04:37,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 08:40:32,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 13:58:20,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 06:19:10,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 13:47:04,866 INFO org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-20 16:13:38,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-20 15:41:00,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 00:26:40,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 08:58:40,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 03:52:31,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: IOException while reading block file
+2025-10-20 20:27:55,866 ERROR org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-20 14:50:51,866 WARN org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 00:32:55,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 05:55:46,866 INFO org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-20 12:00:15,866 WARN org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-20 15:58:49,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-21 06:37:47,866 ERROR org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-20 13:16:11,866 INFO org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 09:05:18,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-20 14:01:51,866 WARN org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-21 05:35:47,866 ERROR org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 11:54:49,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-21 01:43:30,866 INFO org.apache.hadoop.security.UserGroupInformation: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 13:19:12,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 12:54:34,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-20 14:40:01,866 WARN org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 19:59:35,866 ERROR org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-21 09:48:44,866 INFO org.apache.hadoop.ipc.Server: Starting DataNode
+2025-10-21 09:14:45,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: NameNode RPC handler starting
+2025-10-20 17:29:18,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: NameNode RPC handler starting
+2025-10-21 07:14:28,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 02:45:39,866 INFO org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 13:41:07,866 INFO org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 08:35:46,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 19:11:34,866 INFO org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 15:20:42,866 WARN org.apache.hadoop.ipc.Server: NameNode RPC handler starting
+2025-10-21 09:16:25,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 22:46:45,866 WARN org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 14:30:36,866 WARN org.apache.hadoop.hdfs.StateChange: IOException while reading block file
+2025-10-21 04:31:22,866 ERROR org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 01:13:00,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 14:14:42,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-21 07:15:16,866 INFO org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-20 12:34:53,866 ERROR org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 05:31:44,866 ERROR org.apache.hadoop.ipc.Server: Starting DataNode
+2025-10-20 11:21:09,866 ERROR org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-21 07:51:00,866 WARN org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-21 01:26:10,866 INFO org.apache.hadoop.security.UserGroupInformation: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 00:16:25,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 18:37:40,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 10:17:23,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-21 07:50:05,866 INFO org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-21 07:51:01,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 02:40:43,866 ERROR org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-21 01:56:21,866 WARN org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 14:06:50,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 05:15:50,866 WARN org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 17:22:03,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 19:30:56,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-20 22:31:57,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-20 14:23:14,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 04:45:23,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 17:23:57,866 INFO org.apache.hadoop.security.UserGroupInformation: Starting DataNode
+2025-10-21 02:58:59,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 21:16:27,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 12:39:27,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 03:28:12,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-21 04:52:25,866 ERROR org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 23:01:24,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 09:01:15,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: NameNode RPC handler starting
+2025-10-21 08:46:06,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 16:30:36,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-20 20:15:05,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 02:15:14,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-21 02:38:04,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 19:35:06,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: NameNode RPC handler starting
+2025-10-20 19:40:53,866 INFO org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-20 16:45:48,866 INFO org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 20:41:24,866 WARN org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 08:55:28,866 INFO org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 06:37:39,866 INFO org.apache.hadoop.hdfs.StateChange: IOException while reading block file
+2025-10-20 12:28:03,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 05:35:09,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: IOException while reading block file
+2025-10-21 10:08:02,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-20 13:55:54,866 ERROR org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 13:54:47,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 13:39:47,866 ERROR org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-21 06:39:20,866 INFO org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 15:38:02,866 ERROR org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-21 10:36:56,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-20 15:26:01,866 INFO org.apache.hadoop.ipc.Server: Registered DataNode at 10.0.0.12:9866
+2025-10-21 10:00:36,866 WARN org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 22:56:31,866 WARN org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 15:03:09,866 ERROR org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 20:14:02,866 INFO org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 18:56:52,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 05:41:05,866 INFO org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 23:56:41,866 WARN org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 19:54:25,866 WARN org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-21 08:34:40,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 10:30:33,866 INFO org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 10:31:16,866 WARN org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-20 21:54:14,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 09:28:25,866 ERROR org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-20 22:10:51,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 17:24:09,866 ERROR org.apache.hadoop.ipc.Server: NameNode RPC handler starting
+2025-10-20 18:43:00,866 ERROR org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 01:49:46,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-20 20:37:48,866 INFO org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 12:00:24,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 14:57:53,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 17:54:05,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 05:10:52,866 WARN org.apache.hadoop.security.UserGroupInformation: NameNode RPC handler starting
+2025-10-20 12:12:00,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 04:14:57,866 ERROR org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-20 17:32:41,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 06:28:56,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-21 10:33:25,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: IOException while reading block file
+2025-10-21 05:37:00,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 08:26:42,866 WARN org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 09:11:18,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 17:48:14,866 WARN org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-20 13:14:37,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-20 17:33:41,866 WARN org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 15:17:08,866 WARN org.apache.hadoop.security.UserGroupInformation: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 23:39:39,866 INFO org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-21 01:17:35,866 INFO org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-20 19:06:38,866 INFO org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-20 22:20:10,866 WARN org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-20 13:49:24,866 INFO org.apache.hadoop.security.UserGroupInformation: NameNode RPC handler starting
+2025-10-21 01:53:50,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 15:35:42,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 21:15:46,866 ERROR org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 15:02:55,866 ERROR org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 23:39:22,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 18:22:52,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-20 16:46:33,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 13:07:02,866 INFO org.apache.hadoop.hdfs.StateChange: IOException while reading block file
+2025-10-20 12:05:31,866 WARN org.apache.hadoop.hdfs.StateChange: NameNode RPC handler starting
+2025-10-20 22:02:29,866 ERROR org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 04:07:00,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 16:19:46,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-20 19:29:36,866 ERROR org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 01:17:23,866 INFO org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-21 06:53:17,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Registered DataNode at 10.0.0.12:9866
+2025-10-21 05:56:12,866 INFO org.apache.hadoop.security.UserGroupInformation: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 04:17:11,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 19:02:57,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-21 06:34:08,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-21 05:05:16,866 INFO org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-21 06:54:04,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 15:35:29,866 WARN org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-20 18:07:22,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 23:47:00,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-20 22:40:02,866 INFO org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 01:15:54,866 ERROR org.apache.hadoop.ipc.Server: NameNode RPC handler starting
+2025-10-21 01:30:53,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 02:03:25,866 WARN org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-20 14:10:31,866 WARN org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 12:30:17,866 ERROR org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-21 08:56:32,866 INFO org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-21 07:12:44,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-21 03:23:46,866 ERROR org.apache.hadoop.ipc.Server: Registered DataNode at 10.0.0.12:9866
+2025-10-21 03:51:16,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-20 17:27:34,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-21 09:42:07,866 INFO org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-20 22:37:59,866 ERROR org.apache.hadoop.security.UserGroupInformation: Shutting down NameNode
+2025-10-21 05:19:33,866 WARN org.apache.hadoop.ipc.Server: Block report completed in 2.31 seconds
+2025-10-21 00:58:43,866 WARN org.apache.hadoop.hdfs.StateChange: Shutting down NameNode
+2025-10-20 19:31:39,866 INFO org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 11:46:42,866 WARN org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 05:12:17,866 WARN org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 13:06:17,866 ERROR org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-21 08:07:42,866 INFO org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-20 14:35:36,866 INFO org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-20 18:40:46,866 ERROR org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-21 00:19:52,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-21 06:30:10,866 INFO org.apache.hadoop.security.UserGroupInformation: Starting DataNode
+2025-10-21 10:15:23,866 WARN org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-21 03:24:01,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Shutting down NameNode
+2025-10-21 06:45:14,866 WARN org.apache.hadoop.security.UserGroupInformation: Block report completed in 2.31 seconds
+2025-10-21 00:05:09,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-21 01:36:46,866 ERROR org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-20 12:50:45,866 ERROR org.apache.hadoop.ipc.Server: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 17:16:28,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-20 12:48:58,866 WARN org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 12:45:34,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-21 01:50:34,866 WARN org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-20 14:02:41,866 ERROR org.apache.hadoop.hdfs.StateChange: IOException while reading block file
+2025-10-20 12:23:12,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 21:08:20,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-21 02:12:26,866 ERROR org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-20 23:29:39,866 ERROR org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-20 17:14:53,866 INFO org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-21 02:14:59,866 ERROR org.apache.hadoop.security.UserGroupInformation: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 01:10:22,866 INFO org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 16:03:30,866 WARN org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-21 05:22:08,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Shutting down NameNode
+2025-10-21 04:22:18,866 ERROR org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 00:52:12,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 10:50:11,866 ERROR org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-20 18:49:11,866 WARN org.apache.hadoop.hdfs.StateChange: Registered DataNode at 10.0.0.12:9866
+2025-10-20 17:09:12,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 11:47:46,866 WARN org.apache.hadoop.hdfs.StateChange: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 00:11:19,866 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: Registered DataNode at 10.0.0.12:9866
+2025-10-21 08:05:39,866 INFO org.apache.hadoop.hdfs.server.namenode.NameNode: Starting DataNode
+2025-10-21 03:19:57,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Block report completed in 2.31 seconds
+2025-10-20 18:52:54,866 INFO org.apache.hadoop.ipc.Server: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-20 16:35:44,866 WARN org.apache.hadoop.ipc.Server: IOException while reading block file
+2025-10-20 22:34:55,866 ERROR org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 17:02:40,866 WARN org.apache.hadoop.hdfs.StateChange: Starting DataNode
+2025-10-21 10:19:01,866 ERROR org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 21:47:18,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Permission denied: user=hdfs, access=WRITE, inode=/user/data
+2025-10-21 06:16:02,866 INFO org.apache.hadoop.hdfs.StateChange: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 23:05:53,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Received heartbeat from DataNode at 10.0.0.15:9866
+2025-10-20 14:42:58,866 ERROR org.apache.hadoop.security.UserGroupInformation: Registered DataNode at 10.0.0.12:9866
+2025-10-21 10:19:04,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Registered DataNode at 10.0.0.12:9866
+2025-10-20 16:09:13,866 WARN org.apache.hadoop.ipc.Server: Starting DataNode
+2025-10-20 21:08:43,866 ERROR org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-20 14:36:20,866 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: IOException while reading block file
+2025-10-21 05:57:27,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: NameNode RPC handler starting
+2025-10-21 07:47:02,866 WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds
+2025-10-21 09:19:47,866 WARN org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-21 04:16:51,866 WARN org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 13:41:54,866 INFO org.apache.hadoop.ipc.Server: Shutting down NameNode
+2025-10-21 02:23:35,866 ERROR org.apache.hadoop.hdfs.server.datanode.DataNode: Starting DataNode
+2025-10-20 21:16:04,866 WARN org.apache.hadoop.hdfs.StateChange: Block report completed in 2.31 seconds
+2025-10-20 15:36:25,866 WARN org.apache.hadoop.security.UserGroupInformation: IOException while reading block file
+2025-10-20 16:19:29,866 INFO org.apache.hadoop.security.UserGroupInformation: Starting DataNode
+2025-10-21 06:22:41,866 ERROR org.apache.hadoop.hdfs.server.namenode.NameNode: Block report completed in 2.31 seconds

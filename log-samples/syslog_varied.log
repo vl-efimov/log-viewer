@@ -1,0 +1,800 @@
+Oct 20 06:56:31 web1 systemd[7162]: info: docker updated successfully
+Oct 18 19:11:09 db1 systemd[9175]: emerg: sshd updated successfully
+Oct 19 14:07:03 vpn auditd[8898]: err: postgresql connected successfully src=198.51.100.12 dst=10.0.0.5
+Oct 18 20:58:00 firewall app-service[1280]: emerg: permission denied (code=861)
+Oct 19 16:21:25 router1 kernel[7606]: debug: connection from 192.168.1.10 by user bob
+Oct 21 09:11:26 web2 kernel[1365]: info: systemd updated successfully
+Oct 20 05:51:57 db1 docker[1220]: err: haproxy failed successfully
+Oct 19 09:20:02 ci-runner sshd[2801]: err: connection from 172.16.2.33 by user bob src=172.16.2.33 dst=203.0.113.7
+Oct 19 05:29:02 web1 nginx[3276]: warning: connection from 10.0.0.5 by user bob
+Oct 18 12:13:31 vpn nginx[9475]: emerg: rsyslog started successfully
+Oct 19 16:15:00 db1 sshd[9170]: debug: connection from 10.0.0.5 by user guest src=10.0.0.5 dst=192.168.1.10
+Oct 18 22:31:42 db1 kernel[4210]: info: connection from 203.0.113.7 by user carol
+Oct 19 19:39:16 ci-runner cron[3733]: emerg: redis started successfully
+Oct 20 13:24:25 router1 nginx[4308]: err: connection from 10.0.0.5 by user alice
+Oct 20 01:23:47 ci-runner sshd[7159]: crit: docker disconnected successfully src=203.0.113.7 dst=192.168.1.10
+Oct 18 14:48:03 web1 nginx[3045]: warning: connection from 198.51.100.12 by user bob src=10.0.0.5 dst=10.0.0.5
+Oct 20 18:36:02 web2 cron[2423]: err: connection from 192.168.1.10 by user root
+Oct 21 07:38:57 web1 kernel[5661]: alert: docker failed successfully src=172.16.2.33 dst=172.16.2.33
+Oct 19 14:45:26 vpn app-service[3152]: crit: connection from 10.0.0.5 by user bob
+Oct 21 09:57:20 ci-runner rsyslogd[4299]: debug: haproxy terminated successfully
+Oct 19 03:37:32 vpn kernel[5907]: info: nginx restarted successfully
+Oct 21 07:48:52 web2 rsyslogd[3906]: info: postgresql disconnected successfully
+Oct 19 05:45:48 ci-runner app-service[473]: info: rsyslog disconnected successfully src=198.51.100.12 dst=192.168.1.10
+Oct 20 22:16:32 db1 cron[6729]: debug: rsyslog terminated successfully
+Oct 20 17:24:06 router1 ufw[4287]: debug: segmentation fault (code=539)
+Oct 19 01:12:03 web2 ufw[104]: emerg: systemd updated successfully
+Oct 20 20:17:33 db1 kernel[3550]: info: docker started successfully
+Oct 18 20:14:15 ci-runner kernel[4866]: crit: nginx updated successfully src=10.0.0.5 dst=172.16.2.33
+Oct 18 12:43:27 proxy auditd[4432]: notice: connection from 203.0.113.7 by user service
+Oct 19 10:48:37 vpn nginx[2546]: err: connection from 10.0.0.5 by user carol
+Oct 20 21:21:50 firewall ufw[3696]: alert: connection from 172.16.2.33 by user service
+Oct 20 08:08:31 vpn systemd[6481]: info: nginx disconnected successfully
+Oct 20 07:41:27 web2 app-service[5660]: notice: haproxy failed successfully
+Oct 21 10:00:27 db1 cron[354]: info: connection from 198.51.100.12 by user guest
+Oct 19 18:29:04 proxy app-service[4356]: info: systemd terminated successfully
+Oct 20 20:05:56 vpn nginx[1773]: warning: haproxy updated successfully
+Oct 19 20:23:27 web2 app-service[7443]: crit: haproxy updated successfully
+Oct 20 22:37:57 web2 ufw[397]: crit: sshd failed successfully
+Oct 20 05:51:22 web1 auditd[2763]: emerg: systemd started successfully
+Oct 19 02:31:46 web2 auditd[8727]: alert: rsyslog connected successfully
+Oct 18 21:32:35 router1 nginx[5420]: err: connection from 198.51.100.12 by user service
+Oct 18 23:51:34 db1 ufw[9185]: err: sshd terminated successfully
+Oct 18 17:37:26 router1 sshd[9957]: alert: rsyslog stopped successfully
+Oct 19 05:32:12 web1 sshd[5348]: warning: systemd restarted successfully
+Oct 19 23:37:11 vpn docker[3031]: emerg: sshd stopped successfully
+Oct 19 06:17:56 web1 cron[5460]: warning: nginx disconnected successfully
+Oct 18 15:14:49 web1 nginx[1321]: err: connection from 192.168.1.10 by user guest src=203.0.113.7 dst=198.51.100.12
+Oct 21 05:40:59 firewall systemd[6809]: crit: connection from 172.16.2.33 by user root src=192.168.1.10 dst=198.51.100.12
+Oct 18 12:54:46 web2 nginx[4860]: alert: systemd started successfully src=192.168.1.10 dst=198.51.100.12
+Oct 21 03:10:26 vpn sshd[8001]: err: connection from 10.0.0.5 by user alice src=192.168.1.10 dst=10.0.0.5
+Oct 19 21:11:33 proxy auditd[7445]: info: broken pipe (code=594)
+Oct 20 04:56:31 web2 kernel[130]: notice: connection from 10.0.0.5 by user guest
+Oct 19 00:56:28 ci-runner sshd[2175]: warning: connection from 203.0.113.7 by user bob
+Oct 19 23:36:14 web1 nginx[5994]: debug: address already in use (code=655) src=192.168.1.10 dst=192.168.1.10
+Oct 19 13:21:45 web1 app-service[2660]: emerg: rsyslog disconnected successfully
+Oct 19 07:23:05 web2 auditd[574]: notice: rsyslog failed successfully
+Oct 21 11:22:33 web1 sshd[939]: notice: connection from 172.16.2.33 by user carol
+Oct 20 17:49:35 ci-runner auditd[3966]: warning: rsyslog started successfully
+Oct 20 21:48:42 web1 ufw[4624]: err: rsyslog terminated successfully
+Oct 18 17:55:32 web2 sshd[2505]: notice: haproxy failed successfully
+Oct 20 18:50:28 firewall auditd[4182]: notice: connection from 10.0.0.5 by user alice
+Oct 21 02:29:16 web2 systemd[6002]: err: haproxy restarted successfully src=192.168.1.10 dst=203.0.113.7
+Oct 18 18:48:27 firewall cron[2553]: emerg: connection from 172.16.2.33 by user guest
+Oct 20 01:38:45 router1 app-service[2525]: debug: redis terminated successfully src=192.168.1.10 dst=203.0.113.7
+Oct 19 16:18:44 web2 sshd[3011]: alert: nginx updated successfully
+Oct 20 01:54:32 router1 auditd[2347]: err: nginx updated successfully src=203.0.113.7 dst=172.16.2.33
+Oct 20 14:54:05 firewall docker[1063]: warning: connection from 172.16.2.33 by user alice
+Oct 19 03:57:01 proxy app-service[8865]: alert: connection from 172.16.2.33 by user root
+Oct 19 08:43:16 vpn cron[6662]: alert: rsyslog terminated successfully
+Oct 19 05:02:11 proxy app-service[7581]: warning: redis started successfully
+Oct 20 14:41:51 ci-runner systemd[8321]: debug: connection from 203.0.113.7 by user root
+Oct 19 11:11:18 ci-runner auditd[4392]: debug: connection from 10.0.0.5 by user service
+Oct 20 07:20:53 ci-runner app-service[3154]: crit: connection from 203.0.113.7 by user root
+Oct 21 07:53:00 firewall auditd[5643]: debug: haproxy failed successfully
+Oct 19 22:21:20 router1 auditd[9202]: emerg: connection from 198.51.100.12 by user service
+Oct 20 01:30:32 db1 docker[6521]: info: connection from 192.168.1.10 by user root
+Oct 20 08:34:20 router1 nginx[4834]: info: connection from 192.168.1.10 by user service
+Oct 19 10:13:52 firewall sshd[9124]: crit: redis disconnected successfully src=198.51.100.12 dst=203.0.113.7
+Oct 21 07:53:30 firewall auditd[1850]: emerg: connection from 203.0.113.7 by user alice src=192.168.1.10 dst=10.0.0.5
+Oct 20 11:04:42 proxy docker[7163]: alert: connection from 192.168.1.10 by user guest
+Oct 20 21:16:09 db1 docker[997]: info: connection from 192.168.1.10 by user carol src=172.16.2.33 dst=172.16.2.33
+Oct 19 17:51:31 ci-runner sshd[2068]: warning: docker terminated successfully
+Oct 18 14:01:51 vpn kernel[883]: err: connection from 172.16.2.33 by user alice src=192.168.1.10 dst=203.0.113.7
+Oct 19 19:13:10 ci-runner app-service[6442]: emerg: connection from 172.16.2.33 by user bob
+Oct 19 12:51:57 firewall auditd[6684]: debug: postgresql failed successfully
+Oct 20 14:56:21 web1 ufw[1785]: notice: nginx connected successfully
+Oct 18 23:27:25 firewall kernel[5039]: crit: permission denied (code=994)
+Oct 18 12:10:33 vpn docker[4828]: alert: systemd updated successfully
+Oct 20 01:03:20 router1 ufw[3388]: crit: connection from 198.51.100.12 by user carol
+Oct 19 06:53:00 router1 systemd[3528]: warning: address already in use (code=931)
+Oct 20 03:26:25 web2 systemd[6364]: info: postgresql restarted successfully
+Oct 19 05:56:12 ci-runner app-service[7589]: crit: rsyslog stopped successfully
+Oct 19 12:31:37 firewall rsyslogd[5563]: info: connection from 198.51.100.12 by user alice
+Oct 19 14:11:14 proxy cron[7299]: debug: connection from 203.0.113.7 by user guest src=10.0.0.5 dst=172.16.2.33
+Oct 19 04:38:56 vpn ufw[291]: err: connection from 10.0.0.5 by user guest
+Oct 19 16:05:01 router1 ufw[7836]: err: connection from 198.51.100.12 by user carol src=172.16.2.33 dst=172.16.2.33
+Oct 20 14:36:41 ci-runner rsyslogd[8338]: alert: connection from 172.16.2.33 by user guest
+Oct 20 17:33:12 router1 systemd[7308]: alert: segmentation fault (code=714)
+Oct 18 23:32:37 router1 cron[6441]: crit: connection from 192.168.1.10 by user alice
+Oct 19 03:23:57 proxy kernel[3503]: emerg: postgresql restarted successfully
+Oct 20 15:29:21 firewall app-service[3224]: err: rsyslog connected successfully
+Oct 19 05:48:49 vpn sshd[1490]: warning: haproxy updated successfully src=203.0.113.7 dst=172.16.2.33
+Oct 20 10:23:05 web1 cron[1625]: emerg: haproxy connected successfully
+Oct 19 14:23:51 db1 systemd[618]: notice: address already in use (code=804)
+Oct 19 01:53:08 proxy systemd[2905]: alert: rsyslog terminated successfully
+Oct 19 10:14:09 router1 rsyslogd[8647]: warning: connection from 192.168.1.10 by user service src=203.0.113.7 dst=203.0.113.7
+Oct 19 00:43:05 router1 app-service[6080]: err: nginx disconnected successfully
+Oct 19 20:09:29 web1 auditd[7938]: info: connection from 172.16.2.33 by user carol src=172.16.2.33 dst=192.168.1.10
+Oct 20 20:37:38 proxy kernel[9549]: crit: postgresql connected successfully
+Oct 21 07:18:46 vpn docker[7794]: notice: docker updated successfully
+Oct 19 10:12:02 proxy auditd[3799]: info: nginx started successfully
+Oct 20 11:40:12 proxy docker[5224]: info: docker updated successfully src=203.0.113.7 dst=172.16.2.33
+Oct 19 17:29:00 firewall app-service[3845]: warning: redis stopped successfully
+Oct 20 04:07:33 vpn cron[2297]: emerg: haproxy disconnected successfully
+Oct 20 02:13:21 db1 ufw[6372]: debug: sshd connected successfully
+Oct 20 07:53:59 vpn app-service[4014]: crit: connection from 10.0.0.5 by user root src=10.0.0.5 dst=192.168.1.10
+Oct 18 12:52:50 router1 kernel[2773]: info: systemd started successfully src=10.0.0.5 dst=172.16.2.33
+Oct 20 11:27:37 ci-runner cron[1322]: debug: timeout expired (code=914)
+Oct 19 19:50:09 proxy sshd[3146]: notice: postgresql started successfully
+Oct 19 05:06:12 db1 app-service[6561]: emerg: out of memory (code=414) src=172.16.2.33 dst=10.0.0.5
+Oct 20 03:17:18 firewall docker[2902]: alert: connection from 10.0.0.5 by user alice
+Oct 20 12:27:41 proxy systemd[6398]: emerg: haproxy disconnected successfully
+Oct 21 05:28:25 proxy auditd[1868]: info: broken pipe (code=748)
+Oct 19 12:41:31 web2 sshd[9325]: debug: connection from 198.51.100.12 by user carol
+Oct 18 12:52:08 firewall rsyslogd[1226]: warning: connection from 10.0.0.5 by user guest
+Oct 19 05:57:50 router1 docker[6025]: err: systemd updated successfully
+Oct 21 10:56:42 vpn systemd[3411]: err: nginx restarted successfully src=172.16.2.33 dst=172.16.2.33
+Oct 21 06:29:01 web1 ufw[2424]: debug: connection from 198.51.100.12 by user guest
+Oct 19 15:18:36 web1 nginx[8508]: crit: connection from 172.16.2.33 by user root
+Oct 19 11:12:28 web2 ufw[3903]: notice: permission denied (code=419)
+Oct 19 07:48:12 firewall sshd[7039]: info: connection from 198.51.100.12 by user guest
+Oct 18 17:12:17 firewall sshd[8919]: debug: haproxy restarted successfully src=172.16.2.33 dst=172.16.2.33
+Oct 19 23:19:15 firewall cron[9137]: notice: timeout expired (code=615) src=198.51.100.12 dst=198.51.100.12
+Oct 20 07:25:32 router1 app-service[2765]: emerg: redis failed successfully src=172.16.2.33 dst=198.51.100.12
+Oct 20 02:12:38 firewall docker[6537]: debug: permission denied (code=269)
+Oct 18 23:37:02 ci-runner sshd[4955]: emerg: nginx stopped successfully src=198.51.100.12 dst=192.168.1.10
+Oct 19 14:47:47 web2 rsyslogd[1105]: alert: rsyslog restarted successfully
+Oct 18 13:18:18 web1 cron[791]: debug: connection from 192.168.1.10 by user service
+Oct 19 05:42:42 firewall ufw[8417]: crit: docker restarted successfully src=198.51.100.12 dst=172.16.2.33
+Oct 19 08:32:23 firewall systemd[8472]: warning: redis disconnected successfully src=172.16.2.33 dst=198.51.100.12
+Oct 21 03:05:20 db1 app-service[6227]: alert: connection from 203.0.113.7 by user guest
+Oct 19 01:13:41 web1 rsyslogd[9604]: debug: connection from 203.0.113.7 by user guest
+Oct 19 18:08:06 firewall auditd[2908]: debug: docker terminated successfully
+Oct 21 11:35:32 proxy app-service[9336]: alert: connection from 10.0.0.5 by user carol
+Oct 21 10:30:28 firewall cron[1681]: emerg: redis updated successfully src=203.0.113.7 dst=172.16.2.33
+Oct 20 22:12:21 router1 cron[9101]: crit: connection from 198.51.100.12 by user guest
+Oct 19 07:55:30 ci-runner systemd[5907]: emerg: systemd started successfully
+Oct 20 00:23:04 web2 rsyslogd[4803]: emerg: connection from 10.0.0.5 by user alice
+Oct 18 15:41:46 proxy systemd[1664]: alert: redis restarted successfully
+Oct 19 22:29:18 web2 ufw[7876]: info: systemd connected successfully
+Oct 20 21:03:27 vpn cron[9888]: crit: nginx restarted successfully
+Oct 19 05:54:17 router1 nginx[7919]: crit: nginx restarted successfully
+Oct 21 09:42:30 router1 ufw[1274]: warning: postgresql updated successfully src=198.51.100.12 dst=198.51.100.12
+Oct 19 12:18:24 web2 nginx[5352]: err: connection from 10.0.0.5 by user root src=172.16.2.33 dst=10.0.0.5
+Oct 19 15:44:36 router1 kernel[9597]: alert: connection from 172.16.2.33 by user alice
+Oct 21 03:36:01 router1 kernel[3218]: crit: nginx stopped successfully
+Oct 20 21:47:36 web2 kernel[5575]: warning: postgresql disconnected successfully
+Oct 21 03:08:36 firewall nginx[3555]: emerg: segmentation fault (code=391)
+Oct 21 05:03:26 firewall sshd[8873]: alert: redis terminated successfully
+Oct 20 16:36:45 web2 app-service[4262]: info: permission denied (code=766)
+Oct 18 18:41:57 db1 ufw[6955]: emerg: connection from 192.168.1.10 by user bob src=203.0.113.7 dst=203.0.113.7
+Oct 20 23:41:54 vpn docker[4344]: debug: connection from 192.168.1.10 by user service
+Oct 20 18:17:53 web1 rsyslogd[9713]: warning: connection from 198.51.100.12 by user guest src=172.16.2.33 dst=203.0.113.7
+Oct 19 08:30:37 proxy kernel[6416]: emerg: postgresql connected successfully
+Oct 20 23:01:02 web2 auditd[424]: warning: connection from 172.16.2.33 by user guest
+Oct 19 11:49:30 proxy docker[628]: notice: postgresql disconnected successfully
+Oct 20 20:04:57 web1 sshd[5417]: warning: connection from 192.168.1.10 by user bob
+Oct 19 05:24:27 firewall kernel[5021]: emerg: connection from 192.168.1.10 by user alice
+Oct 19 20:58:44 ci-runner auditd[5837]: crit: haproxy started successfully src=172.16.2.33 dst=192.168.1.10
+Oct 20 13:51:10 vpn docker[2828]: crit: docker connected successfully
+Oct 19 02:57:44 firewall ufw[7903]: warning: connection from 203.0.113.7 by user carol src=172.16.2.33 dst=192.168.1.10
+Oct 20 19:35:35 router1 sshd[9546]: warning: connection from 192.168.1.10 by user carol src=192.168.1.10 dst=172.16.2.33
+Oct 19 03:21:43 db1 app-service[1691]: info: rsyslog stopped successfully
+Oct 18 16:51:48 web1 sshd[7279]: err: connection from 10.0.0.5 by user alice
+Oct 19 18:55:48 web1 cron[5621]: emerg: systemd connected successfully src=203.0.113.7 dst=203.0.113.7
+Oct 20 15:24:07 proxy cron[3170]: warning: sshd failed successfully
+Oct 20 18:54:59 web1 nginx[3278]: info: connection from 198.51.100.12 by user carol
+Oct 19 15:21:36 web1 sshd[5341]: crit: postgresql failed successfully src=10.0.0.5 dst=10.0.0.5
+Oct 19 15:58:31 web2 nginx[9146]: emerg: connection from 203.0.113.7 by user guest src=192.168.1.10 dst=10.0.0.5
+Oct 19 15:24:19 ci-runner rsyslogd[750]: debug: permission denied (code=843) src=192.168.1.10 dst=198.51.100.12
+Oct 19 10:25:19 vpn systemd[3862]: crit: systemd failed successfully
+Oct 19 19:29:12 web2 nginx[3210]: warning: haproxy updated successfully
+Oct 20 08:10:24 web1 kernel[5057]: debug: systemd started successfully
+Oct 19 19:37:56 vpn auditd[7821]: emerg: connection from 192.168.1.10 by user bob
+Oct 20 18:15:04 proxy nginx[9280]: alert: postgresql disconnected successfully
+Oct 20 12:31:30 web1 ufw[1095]: crit: connection from 198.51.100.12 by user root src=203.0.113.7 dst=192.168.1.10
+Oct 20 05:42:26 web2 app-service[7666]: debug: connection from 198.51.100.12 by user carol
+Oct 20 11:14:50 vpn sshd[7417]: warning: rsyslog connected successfully
+Oct 21 11:08:37 web2 cron[7346]: debug: connection from 203.0.113.7 by user service
+Oct 20 10:58:46 db1 ufw[2580]: err: postgresql started successfully
+Oct 19 02:19:34 web2 docker[4802]: debug: rsyslog connected successfully
+Oct 19 16:50:46 router1 ufw[1939]: notice: haproxy terminated successfully
+Oct 21 03:03:14 ci-runner docker[6253]: debug: address already in use (code=400)
+Oct 19 10:40:05 ci-runner ufw[1140]: alert: connection from 203.0.113.7 by user service src=203.0.113.7 dst=203.0.113.7
+Oct 21 00:59:11 web1 cron[5830]: info: connection from 198.51.100.12 by user service
+Oct 20 15:32:32 web1 auditd[8110]: warning: rsyslog updated successfully src=192.168.1.10 dst=198.51.100.12
+Oct 21 05:43:30 firewall nginx[2527]: alert: haproxy started successfully src=172.16.2.33 dst=192.168.1.10
+Oct 19 03:34:21 vpn sshd[2397]: emerg: permission denied (code=699)
+Oct 21 04:28:32 vpn cron[2834]: info: nginx updated successfully
+Oct 19 16:34:03 router1 cron[8306]: debug: redis started successfully
+Oct 20 06:53:37 web1 sshd[2691]: warning: connection from 10.0.0.5 by user carol
+Oct 20 23:15:15 router1 rsyslogd[1119]: notice: postgresql disconnected successfully
+Oct 18 21:49:35 firewall nginx[8972]: crit: connection from 10.0.0.5 by user guest
+Oct 21 08:51:41 vpn cron[578]: crit: haproxy stopped successfully
+Oct 19 08:36:59 vpn app-service[9869]: info: connection from 198.51.100.12 by user carol
+Oct 20 07:49:48 web1 cron[9322]: emerg: permission denied (code=224) src=10.0.0.5 dst=203.0.113.7
+Oct 20 01:26:05 ci-runner cron[188]: warning: connection from 198.51.100.12 by user guest
+Oct 20 22:44:04 proxy auditd[5065]: info: connection from 198.51.100.12 by user guest
+Oct 19 06:52:52 firewall kernel[1518]: emerg: connection from 172.16.2.33 by user root
+Oct 20 01:45:14 db1 cron[2058]: alert: nginx updated successfully src=10.0.0.5 dst=198.51.100.12
+Oct 21 02:28:51 web2 systemd[940]: err: disk quota exceeded (code=739) src=198.51.100.12 dst=10.0.0.5
+Oct 20 08:17:10 firewall docker[8222]: warning: permission denied (code=700)
+Oct 20 20:14:49 router1 kernel[3739]: crit: nginx updated successfully
+Oct 20 13:29:03 proxy auditd[5046]: debug: sshd updated successfully
+Oct 20 16:03:38 ci-runner systemd[6056]: err: connection from 172.16.2.33 by user carol
+Oct 20 03:09:32 router1 systemd[246]: alert: address already in use (code=421)
+Oct 20 23:02:44 vpn cron[2386]: debug: haproxy connected successfully src=172.16.2.33 dst=10.0.0.5
+Oct 21 11:00:10 web1 cron[2740]: crit: connection from 10.0.0.5 by user service
+Oct 20 02:57:28 ci-runner systemd[391]: emerg: connection from 10.0.0.5 by user root src=203.0.113.7 dst=10.0.0.5
+Oct 20 21:04:45 proxy docker[3914]: alert: connection from 10.0.0.5 by user root
+Oct 20 13:36:06 vpn systemd[9750]: notice: invalid argument (code=918) src=172.16.2.33 dst=198.51.100.12
+Oct 18 20:39:32 web1 rsyslogd[1866]: alert: docker stopped successfully
+Oct 19 07:04:27 web2 ufw[6359]: info: connection from 172.16.2.33 by user root
+Oct 18 13:18:32 firewall nginx[5845]: alert: broken pipe (code=425)
+Oct 20 19:21:34 web2 kernel[9975]: debug: permission denied (code=858)
+Oct 21 10:59:57 firewall systemd[333]: info: rsyslog updated successfully src=198.51.100.12 dst=198.51.100.12
+Oct 20 07:38:57 firewall ufw[8575]: warning: connection from 172.16.2.33 by user alice src=203.0.113.7 dst=10.0.0.5
+Oct 20 05:23:21 router1 auditd[6946]: crit: docker stopped successfully
+Oct 20 07:12:09 vpn cron[4589]: warning: out of memory (code=468)
+Oct 21 06:07:35 db1 sshd[2355]: info: docker restarted successfully
+Oct 20 04:17:22 web1 docker[6146]: err: connection from 198.51.100.12 by user bob
+Oct 20 19:35:46 web2 rsyslogd[6161]: emerg: postgresql failed successfully
+Oct 19 15:54:58 router1 nginx[4092]: warning: rsyslog terminated successfully
+Oct 20 23:10:46 router1 rsyslogd[649]: info: connection from 203.0.113.7 by user alice
+Oct 20 22:47:24 router1 sshd[6886]: debug: docker terminated successfully src=203.0.113.7 dst=10.0.0.5
+Oct 20 18:54:41 web1 app-service[2684]: alert: connection from 172.16.2.33 by user root
+Oct 20 00:25:49 vpn auditd[138]: crit: connection from 172.16.2.33 by user guest
+Oct 18 14:13:37 db1 systemd[2732]: notice: docker terminated successfully
+Oct 20 11:16:47 web1 rsyslogd[2921]: err: connection from 10.0.0.5 by user bob
+Oct 21 01:14:11 firewall app-service[7284]: debug: connection from 10.0.0.5 by user guest
+Oct 19 16:41:24 vpn systemd[8819]: alert: redis updated successfully
+Oct 19 06:41:40 vpn auditd[9351]: crit: connection from 192.168.1.10 by user alice
+Oct 20 09:45:48 router1 sshd[2140]: emerg: postgresql restarted successfully
+Oct 18 19:13:51 proxy nginx[4919]: debug: postgresql failed successfully
+Oct 20 20:15:36 proxy rsyslogd[6002]: err: connection from 203.0.113.7 by user carol src=203.0.113.7 dst=10.0.0.5
+Oct 20 12:14:27 web2 ufw[7571]: notice: connection from 172.16.2.33 by user guest src=198.51.100.12 dst=198.51.100.12
+Oct 21 03:35:35 web2 app-service[9370]: alert: connection from 10.0.0.5 by user alice
+Oct 19 01:48:41 vpn auditd[4087]: emerg: redis disconnected successfully
+Oct 20 14:59:19 proxy ufw[6475]: info: sshd connected successfully
+Oct 20 09:26:17 web2 kernel[3709]: notice: redis failed successfully
+Oct 18 17:14:45 ci-runner ufw[8951]: err: nginx disconnected successfully src=198.51.100.12 dst=10.0.0.5
+Oct 20 13:46:11 vpn nginx[9087]: debug: connection from 10.0.0.5 by user service
+Oct 18 23:12:28 firewall nginx[2789]: notice: connection from 203.0.113.7 by user root
+Oct 18 23:27:35 web2 ufw[4959]: err: connection from 198.51.100.12 by user service
+Oct 18 13:56:07 proxy nginx[6248]: info: connection from 172.16.2.33 by user root
+Oct 20 13:58:32 router1 app-service[5145]: notice: docker restarted successfully src=172.16.2.33 dst=172.16.2.33
+Oct 20 08:16:14 firewall rsyslogd[3102]: debug: systemd updated successfully src=203.0.113.7 dst=10.0.0.5
+Oct 19 07:13:49 vpn sshd[6838]: notice: docker failed successfully
+Oct 21 04:01:23 vpn rsyslogd[9400]: alert: invalid argument (code=132)
+Oct 19 17:27:24 router1 sshd[5333]: crit: nginx started successfully
+Oct 19 09:02:43 ci-runner app-service[8003]: warning: out of memory (code=720)
+Oct 18 12:34:38 db1 cron[7267]: emerg: connection from 192.168.1.10 by user bob
+Oct 19 22:30:05 web1 app-service[6188]: notice: address already in use (code=111)
+Oct 20 05:13:05 firewall app-service[8816]: emerg: connection from 203.0.113.7 by user alice
+Oct 19 15:31:47 proxy ufw[4561]: notice: connection from 10.0.0.5 by user service src=192.168.1.10 dst=10.0.0.5
+Oct 20 20:18:45 web1 ufw[2070]: notice: connection from 10.0.0.5 by user bob
+Oct 19 12:54:07 web1 sshd[292]: warning: connection from 10.0.0.5 by user service src=203.0.113.7 dst=198.51.100.12
+Oct 19 22:24:40 vpn ufw[9663]: alert: sshd restarted successfully
+Oct 19 19:34:57 vpn nginx[8178]: warning: connection from 10.0.0.5 by user root
+Oct 18 18:39:39 ci-runner app-service[6860]: notice: sshd failed successfully
+Oct 20 09:26:00 router1 rsyslogd[5418]: warning: connection from 172.16.2.33 by user carol
+Oct 20 19:13:10 ci-runner auditd[7153]: err: connection from 203.0.113.7 by user alice
+Oct 20 08:11:20 ci-runner systemd[8859]: notice: redis updated successfully
+Oct 20 22:22:13 db1 app-service[8553]: err: sshd terminated successfully
+Oct 18 23:42:34 ci-runner systemd[8003]: err: postgresql restarted successfully
+Oct 20 00:51:55 firewall nginx[7061]: debug: nginx failed successfully src=172.16.2.33 dst=192.168.1.10
+Oct 21 06:11:07 ci-runner app-service[2903]: notice: systemd connected successfully
+Oct 20 17:03:09 proxy auditd[4437]: alert: postgresql terminated successfully
+Oct 18 18:09:10 web1 nginx[3319]: alert: connection from 10.0.0.5 by user service
+Oct 19 11:57:11 router1 docker[4978]: notice: disk quota exceeded (code=433) src=198.51.100.12 dst=198.51.100.12
+Oct 20 21:14:08 db1 docker[3562]: err: systemd failed successfully
+Oct 19 18:21:47 router1 cron[8890]: crit: connection from 203.0.113.7 by user carol
+Oct 20 04:24:26 ci-runner rsyslogd[693]: alert: sshd connected successfully src=10.0.0.5 dst=192.168.1.10
+Oct 18 18:44:49 vpn ufw[6945]: warning: postgresql connected successfully src=203.0.113.7 dst=192.168.1.10
+Oct 19 14:49:59 web2 nginx[8786]: crit: connection from 10.0.0.5 by user guest
+Oct 20 01:36:00 web1 nginx[3740]: info: connection from 198.51.100.12 by user guest
+Oct 19 04:37:14 vpn ufw[2042]: err: connection from 192.168.1.10 by user bob src=198.51.100.12 dst=192.168.1.10
+Oct 19 08:24:18 proxy ufw[9542]: err: docker started successfully
+Oct 20 06:40:11 router1 cron[2829]: alert: connection from 10.0.0.5 by user guest
+Oct 18 13:57:06 vpn sshd[199]: emerg: sshd updated successfully
+Oct 20 20:24:24 ci-runner auditd[1757]: warning: connection from 10.0.0.5 by user alice
+Oct 19 08:41:52 vpn docker[4898]: notice: connection from 203.0.113.7 by user bob src=192.168.1.10 dst=198.51.100.12
+Oct 19 00:48:37 ci-runner kernel[9079]: alert: connection from 203.0.113.7 by user alice
+Oct 21 00:47:02 firewall auditd[4634]: debug: connection from 172.16.2.33 by user carol
+Oct 18 11:49:57 web2 cron[9815]: err: nginx stopped successfully
+Oct 21 09:03:09 vpn cron[151]: alert: haproxy started successfully
+Oct 19 13:06:34 ci-runner cron[7288]: debug: out of memory (code=366)
+Oct 21 03:05:37 proxy ufw[9462]: debug: connection from 10.0.0.5 by user guest src=198.51.100.12 dst=198.51.100.12
+Oct 20 04:17:57 vpn auditd[1480]: err: connection from 192.168.1.10 by user guest
+Oct 20 03:37:08 proxy sshd[4535]: notice: connection from 10.0.0.5 by user service
+Oct 21 02:42:35 web1 cron[2931]: emerg: rsyslog updated successfully src=172.16.2.33 dst=10.0.0.5
+Oct 20 04:58:06 web2 nginx[7802]: err: rsyslog started successfully
+Oct 19 04:36:44 ci-runner app-service[4999]: info: nginx updated successfully src=203.0.113.7 dst=172.16.2.33
+Oct 19 08:16:03 web1 app-service[3167]: alert: connection from 172.16.2.33 by user root
+Oct 20 10:43:41 web1 app-service[4568]: notice: connection from 192.168.1.10 by user guest
+Oct 20 23:46:14 web2 rsyslogd[8702]: notice: connection from 203.0.113.7 by user bob
+Oct 19 06:13:26 firewall sshd[9488]: err: disk quota exceeded (code=918)
+Oct 19 02:12:55 router1 sshd[8687]: alert: sshd connected successfully
+Oct 19 10:46:13 web2 systemd[3888]: warning: postgresql failed successfully
+Oct 20 22:15:50 proxy docker[1800]: alert: disk quota exceeded (code=633)
+Oct 19 05:13:44 vpn rsyslogd[8777]: err: redis stopped successfully
+Oct 21 08:56:57 ci-runner ufw[9243]: err: invalid argument (code=367)
+Oct 19 07:49:50 vpn docker[2442]: info: connection from 10.0.0.5 by user bob
+Oct 18 20:56:57 web2 app-service[4064]: debug: connection from 192.168.1.10 by user guest
+Oct 19 09:59:00 proxy cron[1125]: debug: timeout expired (code=284)
+Oct 20 19:51:20 ci-runner cron[9206]: crit: connection from 203.0.113.7 by user carol src=172.16.2.33 dst=203.0.113.7
+Oct 19 10:19:05 proxy nginx[5424]: alert: connection from 10.0.0.5 by user guest
+Oct 20 11:42:55 router1 systemd[9755]: err: haproxy failed successfully
+Oct 20 02:59:32 firewall auditd[3967]: debug: connection from 198.51.100.12 by user carol
+Oct 20 05:17:15 web1 nginx[1042]: notice: docker updated successfully
+Oct 21 00:21:50 web2 sshd[2321]: emerg: connection from 192.168.1.10 by user bob
+Oct 19 18:57:42 web2 ufw[5165]: debug: docker restarted successfully src=172.16.2.33 dst=198.51.100.12
+Oct 19 21:30:09 web1 app-service[5735]: notice: rsyslog started successfully
+Oct 20 23:48:29 firewall app-service[4750]: emerg: connection from 198.51.100.12 by user service
+Oct 18 21:44:29 vpn app-service[1713]: err: connection from 192.168.1.10 by user guest
+Oct 20 19:08:42 firewall nginx[9114]: notice: haproxy stopped successfully
+Oct 18 15:36:47 router1 kernel[8837]: err: sshd failed successfully src=198.51.100.12 dst=192.168.1.10
+Oct 19 01:32:07 vpn kernel[9949]: debug: connection from 192.168.1.10 by user root src=192.168.1.10 dst=192.168.1.10
+Oct 21 10:10:46 db1 nginx[4892]: crit: haproxy updated successfully
+Oct 18 16:38:52 db1 app-service[7928]: debug: connection from 10.0.0.5 by user root
+Oct 19 17:44:55 web1 app-service[5352]: emerg: haproxy updated successfully src=172.16.2.33 dst=192.168.1.10
+Oct 20 03:38:43 ci-runner sshd[3066]: debug: haproxy stopped successfully
+Oct 21 09:41:58 vpn nginx[4474]: debug: postgresql started successfully
+Oct 20 07:50:55 web1 sshd[8851]: info: nginx failed successfully
+Oct 19 19:03:15 web1 docker[3412]: notice: nginx failed successfully src=203.0.113.7 dst=172.16.2.33
+Oct 18 12:09:11 ci-runner systemd[2778]: crit: connection from 192.168.1.10 by user bob src=198.51.100.12 dst=10.0.0.5
+Oct 20 20:28:07 ci-runner rsyslogd[8982]: notice: postgresql updated successfully
+Oct 18 20:56:50 db1 systemd[7275]: err: connection from 192.168.1.10 by user alice src=10.0.0.5 dst=203.0.113.7
+Oct 20 04:22:24 db1 rsyslogd[5827]: err: connection from 192.168.1.10 by user bob
+Oct 19 07:05:12 router1 auditd[4075]: debug: connection from 198.51.100.12 by user alice
+Oct 19 10:06:17 proxy docker[4421]: warning: invalid argument (code=349)
+Oct 20 23:20:20 proxy rsyslogd[6938]: notice: rsyslog terminated successfully
+Oct 21 05:23:15 proxy cron[8474]: crit: postgresql updated successfully
+Oct 18 16:41:21 firewall cron[3889]: debug: rsyslog disconnected successfully
+Oct 21 08:12:19 web1 kernel[6034]: err: postgresql connected successfully
+Oct 19 06:52:12 vpn systemd[1543]: notice: connection from 192.168.1.10 by user alice src=172.16.2.33 dst=10.0.0.5
+Oct 20 15:21:23 vpn nginx[2750]: warning: connection from 10.0.0.5 by user guest
+Oct 21 09:00:04 db1 docker[3487]: crit: connection from 10.0.0.5 by user service
+Oct 18 21:08:12 vpn cron[9954]: notice: connection from 198.51.100.12 by user alice
+Oct 20 21:18:37 vpn rsyslogd[8761]: info: connection from 203.0.113.7 by user carol src=203.0.113.7 dst=192.168.1.10
+Oct 19 19:36:36 vpn kernel[9467]: notice: docker connected successfully
+Oct 19 02:24:44 db1 rsyslogd[6308]: warning: broken pipe (code=188) src=172.16.2.33 dst=192.168.1.10
+Oct 18 15:10:57 web2 sshd[3285]: err: redis terminated successfully
+Oct 19 10:03:26 ci-runner auditd[1815]: notice: systemd stopped successfully
+Oct 19 13:21:10 web2 ufw[8083]: emerg: address already in use (code=716)
+Oct 19 13:13:58 ci-runner nginx[1391]: crit: docker terminated successfully src=192.168.1.10 dst=192.168.1.10
+Oct 20 20:44:29 firewall app-service[3899]: err: connection from 10.0.0.5 by user bob
+Oct 18 22:27:48 ci-runner rsyslogd[1949]: emerg: docker disconnected successfully src=203.0.113.7 dst=192.168.1.10
+Oct 18 14:11:52 ci-runner auditd[8403]: crit: connection from 198.51.100.12 by user root
+Oct 21 00:21:32 web2 rsyslogd[8953]: notice: timeout expired (code=220) src=203.0.113.7 dst=10.0.0.5
+Oct 19 13:14:33 web1 app-service[268]: crit: rsyslog connected successfully
+Oct 21 11:26:37 ci-runner docker[8744]: warning: rsyslog stopped successfully src=203.0.113.7 dst=192.168.1.10
+Oct 20 18:04:35 web2 rsyslogd[7521]: err: docker restarted successfully src=10.0.0.5 dst=10.0.0.5
+Oct 19 20:51:26 proxy app-service[4486]: debug: haproxy failed successfully
+Oct 19 18:48:35 proxy app-service[7231]: warning: sshd updated successfully
+Oct 18 21:16:31 ci-runner sshd[9115]: err: postgresql updated successfully
+Oct 21 07:42:35 vpn rsyslogd[5165]: notice: systemd updated successfully
+Oct 19 14:14:52 web1 app-service[3217]: notice: connection from 10.0.0.5 by user root src=203.0.113.7 dst=10.0.0.5
+Oct 19 22:33:18 ci-runner nginx[4881]: alert: connection from 198.51.100.12 by user guest
+Oct 18 23:08:45 router1 ufw[5670]: notice: rsyslog started successfully
+Oct 20 15:36:35 web2 app-service[9108]: crit: connection from 203.0.113.7 by user bob
+Oct 19 06:39:39 proxy ufw[6493]: emerg: docker restarted successfully
+Oct 20 22:58:51 web2 ufw[3881]: err: connection from 192.168.1.10 by user guest
+Oct 19 07:39:27 firewall docker[8415]: err: connection from 203.0.113.7 by user carol
+Oct 19 16:21:33 ci-runner nginx[4735]: debug: disk quota exceeded (code=202)
+Oct 18 14:26:37 vpn cron[5434]: info: connection from 172.16.2.33 by user bob
+Oct 20 22:25:33 router1 cron[7870]: info: rsyslog connected successfully
+Oct 19 20:33:55 proxy app-service[9059]: crit: docker disconnected successfully
+Oct 19 17:50:17 db1 ufw[4830]: alert: out of memory (code=896)
+Oct 21 06:48:54 ci-runner docker[5291]: crit: systemd failed successfully
+Oct 21 07:23:54 db1 kernel[1642]: info: connection from 10.0.0.5 by user carol
+Oct 20 07:43:39 web2 app-service[4582]: info: connection from 198.51.100.12 by user service
+Oct 20 04:38:59 vpn kernel[5493]: debug: postgresql terminated successfully
+Oct 21 00:50:06 router1 auditd[9493]: err: nginx failed successfully
+Oct 21 01:06:49 web2 nginx[8560]: crit: connection from 192.168.1.10 by user alice
+Oct 18 19:01:22 web1 rsyslogd[5763]: notice: postgresql stopped successfully
+Oct 18 16:22:41 web1 docker[8256]: alert: sshd updated successfully
+Oct 21 00:01:52 router1 systemd[4364]: alert: rsyslog updated successfully src=10.0.0.5 dst=203.0.113.7
+Oct 19 12:45:37 router1 kernel[4696]: alert: docker stopped successfully
+Oct 19 11:58:00 firewall auditd[8683]: err: connection from 10.0.0.5 by user root
+Oct 19 23:02:26 firewall auditd[8689]: debug: connection from 192.168.1.10 by user service
+Oct 18 18:49:20 vpn systemd[6606]: info: connection from 192.168.1.10 by user guest
+Oct 20 21:45:14 db1 rsyslogd[9067]: emerg: connection from 198.51.100.12 by user root
+Oct 18 21:13:56 db1 kernel[2564]: emerg: redis stopped successfully
+Oct 19 05:05:05 ci-runner sshd[4991]: err: systemd connected successfully
+Oct 19 22:41:33 web2 kernel[6617]: notice: connection from 172.16.2.33 by user root src=172.16.2.33 dst=198.51.100.12
+Oct 20 01:19:13 db1 app-service[2333]: info: haproxy failed successfully
+Oct 18 13:01:41 db1 auditd[4492]: alert: docker connected successfully
+Oct 20 21:03:22 web2 rsyslogd[8651]: warning: connection from 198.51.100.12 by user guest src=198.51.100.12 dst=192.168.1.10
+Oct 19 09:42:12 router1 nginx[706]: crit: redis started successfully
+Oct 20 07:49:03 web1 systemd[1691]: debug: connection from 198.51.100.12 by user carol src=198.51.100.12 dst=198.51.100.12
+Oct 19 02:58:59 proxy systemd[865]: emerg: connection from 198.51.100.12 by user guest
+Oct 20 18:58:02 router1 app-service[7674]: crit: rsyslog updated successfully
+Oct 20 09:33:44 proxy docker[2200]: warning: connection from 10.0.0.5 by user service
+Oct 19 13:54:17 ci-runner cron[884]: crit: haproxy restarted successfully src=10.0.0.5 dst=198.51.100.12
+Oct 20 10:33:35 web2 kernel[9020]: warning: nginx terminated successfully
+Oct 18 13:23:49 vpn rsyslogd[2779]: crit: redis terminated successfully
+Oct 19 14:37:05 web2 cron[9573]: debug: postgresql disconnected successfully
+Oct 20 15:51:21 vpn cron[4995]: info: haproxy stopped successfully
+Oct 18 14:32:54 router1 app-service[1491]: debug: connection from 10.0.0.5 by user root src=192.168.1.10 dst=10.0.0.5
+Oct 20 12:18:12 proxy systemd[8778]: alert: systemd failed successfully src=10.0.0.5 dst=10.0.0.5
+Oct 20 13:41:11 vpn docker[9922]: crit: haproxy started successfully src=192.168.1.10 dst=10.0.0.5
+Oct 18 14:52:13 vpn systemd[3211]: emerg: disk quota exceeded (code=763)
+Oct 19 11:49:09 ci-runner rsyslogd[906]: emerg: sshd restarted successfully
+Oct 20 12:42:24 ci-runner cron[8069]: debug: segmentation fault (code=430) src=198.51.100.12 dst=192.168.1.10
+Oct 21 04:23:08 db1 cron[1086]: crit: nginx terminated successfully
+Oct 20 00:48:15 web2 auditd[8102]: info: connection from 203.0.113.7 by user guest
+Oct 19 04:04:04 web2 ufw[2107]: info: nginx started successfully
+Oct 20 22:46:37 router1 sshd[8888]: info: systemd restarted successfully
+Oct 19 15:31:58 ci-runner systemd[2690]: warning: sshd restarted successfully src=172.16.2.33 dst=203.0.113.7
+Oct 21 11:27:36 web2 cron[923]: err: systemd disconnected successfully
+Oct 18 23:05:03 web2 docker[9063]: notice: connection from 192.168.1.10 by user guest
+Oct 18 22:05:27 firewall sshd[6511]: info: connection from 10.0.0.5 by user alice src=172.16.2.33 dst=10.0.0.5
+Oct 21 03:31:42 firewall ufw[4054]: warning: rsyslog updated successfully
+Oct 21 04:22:07 firewall rsyslogd[1244]: debug: timeout expired (code=339)
+Oct 19 14:47:00 router1 docker[5617]: alert: broken pipe (code=584)
+Oct 21 06:11:40 router1 ufw[5148]: debug: connection from 203.0.113.7 by user alice
+Oct 19 10:18:46 vpn sshd[8657]: alert: timeout expired (code=255)
+Oct 21 01:55:20 web2 app-service[7058]: notice: docker connected successfully
+Oct 20 15:13:15 web1 app-service[9555]: err: rsyslog stopped successfully src=10.0.0.5 dst=10.0.0.5
+Oct 20 17:33:15 proxy kernel[2711]: info: sshd disconnected successfully
+Oct 18 23:12:34 proxy ufw[9516]: emerg: address already in use (code=666)
+Oct 20 18:02:04 firewall nginx[3026]: info: connection from 198.51.100.12 by user alice src=203.0.113.7 dst=203.0.113.7
+Oct 20 01:36:16 proxy kernel[812]: notice: docker stopped successfully src=172.16.2.33 dst=198.51.100.12
+Oct 20 18:04:44 web1 systemd[6702]: crit: rsyslog started successfully
+Oct 20 04:00:13 router1 auditd[3705]: notice: sshd restarted successfully
+Oct 21 00:05:12 web2 sshd[7667]: alert: segmentation fault (code=214)
+Oct 18 16:28:01 vpn rsyslogd[5620]: err: systemd failed successfully
+Oct 21 04:05:55 proxy kernel[1583]: crit: docker restarted successfully
+Oct 19 10:16:45 vpn ufw[8495]: info: address already in use (code=638)
+Oct 18 22:22:04 web2 cron[6908]: info: connection from 198.51.100.12 by user service
+Oct 20 02:38:25 router1 rsyslogd[4211]: info: connection from 192.168.1.10 by user service
+Oct 20 05:17:32 proxy ufw[4474]: debug: haproxy connected successfully src=198.51.100.12 dst=203.0.113.7
+Oct 20 09:52:23 web2 auditd[7389]: info: postgresql restarted successfully
+Oct 18 20:14:22 router1 rsyslogd[8930]: crit: connection from 172.16.2.33 by user service
+Oct 19 08:26:17 ci-runner docker[5840]: notice: docker disconnected successfully src=203.0.113.7 dst=203.0.113.7
+Oct 19 19:52:47 ci-runner nginx[7894]: debug: connection from 10.0.0.5 by user bob
+Oct 19 05:05:43 web2 app-service[2796]: alert: connection from 10.0.0.5 by user carol
+Oct 18 20:45:51 db1 auditd[9305]: alert: postgresql failed successfully
+Oct 19 20:35:15 firewall systemd[8458]: info: connection from 203.0.113.7 by user service src=192.168.1.10 dst=198.51.100.12
+Oct 20 09:16:37 firewall docker[9518]: emerg: nginx failed successfully
+Oct 20 06:39:08 web2 cron[1709]: info: connection from 172.16.2.33 by user bob
+Oct 18 16:52:34 router1 app-service[4425]: info: connection from 172.16.2.33 by user guest
+Oct 19 12:06:02 db1 auditd[9620]: emerg: connection from 10.0.0.5 by user alice
+Oct 19 22:48:16 router1 rsyslogd[8742]: info: postgresql disconnected successfully src=192.168.1.10 dst=10.0.0.5
+Oct 18 11:41:43 proxy sshd[1051]: info: connection from 10.0.0.5 by user carol
+Oct 21 07:07:43 firewall app-service[8862]: debug: connection from 10.0.0.5 by user root
+Oct 19 23:26:11 vpn auditd[3991]: emerg: connection from 172.16.2.33 by user guest
+Oct 21 02:35:38 firewall cron[2616]: debug: postgresql failed successfully
+Oct 19 02:28:41 ci-runner kernel[8949]: warning: rsyslog started successfully
+Oct 20 15:29:00 db1 docker[381]: warning: haproxy stopped successfully
+Oct 19 09:02:03 vpn docker[1829]: debug: postgresql restarted successfully
+Oct 19 12:28:51 proxy nginx[9137]: warning: redis failed successfully src=192.168.1.10 dst=203.0.113.7
+Oct 19 18:45:13 web1 ufw[7528]: alert: rsyslog updated successfully
+Oct 18 13:03:16 vpn cron[9686]: crit: sshd terminated successfully
+Oct 19 15:54:10 vpn app-service[2138]: warning: connection from 203.0.113.7 by user bob src=172.16.2.33 dst=192.168.1.10
+Oct 20 09:58:05 firewall nginx[3049]: err: rsyslog connected successfully
+Oct 20 11:38:24 ci-runner ufw[6879]: info: docker connected successfully src=172.16.2.33 dst=203.0.113.7
+Oct 20 01:42:24 web1 rsyslogd[3450]: alert: haproxy connected successfully
+Oct 19 02:22:01 web1 rsyslogd[1979]: notice: connection from 198.51.100.12 by user service
+Oct 19 08:58:58 web2 sshd[2416]: notice: connection from 172.16.2.33 by user carol
+Oct 19 09:54:46 firewall systemd[521]: warning: sshd connected successfully
+Oct 20 20:38:08 proxy kernel[3610]: crit: nginx connected successfully
+Oct 18 14:02:11 router1 cron[3294]: err: connection from 172.16.2.33 by user guest src=192.168.1.10 dst=192.168.1.10
+Oct 20 00:30:27 web2 systemd[6163]: warning: connection from 172.16.2.33 by user service src=10.0.0.5 dst=192.168.1.10
+Oct 20 04:29:59 web2 kernel[6009]: err: haproxy stopped successfully
+Oct 19 00:16:23 ci-runner nginx[8205]: notice: systemd failed successfully
+Oct 18 19:10:25 web1 systemd[8581]: crit: sshd connected successfully
+Oct 19 13:00:00 vpn systemd[4735]: warning: connection from 192.168.1.10 by user carol
+Oct 20 17:29:02 web1 cron[1245]: err: haproxy failed successfully
+Oct 19 20:47:16 web2 auditd[2341]: debug: connection from 198.51.100.12 by user bob src=172.16.2.33 dst=172.16.2.33
+Oct 20 16:25:24 proxy rsyslogd[7758]: info: connection from 198.51.100.12 by user service
+Oct 21 06:52:33 ci-runner sshd[1575]: debug: connection from 198.51.100.12 by user alice
+Oct 19 13:56:30 firewall systemd[5478]: warning: postgresql terminated successfully
+Oct 21 06:12:55 proxy docker[5625]: alert: connection from 172.16.2.33 by user service
+Oct 19 05:21:40 db1 nginx[4381]: debug: postgresql restarted successfully src=203.0.113.7 dst=203.0.113.7
+Oct 19 22:37:33 vpn ufw[9447]: crit: connection from 192.168.1.10 by user root src=203.0.113.7 dst=203.0.113.7
+Oct 20 11:39:10 db1 kernel[3476]: info: postgresql disconnected successfully
+Oct 19 12:54:06 firewall docker[8620]: err: connection from 10.0.0.5 by user bob
+Oct 20 16:15:07 proxy systemd[7503]: info: connection from 198.51.100.12 by user root
+Oct 21 10:34:10 web1 app-service[1767]: err: connection from 10.0.0.5 by user carol
+Oct 20 19:39:11 db1 ufw[8054]: err: docker restarted successfully
+Oct 19 10:05:36 web2 docker[7704]: warning: systemd disconnected successfully
+Oct 21 07:18:27 proxy kernel[8684]: err: nginx updated successfully
+Oct 20 15:53:38 ci-runner systemd[2985]: info: haproxy started successfully
+Oct 19 22:20:43 ci-runner systemd[5370]: warning: systemd stopped successfully src=203.0.113.7 dst=198.51.100.12
+Oct 20 12:59:38 ci-runner sshd[7132]: info: connection from 198.51.100.12 by user guest
+Oct 20 08:37:09 firewall nginx[2026]: notice: connection from 172.16.2.33 by user alice src=192.168.1.10 dst=198.51.100.12
+Oct 20 05:57:07 web2 sshd[9662]: err: connection from 198.51.100.12 by user service
+Oct 18 18:04:20 db1 docker[8622]: notice: broken pipe (code=535)
+Oct 20 11:42:11 proxy nginx[1968]: emerg: permission denied (code=208)
+Oct 19 08:57:44 ci-runner rsyslogd[7587]: err: nginx disconnected successfully
+Oct 19 15:26:07 vpn ufw[8647]: alert: nginx restarted successfully
+Oct 20 14:18:38 vpn ufw[530]: err: connection from 192.168.1.10 by user guest
+Oct 20 04:49:07 web2 ufw[5728]: info: rsyslog updated successfully
+Oct 21 07:58:31 router1 app-service[4442]: crit: haproxy connected successfully
+Oct 21 04:22:39 router1 app-service[6616]: crit: connection from 198.51.100.12 by user alice
+Oct 18 17:56:58 web1 nginx[4996]: emerg: postgresql started successfully
+Oct 20 08:15:31 router1 nginx[7653]: alert: redis updated successfully
+Oct 19 12:30:46 router1 cron[7213]: notice: connection from 172.16.2.33 by user root
+Oct 19 13:50:00 router1 kernel[6216]: debug: connection from 10.0.0.5 by user alice
+Oct 18 23:09:10 router1 ufw[777]: warning: connection from 172.16.2.33 by user carol
+Oct 20 02:26:00 router1 ufw[8288]: err: disk quota exceeded (code=317)
+Oct 20 23:56:52 router1 kernel[8903]: info: rsyslog restarted successfully src=198.51.100.12 dst=10.0.0.5
+Oct 20 19:02:30 proxy systemd[9649]: warning: connection from 203.0.113.7 by user alice src=203.0.113.7 dst=10.0.0.5
+Oct 20 19:48:33 web1 kernel[1068]: alert: connection from 172.16.2.33 by user bob
+Oct 21 06:44:07 vpn auditd[2646]: alert: out of memory (code=568) src=192.168.1.10 dst=203.0.113.7
+Oct 20 03:35:37 proxy kernel[6677]: alert: rsyslog started successfully
+Oct 20 13:36:01 firewall auditd[6110]: alert: postgresql restarted successfully
+Oct 20 04:06:13 web1 auditd[9872]: debug: connection from 172.16.2.33 by user guest
+Oct 20 03:07:18 web2 docker[4793]: warning: rsyslog stopped successfully
+Oct 18 18:24:07 vpn systemd[2407]: crit: redis terminated successfully
+Oct 20 15:06:58 db1 rsyslogd[4790]: alert: connection from 172.16.2.33 by user service
+Oct 18 12:28:39 vpn kernel[2171]: notice: redis updated successfully
+Oct 19 13:35:27 web1 app-service[9040]: warning: connection from 192.168.1.10 by user alice
+Oct 21 01:56:08 router1 docker[5302]: debug: systemd connected successfully
+Oct 18 16:43:17 proxy ufw[2881]: info: systemd started successfully
+Oct 19 05:58:14 web1 ufw[7303]: notice: nginx terminated successfully
+Oct 21 03:14:12 db1 nginx[259]: emerg: permission denied (code=188)
+Oct 18 14:40:38 web2 nginx[9299]: emerg: haproxy updated successfully
+Oct 19 00:42:19 web1 ufw[3659]: crit: connection from 10.0.0.5 by user carol src=192.168.1.10 dst=203.0.113.7
+Oct 18 17:36:32 db1 docker[6600]: notice: systemd terminated successfully
+Oct 18 21:51:03 firewall kernel[3871]: emerg: haproxy failed successfully
+Oct 19 20:30:36 web2 cron[4968]: info: redis disconnected successfully
+Oct 19 11:13:53 web2 cron[3710]: debug: connection from 172.16.2.33 by user guest
+Oct 21 02:08:17 ci-runner cron[9467]: notice: systemd stopped successfully
+Oct 19 07:06:05 db1 app-service[7186]: alert: haproxy stopped successfully
+Oct 19 19:12:48 firewall systemd[3970]: emerg: permission denied (code=781)
+Oct 20 08:01:44 web1 app-service[5297]: info: connection from 203.0.113.7 by user carol src=198.51.100.12 dst=10.0.0.5
+Oct 20 16:20:11 db1 app-service[9153]: crit: nginx started successfully src=10.0.0.5 dst=203.0.113.7
+Oct 18 19:40:56 db1 auditd[8881]: alert: sshd stopped successfully
+Oct 19 08:41:23 router1 rsyslogd[3468]: alert: connection from 10.0.0.5 by user service
+Oct 18 15:11:46 proxy auditd[3872]: crit: connection from 172.16.2.33 by user alice
+Oct 20 09:27:35 proxy cron[4683]: info: connection from 172.16.2.33 by user service
+Oct 21 05:18:43 router1 ufw[4565]: info: connection from 172.16.2.33 by user carol
+Oct 21 11:01:32 ci-runner kernel[8675]: emerg: connection from 192.168.1.10 by user service
+Oct 20 06:08:44 router1 auditd[6039]: emerg: nginx restarted successfully
+Oct 20 00:00:23 web2 auditd[4358]: info: rsyslog terminated successfully src=192.168.1.10 dst=172.16.2.33
+Oct 21 07:43:33 db1 ufw[8973]: warning: haproxy stopped successfully
+Oct 20 15:45:21 router1 sshd[1445]: emerg: postgresql started successfully src=192.168.1.10 dst=192.168.1.10
+Oct 21 10:08:08 db1 kernel[1918]: crit: invalid argument (code=150)
+Oct 18 14:03:00 firewall app-service[1017]: info: connection from 203.0.113.7 by user bob
+Oct 19 22:59:01 db1 ufw[9283]: notice: connection from 203.0.113.7 by user bob
+Oct 19 23:49:51 vpn rsyslogd[6796]: crit: connection from 192.168.1.10 by user root
+Oct 19 16:50:50 ci-runner app-service[8726]: debug: out of memory (code=907)
+Oct 21 03:34:11 db1 sshd[7646]: info: connection from 198.51.100.12 by user service
+Oct 21 01:13:15 router1 cron[494]: err: connection from 172.16.2.33 by user carol
+Oct 19 06:45:56 vpn cron[8414]: crit: systemd stopped successfully
+Oct 19 05:14:52 firewall systemd[9760]: crit: systemd restarted successfully
+Oct 19 01:12:26 db1 app-service[2028]: debug: connection from 172.16.2.33 by user alice
+Oct 19 14:37:23 ci-runner cron[6662]: debug: systemd started successfully
+Oct 20 04:50:53 web1 docker[2277]: debug: rsyslog updated successfully
+Oct 20 12:00:13 firewall kernel[181]: notice: sshd connected successfully src=198.51.100.12 dst=192.168.1.10
+Oct 20 07:36:42 router1 sshd[2527]: crit: rsyslog stopped successfully src=203.0.113.7 dst=172.16.2.33
+Oct 20 16:46:52 db1 auditd[9121]: emerg: address already in use (code=395)
+Oct 19 23:40:43 db1 auditd[3893]: notice: connection from 203.0.113.7 by user carol
+Oct 20 10:34:43 proxy rsyslogd[745]: debug: address already in use (code=649)
+Oct 19 11:26:51 firewall docker[7918]: debug: connection from 198.51.100.12 by user root
+Oct 20 07:38:34 web2 kernel[933]: alert: connection from 203.0.113.7 by user root
+Oct 19 06:11:29 ci-runner auditd[9906]: alert: connection from 198.51.100.12 by user root
+Oct 20 09:34:29 web2 nginx[9454]: debug: broken pipe (code=104)
+Oct 18 12:11:55 web1 app-service[2477]: err: connection from 172.16.2.33 by user carol
+Oct 18 17:25:02 ci-runner nginx[3197]: info: nginx stopped successfully
+Oct 18 18:16:04 web2 ufw[7434]: warning: connection from 172.16.2.33 by user alice
+Oct 21 10:55:33 firewall app-service[9280]: notice: systemd terminated successfully
+Oct 19 21:29:10 web1 sshd[387]: alert: connection from 172.16.2.33 by user service
+Oct 20 23:43:35 proxy ufw[3145]: debug: haproxy restarted successfully
+Oct 20 18:41:46 router1 docker[2562]: notice: connection from 172.16.2.33 by user bob src=172.16.2.33 dst=10.0.0.5
+Oct 21 11:16:51 firewall systemd[4165]: info: connection from 192.168.1.10 by user service
+Oct 18 12:41:24 router1 nginx[1107]: debug: connection from 172.16.2.33 by user guest
+Oct 19 11:30:37 ci-runner cron[4519]: err: connection from 192.168.1.10 by user root
+Oct 19 02:34:20 ci-runner docker[5380]: emerg: connection from 203.0.113.7 by user bob
+Oct 20 23:19:14 web1 ufw[6918]: crit: postgresql stopped successfully
+Oct 21 05:34:47 firewall systemd[9382]: alert: connection from 192.168.1.10 by user service
+Oct 19 03:11:43 firewall systemd[3600]: crit: systemd stopped successfully
+Oct 21 05:59:54 db1 cron[1692]: emerg: sshd started successfully src=198.51.100.12 dst=192.168.1.10
+Oct 20 12:01:31 web1 docker[8341]: crit: rsyslog connected successfully
+Oct 18 20:03:35 vpn kernel[8197]: warning: haproxy stopped successfully
+Oct 19 03:57:38 router1 app-service[9877]: alert: out of memory (code=489)
+Oct 20 07:18:52 web2 app-service[3436]: debug: sshd terminated successfully
+Oct 21 03:00:40 ci-runner app-service[5055]: debug: connection from 10.0.0.5 by user carol
+Oct 19 03:05:26 firewall systemd[2150]: info: redis restarted successfully
+Oct 21 07:41:16 ci-runner docker[4554]: debug: connection from 172.16.2.33 by user root
+Oct 20 08:47:27 vpn ufw[8371]: info: connection from 198.51.100.12 by user service
+Oct 19 20:46:56 vpn app-service[1622]: debug: postgresql connected successfully
+Oct 20 08:58:51 ci-runner ufw[4253]: warning: connection from 172.16.2.33 by user root src=198.51.100.12 dst=203.0.113.7
+Oct 20 14:41:51 ci-runner rsyslogd[6089]: alert: docker updated successfully
+Oct 18 12:29:39 db1 ufw[9677]: emerg: redis connected successfully
+Oct 19 04:17:03 router1 ufw[5097]: notice: sshd restarted successfully
+Oct 18 19:35:06 firewall kernel[7875]: crit: nginx updated successfully src=172.16.2.33 dst=192.168.1.10
+Oct 20 19:44:48 firewall systemd[2852]: alert: redis started successfully src=172.16.2.33 dst=203.0.113.7
+Oct 19 12:56:09 ci-runner app-service[121]: info: connection from 192.168.1.10 by user guest
+Oct 19 17:34:59 ci-runner cron[1707]: crit: connection from 10.0.0.5 by user alice
+Oct 21 02:32:41 proxy rsyslogd[7043]: emerg: broken pipe (code=482)
+Oct 21 00:59:37 ci-runner docker[9943]: alert: nginx disconnected successfully
+Oct 18 15:11:56 ci-runner systemd[3366]: crit: rsyslog restarted successfully
+Oct 21 11:03:04 firewall app-service[8900]: err: connection from 198.51.100.12 by user bob src=192.168.1.10 dst=10.0.0.5
+Oct 18 22:40:22 vpn systemd[5802]: warning: connection from 192.168.1.10 by user guest
+Oct 20 10:11:15 web1 systemd[6350]: emerg: permission denied (code=620) src=203.0.113.7 dst=192.168.1.10
+Oct 19 08:38:59 ci-runner systemd[1971]: emerg: docker disconnected successfully src=10.0.0.5 dst=192.168.1.10
+Oct 19 06:24:09 firewall docker[739]: notice: connection from 192.168.1.10 by user alice
+Oct 19 00:06:44 ci-runner cron[4748]: err: postgresql restarted successfully
+Oct 18 22:44:01 web2 kernel[3417]: warning: connection from 10.0.0.5 by user carol src=192.168.1.10 dst=192.168.1.10
+Oct 19 19:51:40 vpn rsyslogd[5012]: emerg: redis failed successfully
+Oct 19 17:44:18 ci-runner app-service[3934]: warning: haproxy started successfully
+Oct 19 17:13:58 web1 docker[4076]: err: nginx restarted successfully
+Oct 20 05:49:23 router1 docker[625]: err: haproxy failed successfully
+Oct 19 10:24:55 router1 kernel[5913]: alert: connection from 198.51.100.12 by user bob
+Oct 19 14:15:22 ci-runner nginx[3474]: debug: connection from 198.51.100.12 by user root
+Oct 18 20:28:36 web1 docker[3233]: err: systemd disconnected successfully
+Oct 20 20:14:54 proxy sshd[3920]: emerg: nginx terminated successfully
+Oct 18 12:25:20 ci-runner systemd[5935]: info: connection from 10.0.0.5 by user service
+Oct 20 04:32:25 firewall ufw[7404]: alert: permission denied (code=851) src=198.51.100.12 dst=192.168.1.10
+Oct 21 09:20:29 router1 rsyslogd[5733]: info: connection from 10.0.0.5 by user alice
+Oct 20 00:50:06 ci-runner auditd[370]: info: postgresql restarted successfully src=198.51.100.12 dst=10.0.0.5
+Oct 21 05:22:29 vpn nginx[5028]: debug: disk quota exceeded (code=837)
+Oct 20 08:56:02 web2 systemd[8097]: debug: redis started successfully
+Oct 19 21:10:43 firewall auditd[3364]: crit: rsyslog restarted successfully
+Oct 21 05:29:03 firewall app-service[5105]: err: connection from 172.16.2.33 by user guest
+Oct 20 17:53:49 ci-runner app-service[856]: info: connection from 192.168.1.10 by user alice
+Oct 21 08:04:04 web1 auditd[1406]: crit: permission denied (code=137)
+Oct 20 22:48:15 ci-runner ufw[9260]: notice: nginx terminated successfully
+Oct 19 20:42:42 router1 systemd[6308]: emerg: postgresql started successfully
+Oct 19 04:36:05 ci-runner kernel[6951]: info: timeout expired (code=723) src=172.16.2.33 dst=203.0.113.7
+Oct 19 16:18:50 ci-runner docker[223]: debug: connection from 203.0.113.7 by user bob
+Oct 18 12:57:53 db1 rsyslogd[1442]: alert: nginx failed successfully src=172.16.2.33 dst=192.168.1.10
+Oct 21 06:09:18 proxy app-service[5350]: err: connection from 203.0.113.7 by user service
+Oct 19 22:17:51 vpn docker[5846]: err: segmentation fault (code=807)
+Oct 20 07:19:34 db1 rsyslogd[3964]: debug: connection from 203.0.113.7 by user carol
+Oct 21 03:35:34 firewall kernel[4281]: crit: sshd disconnected successfully
+Oct 20 10:53:01 vpn kernel[3193]: info: address already in use (code=105)
+Oct 20 07:35:03 firewall rsyslogd[6804]: info: timeout expired (code=888)
+Oct 20 16:05:00 proxy rsyslogd[6416]: notice: connection from 203.0.113.7 by user service
+Oct 21 03:18:37 vpn docker[4732]: debug: postgresql failed successfully src=198.51.100.12 dst=10.0.0.5
+Oct 20 22:25:20 web2 app-service[4075]: err: systemd failed successfully
+Oct 21 04:57:42 proxy ufw[1281]: info: connection from 198.51.100.12 by user bob src=198.51.100.12 dst=198.51.100.12
+Oct 21 08:12:23 web2 systemd[8592]: err: connection from 198.51.100.12 by user service
+Oct 20 09:55:55 proxy cron[7019]: debug: connection from 10.0.0.5 by user carol
+Oct 19 04:02:43 web1 sshd[3689]: alert: postgresql updated successfully
+Oct 19 05:50:01 web2 docker[2694]: notice: postgresql failed successfully
+Oct 20 00:50:26 web1 auditd[9792]: emerg: invalid argument (code=847)
+Oct 20 19:12:03 vpn nginx[735]: warning: connection from 192.168.1.10 by user guest
+Oct 20 17:15:02 firewall kernel[9557]: debug: connection from 192.168.1.10 by user carol
+Oct 18 23:05:14 ci-runner rsyslogd[5426]: warning: systemd connected successfully
+Oct 19 10:42:29 router1 auditd[4710]: crit: connection from 192.168.1.10 by user carol
+Oct 19 13:23:06 db1 rsyslogd[7819]: debug: haproxy updated successfully
+Oct 20 15:15:44 ci-runner systemd[7295]: info: redis started successfully src=192.168.1.10 dst=198.51.100.12
+Oct 20 18:46:00 firewall nginx[5939]: warning: nginx restarted successfully
+Oct 18 19:59:36 vpn kernel[9635]: info: sshd started successfully
+Oct 19 10:30:42 firewall systemd[5142]: info: nginx terminated successfully
+Oct 21 04:37:50 vpn sshd[7716]: debug: postgresql disconnected successfully src=198.51.100.12 dst=172.16.2.33
+Oct 19 05:07:41 proxy nginx[854]: err: sshd updated successfully
+Oct 20 17:54:14 ci-runner cron[4037]: info: sshd failed successfully
+Oct 20 18:38:20 ci-runner ufw[4875]: info: connection from 198.51.100.12 by user carol
+Oct 19 12:58:37 web1 ufw[3957]: info: address already in use (code=883)
+Oct 20 21:06:44 web1 ufw[9729]: crit: connection from 203.0.113.7 by user carol
+Oct 18 14:52:10 web1 ufw[1447]: warning: docker failed successfully
+Oct 18 23:14:51 db1 cron[6918]: err: systemd started successfully
+Oct 20 14:01:01 router1 app-service[6322]: err: nginx started successfully src=203.0.113.7 dst=172.16.2.33
+Oct 19 18:23:49 proxy ufw[7680]: warning: connection from 203.0.113.7 by user root
+Oct 19 20:58:48 router1 app-service[8704]: debug: postgresql terminated successfully
+Oct 20 01:01:13 web2 app-service[1392]: debug: connection from 192.168.1.10 by user root
+Oct 21 00:26:43 db1 kernel[827]: info: sshd terminated successfully
+Oct 19 17:43:03 web2 app-service[1356]: warning: connection from 172.16.2.33 by user alice
+Oct 21 00:33:29 ci-runner systemd[1396]: debug: connection from 10.0.0.5 by user alice src=172.16.2.33 dst=203.0.113.7
+Oct 20 12:07:06 web2 ufw[6460]: emerg: broken pipe (code=580)
+Oct 20 00:56:52 ci-runner sshd[1983]: info: connection from 172.16.2.33 by user root
+Oct 18 23:26:16 firewall nginx[4195]: err: systemd disconnected successfully
+Oct 20 14:21:44 ci-runner auditd[5002]: err: connection from 10.0.0.5 by user carol src=198.51.100.12 dst=198.51.100.12
+Oct 18 19:58:08 db1 ufw[1561]: emerg: docker terminated successfully
+Oct 18 18:14:06 vpn auditd[3954]: warning: connection from 172.16.2.33 by user bob
+Oct 21 08:19:25 firewall systemd[8422]: alert: connection from 10.0.0.5 by user bob
+Oct 20 00:34:43 ci-runner nginx[4545]: alert: connection from 203.0.113.7 by user root
+Oct 20 19:54:59 web2 nginx[6578]: crit: redis terminated successfully
+Oct 19 12:25:48 firewall rsyslogd[2037]: alert: connection from 203.0.113.7 by user root src=198.51.100.12 dst=198.51.100.12
+Oct 20 00:07:14 vpn ufw[743]: debug: redis connected successfully
+Oct 20 08:57:58 firewall kernel[3087]: warning: connection from 203.0.113.7 by user service
+Oct 20 01:08:34 ci-runner ufw[7788]: crit: connection from 198.51.100.12 by user carol
+Oct 19 02:21:57 proxy auditd[103]: info: connection from 10.0.0.5 by user alice src=172.16.2.33 dst=172.16.2.33
+Oct 19 16:06:29 firewall ufw[9997]: alert: haproxy stopped successfully
+Oct 19 10:49:15 ci-runner nginx[8235]: info: connection from 203.0.113.7 by user service
+Oct 18 15:46:16 vpn systemd[9604]: notice: docker terminated successfully
+Oct 19 21:42:01 ci-runner systemd[7740]: err: docker stopped successfully
+Oct 20 18:44:58 web1 docker[4446]: warning: connection from 10.0.0.5 by user guest
+Oct 19 17:27:17 db1 systemd[2806]: err: systemd connected successfully
+Oct 19 00:05:25 firewall cron[780]: warning: connection from 203.0.113.7 by user root
+Oct 19 19:29:15 firewall nginx[9812]: info: connection from 192.168.1.10 by user bob
+Oct 18 21:45:13 web2 systemd[5945]: notice: connection from 192.168.1.10 by user root
+Oct 20 06:27:02 web2 auditd[2112]: info: connection from 192.168.1.10 by user carol
+Oct 18 14:20:11 vpn ufw[5552]: warning: postgresql stopped successfully
+Oct 18 18:10:26 db1 auditd[765]: debug: connection from 10.0.0.5 by user service
+Oct 19 23:39:30 firewall sshd[9519]: info: postgresql started successfully
+Oct 20 11:39:02 web1 docker[7364]: notice: connection from 192.168.1.10 by user carol
+Oct 21 02:50:58 proxy rsyslogd[1261]: err: segmentation fault (code=474)
+Oct 18 15:19:01 firewall auditd[6970]: alert: docker connected successfully src=198.51.100.12 dst=172.16.2.33
+Oct 19 09:42:12 vpn auditd[9922]: crit: connection from 198.51.100.12 by user bob
+Oct 19 05:05:21 db1 ufw[7696]: err: connection from 198.51.100.12 by user alice src=10.0.0.5 dst=198.51.100.12
+Oct 19 12:11:57 vpn auditd[4323]: crit: docker updated successfully src=198.51.100.12 dst=192.168.1.10
+Oct 19 23:59:57 proxy sshd[5991]: err: haproxy disconnected successfully
+Oct 21 01:32:39 vpn ufw[601]: info: broken pipe (code=161)
+Oct 21 02:00:42 vpn rsyslogd[1708]: alert: connection from 172.16.2.33 by user guest
+Oct 18 15:30:22 ci-runner rsyslogd[5220]: emerg: nginx updated successfully
+Oct 20 02:51:56 web1 docker[7810]: err: redis stopped successfully
+Oct 21 04:55:26 ci-runner kernel[1269]: alert: connection from 10.0.0.5 by user alice
+Oct 19 03:29:31 firewall cron[9919]: alert: sshd updated successfully
+Oct 18 11:58:49 db1 kernel[8013]: warning: postgresql disconnected successfully
+Oct 20 11:14:34 web1 docker[1048]: alert: connection from 198.51.100.12 by user alice src=10.0.0.5 dst=203.0.113.7
+Oct 21 07:53:06 web1 nginx[7952]: info: connection from 10.0.0.5 by user bob src=192.168.1.10 dst=198.51.100.12
+Oct 20 21:11:20 ci-runner auditd[3680]: err: redis updated successfully
+Oct 19 08:45:08 firewall rsyslogd[8195]: emerg: sshd connected successfully
+Oct 18 17:46:19 router1 docker[3951]: alert: systemd connected successfully
+Oct 19 08:18:59 router1 systemd[5685]: warning: systemd restarted successfully
+Oct 21 09:03:36 db1 sshd[919]: notice: connection from 192.168.1.10 by user root src=198.51.100.12 dst=198.51.100.12
+Oct 19 03:42:58 web1 nginx[7958]: alert: connection from 172.16.2.33 by user guest
+Oct 20 05:19:54 ci-runner docker[3870]: err: rsyslog terminated successfully
+Oct 21 02:01:25 proxy kernel[342]: debug: connection from 10.0.0.5 by user carol
+Oct 21 09:43:59 ci-runner sshd[4960]: warning: connection from 203.0.113.7 by user root
+Oct 19 16:20:40 ci-runner auditd[499]: alert: docker stopped successfully
+Oct 20 02:09:22 vpn nginx[3526]: info: haproxy disconnected successfully
+Oct 21 07:03:41 router1 app-service[291]: emerg: connection from 172.16.2.33 by user alice src=172.16.2.33 dst=198.51.100.12
+Oct 18 14:25:31 firewall kernel[3233]: alert: timeout expired (code=894)
+Oct 19 10:29:39 ci-runner auditd[670]: crit: connection from 203.0.113.7 by user alice src=10.0.0.5 dst=203.0.113.7
+Oct 19 07:34:05 vpn ufw[7959]: alert: rsyslog stopped successfully
+Oct 21 06:24:12 web1 rsyslogd[3077]: warning: connection from 192.168.1.10 by user guest src=198.51.100.12 dst=203.0.113.7
+Oct 18 23:29:57 proxy nginx[7389]: debug: docker restarted successfully
+Oct 18 14:12:54 router1 rsyslogd[2251]: alert: sshd terminated successfully
+Oct 18 20:50:58 web1 systemd[7897]: alert: redis stopped successfully
+Oct 19 23:58:29 db1 rsyslogd[3611]: debug: connection from 203.0.113.7 by user service src=198.51.100.12 dst=192.168.1.10
+Oct 19 22:54:46 web1 ufw[7961]: notice: nginx terminated successfully
+Oct 18 23:18:11 proxy cron[5618]: alert: address already in use (code=780)
+Oct 19 03:19:35 router1 systemd[6663]: emerg: haproxy terminated successfully
+Oct 20 14:06:32 ci-runner docker[6495]: emerg: redis restarted successfully
+Oct 21 07:36:19 proxy auditd[3140]: emerg: connection from 203.0.113.7 by user bob src=203.0.113.7 dst=192.168.1.10
+Oct 20 10:23:56 router1 cron[8031]: emerg: connection from 10.0.0.5 by user root
+Oct 21 10:33:21 db1 docker[2258]: crit: docker started successfully
+Oct 20 16:20:43 web1 nginx[9851]: emerg: connection from 203.0.113.7 by user guest src=203.0.113.7 dst=192.168.1.10
+Oct 20 08:30:44 ci-runner cron[9293]: notice: postgresql failed successfully
+Oct 20 20:01:54 db1 nginx[3137]: err: sshd connected successfully src=198.51.100.12 dst=203.0.113.7
+Oct 21 03:02:53 router1 sshd[7967]: notice: sshd stopped successfully
+Oct 21 03:42:45 firewall ufw[9266]: err: rsyslog started successfully
+Oct 19 17:17:48 router1 sshd[7458]: warning: systemd stopped successfully
+Oct 18 20:27:03 web2 ufw[3214]: alert: connection from 203.0.113.7 by user root
+Oct 19 19:38:28 router1 kernel[9697]: crit: postgresql stopped successfully
+Oct 21 05:15:52 proxy sshd[5765]: err: postgresql restarted successfully
+Oct 20 01:11:29 db1 app-service[8868]: emerg: connection from 172.16.2.33 by user service
+Oct 20 07:32:21 web2 cron[9946]: emerg: docker failed successfully
+Oct 18 23:02:43 router1 auditd[9285]: err: sshd terminated successfully
+Oct 21 02:55:46 web2 rsyslogd[4078]: info: postgresql restarted successfully
+Oct 20 22:51:42 router1 rsyslogd[8036]: debug: docker started successfully src=10.0.0.5 dst=203.0.113.7
+Oct 21 06:48:42 web1 docker[6401]: debug: connection from 192.168.1.10 by user guest src=172.16.2.33 dst=203.0.113.7
+Oct 18 14:08:09 router1 sshd[7336]: debug: haproxy started successfully
+Oct 20 19:03:33 vpn cron[7856]: alert: connection from 10.0.0.5 by user root
+Oct 20 07:14:42 firewall nginx[9765]: crit: postgresql updated successfully
+Oct 18 14:06:13 router1 sshd[7005]: err: connection from 198.51.100.12 by user service src=10.0.0.5 dst=172.16.2.33
+Oct 21 08:28:25 firewall cron[2753]: emerg: postgresql disconnected successfully
+Oct 20 05:46:56 ci-runner auditd[6405]: info: broken pipe (code=623)
+Oct 20 10:38:57 db1 kernel[366]: debug: connection from 203.0.113.7 by user guest
+Oct 18 16:16:58 proxy cron[1636]: err: sshd started successfully
+Oct 20 10:09:19 proxy systemd[7979]: warning: connection from 198.51.100.12 by user guest
+Oct 20 08:17:56 vpn nginx[9695]: alert: haproxy started successfully
+Oct 20 21:53:29 proxy docker[5204]: alert: docker restarted successfully src=172.16.2.33 dst=172.16.2.33
+Oct 21 11:14:43 firewall cron[1926]: debug: redis started successfully src=172.16.2.33 dst=10.0.0.5
+Oct 21 03:30:02 db1 ufw[1054]: alert: nginx failed successfully
+Oct 19 06:41:24 firewall ufw[9530]: warning: postgresql disconnected successfully
+Oct 21 02:04:06 web1 systemd[6683]: notice: connection from 192.168.1.10 by user alice
+Oct 18 23:47:52 router1 nginx[5168]: notice: connection from 203.0.113.7 by user alice
+Oct 19 00:41:33 proxy cron[8144]: err: sshd terminated successfully
+Oct 20 17:26:17 proxy cron[5557]: debug: nginx disconnected successfully
+Oct 20 02:35:12 vpn sshd[1242]: info: docker failed successfully
+Oct 19 23:58:07 ci-runner ufw[3492]: debug: sshd started successfully
+Oct 18 23:43:55 router1 sshd[7252]: alert: connection from 203.0.113.7 by user guest
+Oct 19 22:28:54 vpn app-service[681]: warning: connection from 10.0.0.5 by user service
+Oct 21 06:05:38 vpn app-service[1235]: emerg: docker stopped successfully
+Oct 19 09:23:48 ci-runner sshd[9074]: info: docker stopped successfully
+Oct 20 21:43:20 web1 nginx[7814]: info: postgresql connected successfully
+Oct 21 01:13:58 firewall docker[596]: info: connection from 10.0.0.5 by user bob
+Oct 21 06:39:24 ci-runner rsyslogd[285]: debug: connection from 192.168.1.10 by user service
+Oct 19 17:05:29 vpn rsyslogd[517]: err: connection from 192.168.1.10 by user bob
+Oct 20 00:56:42 web1 sshd[2147]: warning: connection from 203.0.113.7 by user root
+Oct 20 23:12:29 vpn rsyslogd[6214]: alert: connection from 10.0.0.5 by user carol
+Oct 21 06:37:53 web1 cron[8989]: warning: systemd updated successfully
+Oct 19 09:35:45 router1 docker[2843]: alert: connection from 10.0.0.5 by user service src=10.0.0.5 dst=198.51.100.12
+Oct 18 19:53:11 web1 systemd[5934]: warning: systemd started successfully
+Oct 21 05:04:27 firewall ufw[8803]: warning: postgresql failed successfully
+Oct 19 13:47:12 ci-runner cron[3631]: err: connection from 198.51.100.12 by user root
+Oct 18 16:18:36 vpn rsyslogd[4620]: debug: redis connected successfully src=10.0.0.5 dst=192.168.1.10
+Oct 19 03:23:41 firewall rsyslogd[1010]: err: segmentation fault (code=493)
+Oct 21 01:08:21 db1 docker[8584]: err: connection from 203.0.113.7 by user root src=172.16.2.33 dst=198.51.100.12
+Oct 21 10:28:32 db1 sshd[532]: notice: connection from 203.0.113.7 by user carol
+Oct 20 06:12:13 router1 rsyslogd[2964]: debug: nginx restarted successfully src=10.0.0.5 dst=203.0.113.7
