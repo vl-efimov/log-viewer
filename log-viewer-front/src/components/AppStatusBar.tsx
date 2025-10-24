@@ -282,7 +282,7 @@ const AppStatusBar: React.FC = () => {
             >
                 {(() => {
                     if (files.length === 0) {
-                        return <Typography sx={{ color: VSCODE_TEXT }}>Нет файлов</Typography>;
+                        return <Typography sx={{ color: VSCODE_TEXT }}>No files</Typography>;
                     }
                     return (
                         <>
@@ -297,12 +297,12 @@ const AppStatusBar: React.FC = () => {
                                 ))}
                             </Select>
                             <Typography sx={{ color: VSCODE_TEXT }}>
-                                {`${(logFile.size / (1024 * 1024)).toFixed(2)} МБ`}
+                                {`${(logFile.size / (1024 * 1024)).toFixed(2)} MB`}
                             </Typography>
                             <Typography sx={{ color: VSCODE_TEXT }}>
                                 {logFile.format === 'Unknown format' ? 'Unknown format' : logFile.format}
                             </Typography>
-                            <Tooltip title="Удалить выбранный файл">
+                            <Tooltip title="Delete selected file">
                                 <IconButton size="small" onClick={onRequestDelete} sx={{ color: VSCODE_TEXT }}>
                                     <DeleteIcon fontSize="small" />
                                 </IconButton>
@@ -323,12 +323,12 @@ const AppStatusBar: React.FC = () => {
                         const display = memEstimateMB ?? memUsedMB;
                         if (display !== null && memMaxMB !== null) {
                             const pct = memMaxMB > 0 ? Math.round((display / memMaxMB) * 100) : 0;
-                            return `Память: ${display} / ${memMaxMB} МБ (${pct}%)`;
+                            return `Memory: ${display} / ${memMaxMB} MB (${pct}%)`;
                         }
                         if (display !== null) {
-                            return `Память: ${display} МБ`;
+                            return `Memory: ${display} MB`;
                         }
-                        return 'Память: N/A';
+                        return 'Memory: N/A';
                     })()}
                 </Typography>
                 <Box
@@ -340,7 +340,7 @@ const AppStatusBar: React.FC = () => {
                     }}
                 />
                 <Typography sx={{ color: VSCODE_TEXT }}>
-                    Готово
+                    Ready
                 </Typography>
             </Box>
             <Dialog
@@ -348,15 +348,15 @@ const AppStatusBar: React.FC = () => {
                 onClose={onCancelDelete}
                 aria-labelledby="confirm-delete-title"
             >
-                <DialogTitle id="confirm-delete-title">Подтвердите удаление</DialogTitle>
+                <DialogTitle id="confirm-delete-title">Confirm deletion</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        {selectedFileId === null ? 'Нет выбранного файла.' : `Вы действительно хотите удалить файл "${files.find(f => f.id === selectedFileId)?.name ?? ''}"? Это действие необратимо.`}
+                        {selectedFileId === null ? 'No file selected.' : `Are you sure you want to permanently delete the file "${files.find(f => f.id === selectedFileId)?.name ?? ''}"? This action cannot be undone.`}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={onCancelDelete}>Отмена</Button>
-                    <Button onClick={onConfirmDelete} color="error">Удалить</Button>
+                    <Button onClick={onCancelDelete}>Cancel</Button>
+                    <Button onClick={onConfirmDelete} color="error">Delete</Button>
                 </DialogActions>
             </Dialog>
         </Box>

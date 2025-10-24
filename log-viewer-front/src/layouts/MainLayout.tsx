@@ -23,9 +23,9 @@ function detectLogFormat(content: string): string {
     // HDFS v2: 2025-10-21 03:08:18,866 INFO org.apache.hadoop.ipc.Server: ...
     // Format: YYYY-MM-DD HH:MM:SS,mmm LEVEL class: ...
     const hdfsV2Regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} (INFO|WARN|ERROR|DEBUG|TRACE|FATAL) [\w.$:-]+:/m;
-    // BGL (старый): ... 2005-06-05-09.39.54.210760 ... (date-time может быть в любой части строки)
+    // BGL (old): ... 2005-06-05-09.39.54.210760 ... (date-time may appear anywhere in the line)
     const bglOldRegex = /\d{4}-\d{2}-\d{2}-\d{2}\.\d{2}\.\d{2}\.\d{6}/m;
-    // BGL (новый): 2025-10-20 21:37:35 JOB 46082 USER=alice QUEUE=low NODES=128 CORES=256 RUNTIME=00:18:35 STATUS=CANCELLED
+    // BGL (new): 2025-10-20 21:37:35 JOB 46082 USER=alice QUEUE=low NODES=128 CORES=256 RUNTIME=00:18:35 STATUS=CANCELLED
     const bglNewRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} JOB \d+ USER=\w+ QUEUE=\w+ NODES=\d+ CORES=\d+ RUNTIME=\d{2}:\d{2}:\d{2} STATUS=\w+/m;
     // Apache: 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] ...
     // Require username (not '-') after IP

@@ -52,10 +52,10 @@ const ViewLogsPage: React.FC = () => {
     }, [logFile]);
 
     if (loading) {
-        return <Typography variant="body1">Загрузка...</Typography>;
+        return <Typography variant="body1">Loading...</Typography>;
     }
     if (lines.length === 0) {
-        return <Typography variant="body1">Перетащите текстовый файл с логами на приложение</Typography>;
+        return <Typography variant="body1">Drag and drop a text log file onto the app</Typography>;
     }
     return (
         <Box

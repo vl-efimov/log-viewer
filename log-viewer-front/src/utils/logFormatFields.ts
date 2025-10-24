@@ -1,8 +1,8 @@
-// Автоопределение полей для каждого формата лога
+// Auto-detection of fields for each log format
 export function getLogFieldsForFormat(format: string): string[] {
     switch (format) {
         case 'Apache':
-            // Объединённый список для access и error логов
+            // Combined list for access and error logs
             return [
                 'ip', 'ident', 'user', 'datetime', 'request', 'status', 'size', 'referer', 'userAgent',
                 'level', 'client', 'message'
@@ -31,11 +31,11 @@ export function getLogFieldsForFormat(format: string): string[] {
     }
 }
 
-// Универсальный парсер строки лога по формату
+// Generic parser for a log line by format
 export function parseLogLine(line: string, format: string): Record<string, any> {
     switch (format) {
         case 'Apache': {
-            // Сначала пробуем error log
+            // First try Apache error log
             const errorRegex = /^\[([^\]]+)\] \[([^\]]+)\](?: \[client ([^\]]+)\])?(?: (.*))?$/;
             const errorMatch = line.match(errorRegex);
             if (errorMatch) {
@@ -46,7 +46,7 @@ export function parseLogLine(line: string, format: string): Record<string, any> 
                     message: errorMatch[4] ?? ''
                 };
             }
-            // Если не error log — пробуем как access log
+            // If not an error log, try parsing as access log
             const accessRegex = /^(\S+) (\S+) (\S+) \[([^\]]+)\] "([^"]*)" (\d{3}) (\S+)(?: "([^"]*)" "([^"]*)")?/;
             const accessMatch = line.match(accessRegex);
             if (accessMatch) {
