@@ -59,11 +59,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
         <Drawer
             variant="permanent"
             sx={{
-                width: isSidebarOpen ? 240 : 70,
+                width: isSidebarOpen ? 240 : 73,
                 flexShrink: 0,
                 transition: 'width 0.3s ease',
                 '& .MuiDrawer-paper': {
-                    width: isSidebarOpen ? 240 : 70,
+                    width: isSidebarOpen ? 240 : 73,
                     boxSizing: 'border-box',
                     display: 'flex',
                     flexDirection: 'column',
@@ -98,30 +98,33 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                             whiteSpace: 'nowrap',
                                             transition: 'height 0.3s ease',
                                             height: isSidebarOpen ? '24px' : '0px',
+                                            marginBottom: 1,
                                         }}
                                     >
                                         {isRendered && category.subheader}
                                     </ListSubheader>
                                 }
                             >
-                                {category.items?.map((item, index) => (
-                                    <div key={`sidebar-item-${index}`}>
-                                        <ListItemButton
-                                            component={Link}
-                                            to={item.path}
-                                            selected={location.pathname === item.path}
-                                            sx={{
-                                                borderRadius: 2,
-                                                overflow: 'hidden',
-                                                whiteSpace: 'nowrap',
-                                                height: '48px',
-                                            }}
-                                        >
-                                            <ListItemIcon>{item.icon}</ListItemIcon>
-                                            {isRendered && <ListItemText primary={item.text} />}
-                                        </ListItemButton>
-                                    </div>
-                                ))}
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    {category.items?.map((item, index) => (
+                                        <div key={`sidebar-item-${index}`}>
+                                            <ListItemButton
+                                                component={Link}
+                                                to={item.path}
+                                                selected={location.pathname === item.path}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    overflow: 'hidden',
+                                                    whiteSpace: 'nowrap',
+                                                    height: '48px',
+                                                }}
+                                            >
+                                                <ListItemIcon>{item.icon}</ListItemIcon>
+                                                {isRendered && <ListItemText primary={item.text} />}
+                                            </ListItemButton>
+                                        </div>
+                                    ))}
+                                </Box>
                             </List>
                             {index === topMenuItems.length - 1 || <Divider sx={{ marginY: 1 }} />}
                         </div>
