@@ -14,7 +14,9 @@ const flagStyle = { marginRight: 8, width: 20, height: 15 };
 
 const LanguageSelect = () => {
     const { i18n } = useTranslation();
-    const [locale, setLocale] = useState(Languages.EN);
+    const [locale, setLocale] = useState<Languages>(() => {
+        return (i18n.language as Languages) || Languages.EN;
+    });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     const handleButtonClick = (event: React.MouseEvent<HTMLElement>) => {

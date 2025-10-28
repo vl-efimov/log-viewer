@@ -62,10 +62,18 @@ import { Outlet } from 'react-router-dom';
 
 
 export default function MainLayout () {
-    const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [isSidebarOpen, setSidebarOpen] = useState(() => {
+        const saved = localStorage.getItem('sidebarOpen');
+        return saved !== null ? saved === 'true' : false;
+    });
     const dispatch = useDispatch();
+    
     const toggleSidebar = () => {
-        setSidebarOpen(!isSidebarOpen);
+        setSidebarOpen(prev => {
+            const newState = !prev;
+            localStorage.setItem('sidebarOpen', String(newState));
+            return newState;
+        });
     };
 
     useEffect(() => {
