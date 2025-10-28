@@ -8,42 +8,52 @@ import DashboardPage from '../pages/DashboardPage';
 import SettingsPage from '../pages/SettingsPage';
 import ViewLogsPage from '../pages/ViewLogsPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import {
+    RouteRoot,
+    RouteAddLogs,
+    RouteDashboard,
+    RouteViewLogs,
+    RouteAnomalySearch,
+    RouteCommonPatterns,
+    RouteSettings,
+    RouteNotFound
+} from './routePaths';
 
 const AppRoutes: RouteObject[] = [
     {
-        path: "/",
+        path: RouteRoot,
         element: <MainLayout />,
         children: [
             {
-                path: "/",
-                element: <Navigate to="/add-logs" />,
+                path: RouteRoot,
+                element: <Navigate to={RouteAddLogs} />,
             },
             {
-                path: "/add-logs",
+                path: RouteAddLogs,
                 element: <AddLogsPage />,
             },
             {
-                path: "/dashboard",
+                path: RouteDashboard,
                 element: <DashboardPage />,
             },
             {
-                path: "/view-logs",
+                path: RouteViewLogs,
                 element: <ViewLogsPage />,
             },
             {
-                path: "/anomaly-search",
+                path: RouteAnomalySearch,
                 element: <AnomaliesPage />,
             },
             {
-                path: "/common-patterns",
+                path: RouteCommonPatterns,
                 element: <CommonPatternsPage />,
             },
             {
-                path: "/settings",
+                path: RouteSettings,
                 element: <SettingsPage />,
             },
             {
-                path: "*",
+                path: RouteNotFound,
                 element: <NotFoundPage />,
             },
         ]
