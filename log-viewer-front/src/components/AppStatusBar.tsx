@@ -277,7 +277,8 @@ const AppStatusBar: React.FC = () => {
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 2
+                    gap: 2,
+                    height: '100%',
                 }}
             >
                 {(() => {
@@ -290,19 +291,80 @@ const AppStatusBar: React.FC = () => {
                                 value={selectedFileId ?? ''}
                                 onChange={handleSelectChange}
                                 size="small"
-                                sx={{ color: VSCODE_TEXT, minWidth: 200 }}
+                                sx={{ color: VSCODE_TEXT, minWidth: 200, maxHeight: 32 }}
                             >
                                 {files.map(f => (
                                     <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>
                                 ))}
                             </Select>
-                            <Typography sx={{ color: VSCODE_TEXT }}>
-                                {`${(logFile.size / (1024 * 1024)).toFixed(2)} MB`}
-                            </Typography>
-                            <Typography sx={{ color: VSCODE_TEXT }}>
-                                {logFile.format === 'Unknown format' ? 'Unknown format' : logFile.format}
-                            </Typography>
-                            <Tooltip title="Delete selected file">
+                            <Tooltip
+                                title={<Typography sx={{ fontSize: 18 }}>File size</Typography>}
+                                arrow
+                                slotProps={{
+                                    popper: {
+                                        modifiers: [
+                                            {
+                                                name: 'offset',
+                                                options: {
+                                                    offset: [0, -8],
+                                                },
+                                            },
+                                        ],
+                                    },
+                                }}
+                            >
+                                <Typography 
+                                    sx={{ 
+                                        color: VSCODE_TEXT,
+                                        height: '100%',
+                                        alignContent: 'center',
+                                    }}
+                                >
+                                    {`${(logFile.size / (1024 * 1024)).toFixed(2)} MB`}
+                                </Typography>
+                            </Tooltip>
+                            <Tooltip
+                                title={<Typography sx={{ fontSize: 18 }}>Log file format</Typography>}
+                                arrow
+                                slotProps={{
+                                    popper: {
+                                        modifiers: [
+                                            {
+                                                name: 'offset',
+                                                options: {
+                                                    offset: [0, -8],
+                                                },
+                                            },
+                                        ],
+                                    },
+                                }}
+                            >
+                                <Typography
+                                    sx={{ 
+                                        color: VSCODE_TEXT,
+                                        height: '100%',
+                                        alignContent: 'center',
+                                    }}
+                                >
+                                    {logFile.format === 'Unknown format' ? 'Unknown format' : logFile.format}
+                                </Typography>
+                            </Tooltip>
+                            <Tooltip
+                                title={<Typography sx={{ fontSize: 18 }}>Delete selected file</Typography>}
+                                arrow
+                                slotProps={{
+                                    popper: {
+                                        modifiers: [
+                                            {
+                                                name: 'offset',
+                                                options: {
+                                                    offset: [0, -8],
+                                                },
+                                            },
+                                        ],
+                                    },
+                                }}
+                            >
                                 <IconButton size="small" onClick={onRequestDelete} sx={{ color: VSCODE_TEXT }}>
                                     <DeleteIcon fontSize="small" />
                                 </IconButton>
