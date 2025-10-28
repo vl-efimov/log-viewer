@@ -107,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                             >
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     {category.items?.map((item, index) => (
-                                        <div key={`sidebar-item-${index}`}>
+                                        <Box key={`sidebar-item-${index}`}>
                                             <ListItemButton
                                                 component={Link}
                                                 to={item.path}
@@ -119,10 +119,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                                     height: '48px',
                                                 }}
                                             >
-                                                <ListItemIcon>{item.icon}</ListItemIcon>
+                                                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
                                                 {isRendered && <ListItemText primary={item.text} />}
                                             </ListItemButton>
-                                        </div>
+                                        </Box>
                                     ))}
                                 </Box>
                             </List>
