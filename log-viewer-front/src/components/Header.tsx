@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     <IconButton
                         sx={{ color: textColor }}
                         aria-label="theme palette"
-                        onClick={() => setDrawerOpen(true)}
+                        onClick={() => setDrawerOpen(prev => !prev)}
                     >
                         <PaletteIcon />
                     </IconButton>
