@@ -38,7 +38,6 @@ const LanguageSelect = () => {
                 color="inherit"
                 aria-label="select language"
                 sx={{
-                    marginRight: 2,
                     width: 40,
                     height: 40,
                     overflow: 'hidden',

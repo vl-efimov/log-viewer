@@ -120,10 +120,9 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     <PaletteIcon />
                 </IconButton>
 
-                <FormControl sx={{ minWidth: 100 }}>
-                    <LanguageSelect />
-                </FormControl>
+                <LanguageSelect />
             </Toolbar>
+
             <ThemePaletteDrawer
                 open={drawerOpen}
                 onClose={() => setDrawerOpen(false)}
