@@ -156,6 +156,10 @@ export default function MainLayout () {
                         flexGrow: 1,
                         overflow: 'hidden',
                         display: 'flex',
+                        background: (theme) => 
+                            theme.palette.mode === 'light' 
+                                ? 'linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%)'
+                                : 'linear-gradient(135deg, #23272f 0%, #292e38 100%)',
                     }}
                 >
                     <Box
