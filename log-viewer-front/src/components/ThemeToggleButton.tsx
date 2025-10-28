@@ -40,7 +40,7 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ mode, toggleTheme
                     justifyContent: 'center'
                 }}
             >
-                <LightMode />
+                <LightMode sx={{ color: 'white' }} />
             </span>
         </Slide>
         <Slide
@@ -62,7 +62,7 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ mode, toggleTheme
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}>
-                <DarkMode />
+                <DarkMode sx={{ color: 'white' }}  />
             </span>
         </Slide>
     </IconButton>

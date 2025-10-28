@@ -69,6 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                     flexDirection: 'column',
                     transition: 'width 0.3s ease',
                     position: 'relative',
+                    backgroundColor: (theme) => theme.custom?.sidebarBg,
                 },
             }}
         >
@@ -99,6 +100,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                             transition: 'height 0.3s ease',
                                             height: isSidebarOpen ? '24px' : '0px',
                                             marginBottom: 1,
+                                            backgroundColor: 'inherit',
                                         }}
                                     >
                                         {isRendered && category.subheader}

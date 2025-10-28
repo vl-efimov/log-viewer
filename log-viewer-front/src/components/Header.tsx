@@ -25,19 +25,21 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const { toggleTheme, mode, primaryColor, setPrimaryColor } = themeCtx;
     const [drawerOpen, setDrawerOpen] = useState(false);
 
+    const textColor = mode === 'light' ? '#fff' : undefined;
     return (
         <AppBar
             position='fixed'
             sx={{
-                zIndex: (theme) => theme.zIndex.drawer + 1
+                zIndex: (theme) => theme.zIndex.drawer + 1,
+                backgroundColor: (theme) => theme.custom?.headerBg,
             }}
         >
             <Toolbar>
                 <IconButton
                     sx={{
                         marginRight: 2,
+                        color: textColor,
                     }}
-                    color="inherit"
                     aria-label="menu"
                     onClick={toggleSidebar}
                 >
@@ -46,6 +48,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 <Typography
                     sx={{
                         flexGrow: 1,
+                        color: textColor,
                     }}
                     variant="h6"
                 >
@@ -59,14 +62,16 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     />
 
                     <IconButton
-                        color="inherit"
+                        sx={{ color: textColor }}
                         aria-label="theme palette"
                         onClick={() => setDrawerOpen(true)}
                     >
                         <PaletteIcon />
                     </IconButton>
 
-                    <LanguageSelect />
+                    <Box sx={{ color: textColor }}>
+                        <LanguageSelect />
+                    </Box>
                 </Box>
 
             </Toolbar>

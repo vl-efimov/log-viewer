@@ -34,6 +34,10 @@ export const getCustomTheme = (
                 'sans-serif',
             ].join(','),
         },
+        custom: {
+            headerBg: isLight ? '#334155' : undefined,
+            sidebarBg: isLight ? '#e2e8f0' : undefined,
+        },
     });
 };
 
