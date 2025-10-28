@@ -1,6 +1,7 @@
 import Typography from '@mui/material/Typography';
 import Drawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
+import { useEffect, useRef } from 'react';
 
 interface ThemePaletteDrawerProps {
     open: boolean;
@@ -31,6 +32,14 @@ const PRIMARY_COLORS = [
 ];
 
 const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, onPrimaryChange, currentPrimary }) => {
+    const firstColorRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (open && firstColorRef.current) {
+            firstColorRef.current.focus();
+        }
+    }, [open]);
+
     return (
         <Drawer
             anchor="right"
@@ -64,9 +73,11 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         marginBottom: 16 
                     }}
                 >
-                    {PRIMARY_COLORS.map(color => (
+                    {PRIMARY_COLORS.map((color, idx) => (
                         <div
                             key={color}
+                            ref={idx === 0 ? firstColorRef : undefined}
+                            tabIndex={0}
                             onClick={() => onPrimaryChange(color)}
                             style={{
                                 width: 32,
@@ -75,6 +86,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                                 background: color,
                                 border: color === currentPrimary ? '3px solid #000' : '2px solid #ccc',
                                 cursor: 'pointer',
+                                outline: 'none',
                             }}
                             title={color}
                         />
