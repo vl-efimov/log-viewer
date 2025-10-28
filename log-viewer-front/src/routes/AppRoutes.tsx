@@ -2,19 +2,19 @@ import { Navigate, RouteObject } from 'react-router-dom';
 
 import MainLayout from '../layouts/MainLayout';
 import AddLogsPage from '../pages/AddLogsPage';
-import AnomaliesPage from '../pages/AnomaliesPage';
-import CommonPatternsPage from '../pages/CommonPatternsPage';
+import LogFormatsPage from '../pages/LogFormatsPage';
+import PretrainedModelsPage from '../pages/PretrainedModelsPage';
 import DashboardPage from '../pages/DashboardPage';
 import SettingsPage from '../pages/SettingsPage';
 import ViewLogsPage from '../pages/ViewLogsPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import {
     RouteRoot,
-    RouteAddLogs,
+    RouteHome,
     RouteDashboard,
     RouteViewLogs,
-    RouteAnomalySearch,
-    RouteCommonPatterns,
+    RouteLogFormats,
+    RoutePretrainedModels,
     RouteSettings,
     RouteNotFound
 } from './routePaths';
@@ -26,10 +26,10 @@ const AppRoutes: RouteObject[] = [
         children: [
             {
                 path: RouteRoot,
-                element: <Navigate to={RouteAddLogs} />,
+                element: <Navigate to={RouteHome} />,
             },
             {
-                path: RouteAddLogs,
+                path: RouteHome,
                 element: <AddLogsPage />,
             },
             {
@@ -41,12 +41,12 @@ const AppRoutes: RouteObject[] = [
                 element: <ViewLogsPage />,
             },
             {
-                path: RouteAnomalySearch,
-                element: <AnomaliesPage />,
+                path: RouteLogFormats,
+                element: <LogFormatsPage />,
             },
             {
-                path: RouteCommonPatterns,
-                element: <CommonPatternsPage />,
+                path: RoutePretrainedModels,
+                element: <PretrainedModelsPage />,
             },
             {
                 path: RouteSettings,

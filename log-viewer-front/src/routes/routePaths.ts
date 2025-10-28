@@ -1,8 +1,8 @@
 export const RouteRoot = "/";
-export const RouteAddLogs = "/add-logs";
+export const RouteHome = "/home";
 export const RouteDashboard = "/dashboard";
 export const RouteViewLogs = "/view-logs";
-export const RouteAnomalySearch = "/anomaly-search";
-export const RouteCommonPatterns = "/common-patterns";
+export const RouteLogFormats = "/log-formats";
+export const RoutePretrainedModels = "/pretrained-models";
 export const RouteSettings = "/settings";
 export const RouteNotFound = "*";

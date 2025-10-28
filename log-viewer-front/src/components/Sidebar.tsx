@@ -6,15 +6,15 @@ import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton';
 import Divider from '@mui/material/Divider';
 import ListSubheader from '@mui/material/ListSubheader';
-import AddIcon from '@mui/icons-material/Add';
+import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PreviewIcon from '@mui/icons-material/Preview';
-import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
-import PatternIcon from '@mui/icons-material/Pattern';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { RouteAddLogs, RouteDashboard, RouteViewLogs, RouteAnomalySearch, RouteCommonPatterns, RouteSettings } from '../routes/routePaths';
+import { RouteHome, RouteDashboard, RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../routes/routePaths';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -37,21 +37,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
         {
             subheader: 'Start',
             items: [
-                { text: 'Add new logs', icon: <AddIcon />, path: RouteAddLogs },
+                { text: 'Home', icon: <HomeIcon />, path: RouteHome },
             ]
         },
         {
-            subheader: 'Main items',
+            subheader: 'Logs',
             items: [
                 { text: 'Dashboard', icon: <DashboardIcon />, path: RouteDashboard },
                 { text: 'View logs', icon: <PreviewIcon />, path: RouteViewLogs },
             ]
         },
         {
-            subheader: 'Analytics',
+            subheader: 'Resources',
             items: [
-                { text: 'Anomaly Search', icon: <TroubleshootIcon />, path: RouteAnomalySearch },
-                { text: 'Common patterns', icon: <PatternIcon />, path: RouteCommonPatterns },
+                { text: 'Log formats', icon: <DescriptionIcon />, path: RouteLogFormats },
+                { text: 'Pretrained models', icon: <ModelTrainingIcon />, path: RoutePretrainedModels },
             ]
         },
     ];
