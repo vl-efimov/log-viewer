@@ -31,8 +31,19 @@ const LanguageSelect = () => {
         setAnchorEl(null);
     };
 
+    // Preload flag images for all languages
+    const flagSrcs = LANGUAGES.map(lang => {
+        const code = lang === Languages.EN ? 'gb' : lang;
+        return `/src/assets/flags/${code}.svg`;
+    });
+
     return (
         <>
+            <div style={{ display: 'none' }}>
+                {flagSrcs.map(src => (
+                    <img src={src} alt="preload-flag" key={src} />
+                ))}
+            </div>
             <IconButton
                 onClick={handleButtonClick}
                 color="inherit"
