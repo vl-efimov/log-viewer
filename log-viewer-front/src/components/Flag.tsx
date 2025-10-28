@@ -1,27 +1,24 @@
-import { useState, useEffect } from 'react';
+import gbFlag from '../assets/flags/gb-flag.svg';
+import ruFlag from '../assets/flags/ru-flag.svg';
+import czFlag from '../assets/flags/cz-flag.svg';
+import { Languages } from '../constants/LanguagesEnum';
 
 interface FlagProps {
     language: string;
     [key: string]: unknown;
 }
 
+const FLAG_MAP: Record<string, string> = {
+    gb: gbFlag,
+    ru: ruFlag,
+    cz: czFlag,
+};
+
 const Flag: React.FC<FlagProps> = (props: FlagProps) => {
-    const [flag, setFlag] = useState<string | null>(null);
-
-    useEffect(() => {
-        const loadFlag = async () => {
-            try {
-                const flagResponse = await import(`../assets/flags/${props.language}-flag.svg`);
-                setFlag(flagResponse.default);
-            } catch (e) {
-                console.error(`Error loading flag for ${props.language}:`, e);
-            }
-        };
-
-        loadFlag();
-    }, [props.language]);
-
-    return flag ? <img src={flag} alt={`${props.language} flag`} {...props} /> : null;
+    const code = props.language === Languages.EN ? 'gb' : props.language;
+    const src = FLAG_MAP[code];
+    if (!src) return null;
+    return <img src={src} alt={`${props.language} flag`} {...props} />;
 };
 
 export default Flag;
