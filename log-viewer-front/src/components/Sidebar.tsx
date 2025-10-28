@@ -14,6 +14,7 @@ import PatternIcon from '@mui/icons-material/Pattern';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { RouteAddLogs, RouteDashboard, RouteViewLogs, RouteAnomalySearch, RouteCommonPatterns, RouteSettings } from '../routes/routePaths';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -36,21 +37,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
         {
             subheader: 'Start',
             items: [
-                { text: 'Add new logs', icon: <AddIcon />, path: '/add-logs' },
+                { text: 'Add new logs', icon: <AddIcon />, path: RouteAddLogs },
             ]
         },
         {
             subheader: 'Main items',
             items: [
-                { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-                { text: 'View logs', icon: <PreviewIcon />, path: '/view-logs' },
+                { text: 'Dashboard', icon: <DashboardIcon />, path: RouteDashboard },
+                { text: 'View logs', icon: <PreviewIcon />, path: RouteViewLogs },
             ]
         },
         {
             subheader: 'Analytics',
             items: [
-                { text: 'Anomaly Search', icon: <TroubleshootIcon />, path: '/anomaly-search' },
-                { text: 'Common patterns', icon: <PatternIcon />, path: '/common-patterns' },
+                { text: 'Anomaly Search', icon: <TroubleshootIcon />, path: RouteAnomalySearch },
+                { text: 'Common patterns', icon: <PatternIcon />, path: RouteCommonPatterns },
             ]
         },
     ];
@@ -136,8 +137,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                 <List>
                     <ListItemButton
                         component={Link}
-                        to={'/settings'}
-                        selected={location.pathname === '/settings'}
+                        to={RouteSettings}
+                        selected={location.pathname === RouteSettings}
                         sx={{
                             borderRadius: 2,
                             overflow: 'hidden',
@@ -145,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                             height: '48px',
                         }}
                     >
-                        <ListItemIcon><SettingsIcon /></ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: 40 }}><SettingsIcon /></ListItemIcon>
                         {isRendered && <ListItemText primary={'Settings'} />}
                     </ListItemButton>
                 </List>
