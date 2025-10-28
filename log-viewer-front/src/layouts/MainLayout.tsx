@@ -129,7 +129,6 @@ export default function MainLayout () {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100vh',
-                border: '1px solid red'
             }}
             onDrop={onDrop}
             onDragOver={onDragOver}
@@ -162,6 +161,7 @@ export default function MainLayout () {
                     <Box
                         sx={{
                             p: 2,
+                            width: '100%',
                             overflow: 'hidden',
                         }}
                     >
