@@ -1,7 +1,8 @@
+import Box from '@mui/material/Box';
 import { useState } from 'react';
-import Select from '@mui/material/Select';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import { useTranslation } from 'react-i18next';
 import Flag from './Flag';
 import { Languages } from '../constants/LanguagesEnum';
@@ -14,53 +15,85 @@ const flagStyle = { marginRight: 8, width: 20, height: 15 };
 const LanguageSelect = () => {
     const { i18n } = useTranslation();
     const [locale, setLocale] = useState(Languages.EN);
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-    const handleLocaleChange = (event: SelectChangeEvent<string>) => {
-        const newLocale = event.target.value as Languages;
-        setLocale(newLocale);
-        i18n.changeLanguage(newLocale);
+    const handleButtonClick = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleLocaleSelect = (lang: Languages) => {
+        setLocale(lang);
+        i18n.changeLanguage(lang);
+        setAnchorEl(null);
     };
 
     return (
-        <Select
-            value={locale}
-            onChange={handleLocaleChange}
-            IconComponent={() => <span style={{ display: 'none' }} />}
-            MenuProps={{
-                PaperProps: {
-                    sx: {
-                        boxShadow: 3,
-                    },
-                },
-            }}
-            sx={{
-                '& .MuiOutlinedInput-notchedOutline': {
-                    border: 'none',
-                },
-                '&:hover': {
-                    backgroundColor: 'transparent',
-                },
-            }}
-        >
-            {LANGUAGES.map((lang) => (
-                <MenuItem
-                    key={lang}
-                    value={lang}
+        <>
+            <IconButton
+                onClick={handleButtonClick}
+                color="inherit"
+                aria-label="select language"
+                sx={{
+                    marginRight: 2,
+                    width: 40,
+                    height: 40,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    background: 'transparent',
+                }}
+                size="large"
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        background: 'transparent',
+                    }}
                 >
                     <Flag
-                        language={lang === Languages.EN ? 'gb' : lang}
-                        style={flagStyle}
+                        language={locale === Languages.EN ? 'gb' : locale}
+                        style={{ width: 24, height: 18, objectFit: 'contain' }}
                     />
-                    <Typography
-                        variant="body1"
-                        component="span"
+                </Box>
+            </IconButton>
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            >
+                {LANGUAGES.map((lang) => (
+                    <MenuItem
+                        key={lang}
+                        selected={locale === lang}
+                        onClick={() => handleLocaleSelect(lang)}
                     >
-                        {lang.toUpperCase()}
-                    </Typography>
-                    
-                </MenuItem>
-            ))}
-        </Select>
+                        <Flag
+                            language={lang === Languages.EN ? 'gb' : lang}
+                            style={flagStyle}
+                        />
+                        <Typography
+                            variant="body1"
+                            component="span"
+                        >
+                            {lang.toUpperCase()}
+                        </Typography>
+                    </MenuItem>
+                ))}
+            </Menu>
+        </>
     );
 };
 
