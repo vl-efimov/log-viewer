@@ -28,9 +28,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const textColor = mode === 'light' ? '#fff' : undefined;
     return (
         <AppBar
-            position='fixed'
             sx={{
-                zIndex: (theme) => theme.zIndex.drawer + 1,
                 backgroundColor: (theme) => theme.custom?.headerBg,
             }}
         >
@@ -64,7 +62,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     <IconButton
                         sx={{ color: textColor }}
                         aria-label="theme palette"
-                        onClick={() => setDrawerOpen(prev => !prev)}
+                        onClick={() => setDrawerOpen(true)}
                     >
                         <PaletteIcon />
                     </IconButton>
@@ -81,6 +79,8 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 onClose={() => setDrawerOpen(false)}
                 onPrimaryChange={setPrimaryColor}
                 currentPrimary={primaryColor}
+                mode={mode}
+                onThemeToggle={toggleTheme}
             />
         </AppBar>
     );

@@ -1,12 +1,19 @@
 import Typography from '@mui/material/Typography';
 import Drawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import { ColorModeEnum } from '../constants/ColorModeEnum';
 
 interface ThemePaletteDrawerProps {
     open: boolean;
     onClose: () => void;
     onPrimaryChange: (color: string) => void;
     currentPrimary: string;
+    mode: ColorModeEnum;
+    onThemeToggle: () => void;
 }
 
 const PRIMARY_COLORS = [
@@ -30,7 +37,7 @@ const PRIMARY_COLORS = [
     '#f43f5e',
 ];
 
-const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, onPrimaryChange, currentPrimary }) => {
+const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, onPrimaryChange, currentPrimary, mode, onThemeToggle }) => {
     return (
         <Drawer
             anchor="right"
@@ -44,25 +51,138 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                             theme.palette.mode === 'light'
                                 ? 'rgba(255, 255, 255, 0.9)'
                                 : 'rgba(30, 41, 59, 0.9)',
+                        zIndex: (theme) => theme.zIndex.appBar + 1,
                     }
                 }
             }}
         >
             <Box
                 sx={{
-                    pt: { xs: '72px', sm: '80px' },
+                    pt: 3,
                     px: 3,
                     pb: 3,
-                    width: 320
+                    width: 320,
+                    position: 'relative',
                 }}
             >
+                <IconButton
+                    onClick={onClose}
+                    sx={{
+                        position: 'absolute',
+                        right: 8,
+                        top: 8,
+                        '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                        },
+                    }}
+                    aria-label="close"
+                >
+                    <CloseIcon />
+                </IconButton>
+                
                 <Typography
                     variant="h5"
                     gutterBottom
-                    sx={{ fontWeight: 600, mb: 3 }}
+                    sx={{ fontWeight: 600, mb: 3, mt: 2 }}
                 >
                     Theme Settings
                 </Typography>
+
+                <Box sx={{ mb: 4 }}>
+                    <Typography
+                        variant="subtitle2"
+                        gutterBottom
+                        sx={{
+                            fontWeight: 600,
+                            color: 'text.secondary',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            mb: 2
+                        }}
+                    >
+                        Theme Mode
+                    </Typography>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            gap: 1,
+                        }}
+                    >
+                        <Box
+                            onClick={() => mode === ColorModeEnum.Dark && onThemeToggle()}
+                            sx={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 1,
+                                py: 1.5,
+                                borderRadius: 2,
+                                cursor: 'pointer',
+                                backgroundColor: mode === ColorModeEnum.Light 
+                                    ? 'primary.main' 
+                                    : 'action.hover',
+                                color: mode === ColorModeEnum.Light 
+                                    ? 'primary.contrastText' 
+                                    : 'text.primary',
+                                border: '2px solid',
+                                borderColor: mode === ColorModeEnum.Light 
+                                    ? 'primary.main' 
+                                    : 'divider',
+                                boxShadow: mode === ColorModeEnum.Light 
+                                    ? '0 2px 8px rgba(0, 0, 0, 0.15)' 
+                                    : 'none',
+                                '&:hover': {
+                                    backgroundColor: mode === ColorModeEnum.Light 
+                                        ? 'primary.dark' 
+                                        : 'action.selected',
+                                },
+                            }}
+                        >
+                            <LightModeIcon />
+                            <Typography variant="body2">
+                                Light
+                            </Typography>
+                        </Box>
+                        <Box
+                            onClick={() => mode === ColorModeEnum.Light && onThemeToggle()}
+                            sx={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 1,
+                                py: 1.5,
+                                borderRadius: 2,
+                                cursor: 'pointer',
+                                backgroundColor: mode === ColorModeEnum.Dark 
+                                    ? 'primary.main' 
+                                    : 'action.hover',
+                                color: mode === ColorModeEnum.Dark 
+                                    ? 'primary.contrastText' 
+                                    : 'text.primary',
+                                border: '2px solid',
+                                borderColor: mode === ColorModeEnum.Dark 
+                                    ? 'primary.main' 
+                                    : 'divider',
+                                boxShadow: mode === ColorModeEnum.Dark 
+                                    ? '0 2px 8px rgba(0, 0, 0, 0.15)' 
+                                    : 'none',
+                                '&:hover': {
+                                    backgroundColor: mode === ColorModeEnum.Dark 
+                                        ? 'primary.dark' 
+                                        : 'action.selected',
+                                },
+                            }}
+                        >
+                            <DarkModeIcon />
+                            <Typography variant="body2">
+                                Dark
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Box>
+
                 <Typography
                     variant="subtitle2"
                     gutterBottom
