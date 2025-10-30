@@ -7,57 +7,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setLogFile } from '../redux/slices/logFileSlice';
 import { addFileWithLogs } from '../utils/logDb';
-
-function detectLogFormat(content: string): string {
-    const apacheErrorUniversalRegex = /^\[.*\] \[[a-z]+\](?: \[client [^\]]+\])?(?: .*)?$/m;
-    // Apache access log: IP - - [date:time ...] ... "...HTTP/1.1" ...
-    // Nginx access log: IP - - [date:time ...] ... "...HTTP/1.1" ...
-    // Try to distinguish by request line, referer, user-agent, or other markers
-    const apacheAccessRegex = /^\S+ - - \[\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2}/m;
-    // Nginx: sometimes has HTTP_X_FORWARDED_FOR, or specific user-agent, but not always
-    // Try to detect Nginx by presence of "nginx" in user-agent or referer (not reliable, but best effort)
-    const nginxAgentRegex = /nginx/i;
-    // HDFS v1: 081109 203615 148 INFO dfs.DataNode$PacketResponder: ...
-    // Format: yyMMdd HHmmss NNN LEVEL class:
-    const hdfsV1Regex = /^\d{6} \d{6} \d+ [A-Z]+ [\w.$:-]+:/m;
-    // HDFS v2: 2025-10-21 03:08:18,866 INFO org.apache.hadoop.ipc.Server: ...
-    // Format: YYYY-MM-DD HH:MM:SS,mmm LEVEL class: ...
-    const hdfsV2Regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} (INFO|WARN|ERROR|DEBUG|TRACE|FATAL) [\w.$:-]+:/m;
-    // BGL (old): ... 2005-06-05-09.39.54.210760 ... (date-time may appear anywhere in the line)
-    const bglOldRegex = /\d{4}-\d{2}-\d{2}-\d{2}\.\d{2}\.\d{2}\.\d{6}/m;
-    // BGL (new): 2025-10-20 21:37:35 JOB 46082 USER=alice QUEUE=low NODES=128 CORES=256 RUNTIME=00:18:35 STATUS=CANCELLED
-    const bglNewRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} JOB \d+ USER=\w+ QUEUE=\w+ NODES=\d+ CORES=\d+ RUNTIME=\d{2}:\d{2}:\d{2} STATUS=\w+/m;
-    // Apache: 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] ...
-    // Require username (not '-') after IP
-    const apacheRegex = /^\S+ \S+ (?!-)\S+ \[\d{2}\/\w{3}\/\d{4}:/m;
-    // Nginx: 127.0.0.1 - - [12/Dec/2020:19:06:43 +0000] ...
-    const nginxRegex = /^\S+ - - \[\d{2}\/\w{3}\/\d{4}:/m;
-    // Syslog: Oct 11 22:14:15 mymachine su: ...
-    const syslogRegex = /^\w{3} +\d{1,2} \d{2}:\d{2}:\d{2} /m;
-
-    const preview = content.split(/\r?\n/).slice(0, 50).join('\n');
-
-    if (apacheErrorUniversalRegex.test(preview)) return 'Apache';
-    if (nginxRegex.test(preview)) return 'Nginx';
-    if (apacheAccessRegex.test(preview)) {
-        const lines = preview.split(/\r?\n/);
-        for (const line of lines) {
-            if (nginxAgentRegex.test(line)) {
-                return 'Nginx';
-            }
-        }
-        return 'Apache';
-    }
-    if (hdfsV2Regex.test(preview)) return 'HDFS';
-    if (hdfsV1Regex.test(preview)) return 'HDFS';
-    if (bglNewRegex.test(preview)) return 'BGL';
-    if (bglOldRegex.test(preview)) return 'BGL';
-    if (apacheRegex.test(preview)) return 'Apache';
-    if (syslogRegex.test(preview)) return 'Syslog';
-    // If access log format but can't distinguish, fallback to generic
-    if (/^\S+ - - \[\d{2}\/\w{3}\/\d{4}:/m.test(preview)) return 'Web Access Log';
-    return 'Unknown format';
-}
+import { detectLogFormat } from '../utils/logFormatDetector';
 import { Outlet } from 'react-router-dom';
 
 
@@ -164,10 +114,26 @@ export default function MainLayout () {
                         flexGrow: 1,
                         overflow: 'hidden',
                         display: 'flex',
+                        position: 'relative',
                         background: (theme) => 
                             theme.palette.mode === 'light' 
-                                ? 'linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%)'
-                                : 'linear-gradient(135deg, #23272f 0%, #292e38 100%)',
+                                ? 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+                                : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: (theme) => 
+                                theme.palette.mode === 'light'
+                                    ? `radial-gradient(circle at 20% 50%, ${theme.palette.primary.main}08 0%, transparent 50%),
+                                       radial-gradient(circle at 80% 80%, ${theme.palette.secondary.main}06 0%, transparent 50%)`
+                                    : `radial-gradient(circle at 20% 50%, ${theme.palette.primary.main}10 0%, transparent 50%),
+                                       radial-gradient(circle at 80% 80%, ${theme.palette.secondary.main}08 0%, transparent 50%)`,
+                            pointerEvents: 'none',
+                        },
                     }}
                 >
                     <Box
