@@ -19,7 +19,6 @@ const AddLogsPage: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 3,
-                border: '2px dashed #ccc',
                 height: '100%',
                 width: '100%',
             }}
