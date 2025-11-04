@@ -1,83 +1,260 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { RouteHome } from '../routes/routePaths';
 import { RootState } from '../redux/store';
-import { getAllFiles, getAllLogs } from '../utils/logDb';
+import { updateLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
+import { getFileHandle } from '../redux/slices/logFileSlice';
 
 
 const ViewLogsPage: React.FC = () => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    
+    // Get data from Redux
+    const { content, name: fileName, isMonitoring, hasFileHandle } = useSelector((state: RootState) => state.logFile);
+    
     const [lines, setLines] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [fileName, setFileName] = useState<string>('');
-    const logFile = useSelector((state: RootState) => state.logFile);
+    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+    const lastModifiedRef = useRef<number>(0);
 
+    // Load initial content from Redux
     useEffect(() => {
-        const loadLogs = async () => {
-            setLoading(true);
+        if (content) {
+            setLines(content.split(/\r?\n/));
+            setLastUpdate(new Date());
+        }
+    }, [content]);
+
+    // Poll for file changes using File System Access API
+    useEffect(() => {
+        if (!isMonitoring || !autoRefresh || !hasFileHandle) return;
+
+        const fileHandle = getFileHandle();
+        if (!fileHandle) return;
+
+        let intervalId: number | null = null;
+
+        const startPolling = async () => {
             try {
-                // If user selected a file through Redux, prefer it
-                if (logFile.loaded && typeof logFile.content === 'string' && logFile.content.length > 0) {
-                    setFileName(logFile.name);
-                    setLines(logFile.content.split(/\r?\n/));
-                    setLoading(false);
-                    return;
-                }
+                // Read initial state
+                const file = await fileHandle.getFile();
+                lastModifiedRef.current = file.lastModified;
 
-                // Get all files and show the latest one from DB
-                const files = await getAllFiles();
-                if (files.length === 0) {
-                    setLines([]);
-                    setLoading(false);
-                    return;
-                }
+                // Start polling for changes
+                intervalId = window.setInterval(async () => {
+                    try {
+                        const file = await fileHandle.getFile();
+                        
+                        // Check if file was modified
+                        if (file.lastModified > lastModifiedRef.current) {
+                            lastModifiedRef.current = file.lastModified;
+                            const newContent = await file.text();
+                            
+                            // Update Redux store
+                            dispatch(updateLogContent({
+                                content: newContent,
+                                lastModified: file.lastModified,
+                            }));
+                            
+                            setLastUpdate(new Date());
+                        }
+                    } catch (error) {
+                        console.error('Error reading file:', error);
+                    }
+                }, 1000); // Check every second
 
-                // Get the latest file (last in array)
-                const latestFile = files[files.length - 1];
-                setFileName(latestFile.name);
-
-                // Load logs for this file
-                const logs = await getAllLogs(latestFile.id!);
-                setLines(logs.map(l => l.line));
             } catch (error) {
-                console.error('Error loading logs:', error);
-            } finally {
-                setLoading(false);
+                console.error('Error starting file monitoring:', error);
             }
         };
 
-        loadLogs();
-    // re-run when user-selected logFile changes so viewer updates immediately
-    }, [logFile]);
+        startPolling();
 
-    if (loading) {
-        return <Typography variant="body1">Loading...</Typography>;
+        return () => {
+            if (intervalId !== null) {
+                window.clearInterval(intervalId);
+            }
+        };
+    }, [isMonitoring, autoRefresh, hasFileHandle, dispatch]);
+
+    const handleToggleAutoRefresh = () => {
+        setAutoRefresh(prev => !prev);
+    };
+
+    const handleManualRefresh = async () => {
+        const fileHandle = getFileHandle();
+        if (!fileHandle) return;
+
+        try {
+            const file = await fileHandle.getFile();
+            lastModifiedRef.current = file.lastModified;
+            const newContent = await file.text();
+            
+            dispatch(updateLogContent({
+                content: newContent,
+                lastModified: file.lastModified,
+            }));
+            
+            setLastUpdate(new Date());
+        } catch (error) {
+            console.error('Error refreshing file:', error);
+        }
+    };
+
+    const handleReloadFile = () => {
+        // Stop current monitoring and navigate back to home to select a new file
+        dispatch(setMonitoringState(false));
+        navigate(RouteHome);
+    };
+
+    const handleBackToHome = () => {
+        navigate(RouteHome);
+    };
+
+    if (!isMonitoring) {
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    gap: 2,
+                }}
+            >
+                <Typography variant="h5" gutterBottom>
+                    No file selected
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                    Please select a log file from the Home page to start monitoring.
+                </Typography>
+                <Typography
+                    variant="body2"
+                    color="primary"
+                    sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+                    onClick={handleBackToHome}
+                >
+                    Go to Home
+                </Typography>
+            </Box>
+        );
     }
-    if (lines.length === 0) {
-        return <Typography variant="body1">Drag and drop a text log file onto the app</Typography>;
-    }
+
     return (
         <Box
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
+                gap: 2,
             }}
         >
-            <Typography variant="h6" sx={{ mb: 2 }}>
-                {fileName}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Box>
+                    <Typography variant="h6">
+                        {fileName}
+                    </Typography>
+                    {lastUpdate && (
+                        <Typography variant="caption" color="text.secondary">
+                            Last updated: {lastUpdate.toLocaleTimeString()}
+                        </Typography>
+                    )}
+                </Box>
+            </Box>
+
+            <Alert severity="info" sx={{ mb: 1 }}>
+                <Typography variant="body2">
+                    <strong>Live Monitoring:</strong> 
+                    {hasFileHandle ? (
+                        <> The file is automatically checked for changes every second.</>
+                    ) : (
+                        <> Automatic updates are not available. Use "Refresh Now" button to manually reload the file.</>
+                    )}
+                </Typography>
+            </Alert>
+
+            <Box sx={{ display: 'flex', gap: 2, mb: 1, alignItems: 'center' }}>
+                <Typography
+                    variant="button"
+                    sx={{
+                        cursor: 'pointer',
+                        color: 'primary.main',
+                        textDecoration: 'underline',
+                        '&:hover': { opacity: 0.8 }
+                    }}
+                    onClick={handleReloadFile}
+                >
+                    Change File
+                </Typography>
+                <Typography
+                    variant="button"
+                    sx={{
+                        cursor: 'pointer',
+                        color: 'primary.main',
+                        textDecoration: 'underline',
+                        '&:hover': { opacity: 0.8 }
+                    }}
+                    onClick={handleManualRefresh}
+                >
+                    Refresh Now
+                </Typography>
+                <Chip 
+                    label={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+                    color={autoRefresh ? 'success' : 'default'}
+                    onClick={handleToggleAutoRefresh}
+                    size="small"
+                    sx={{ cursor: 'pointer' }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                    Total lines: {lines.length}
+                </Typography>
+            </Box>
+
             <Paper
                 sx={{
                     p: 2,
-                    whiteSpace: 'pre-wrap',
-                    overflow: 'auto',
                     flexGrow: 1,
+                    overflow: 'auto',
+                    fontFamily: 'monospace',
+                    fontSize: '0.875rem',
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
                 }}
             >
                 {lines.map((line, i) => (
-                    <div key={i}>{line}</div>
+                    <Box
+                        key={i}
+                        sx={{
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            '&:hover': {
+                                backgroundColor: (theme) => 
+                                    theme.palette.mode === 'dark' 
+                                        ? 'rgba(255, 255, 255, 0.05)' 
+                                        : 'rgba(0, 0, 0, 0.02)',
+                            }
+                        }}
+                    >
+                        <Typography
+                            component="span"
+                            sx={{
+                                color: 'text.secondary',
+                                fontSize: '0.75rem',
+                                mr: 2,
+                                userSelect: 'none',
+                            }}
+                        >
+                            {i + 1}
+                        </Typography>
+                        {line}
+                    </Box>
                 ))}
             </Paper>
         </Box>

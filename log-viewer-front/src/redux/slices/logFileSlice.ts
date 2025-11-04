@@ -1,5 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+// Global storage for FileSystemFileHandle (can't be serialized in Redux)
+let globalFileHandle: FileSystemFileHandle | null = null;
+
+export const setFileHandle = (handle: FileSystemFileHandle | null) => {
+    globalFileHandle = handle;
+};
+
+export const getFileHandle = (): FileSystemFileHandle | null => {
+    return globalFileHandle;
+};
 
 interface LogFileState {
     name: string;
@@ -7,6 +17,9 @@ interface LogFileState {
     content: string;
     format: string;
     loaded: boolean;
+    lastModified: number;
+    hasFileHandle: boolean; // Flag indicating if we have a File System Access API handle
+    isMonitoring: boolean; // Flag for live monitoring state
 }
 
 const initialState: LogFileState = {
@@ -15,18 +28,37 @@ const initialState: LogFileState = {
     content: '',
     format: '',
     loaded: false,
+    lastModified: 0,
+    hasFileHandle: false,
+    isMonitoring: false,
 };
 
 const logFileSlice = createSlice({
     name: 'logFile',
     initialState,
     reducers: {
-        setLogFile: (state, action: PayloadAction<Omit<LogFileState, 'loaded'>>) => {
+        setLogFile: (state, action: PayloadAction<{
+            name: string;
+            size: number;
+            content: string;
+            format: string;
+            lastModified?: number;
+            hasFileHandle?: boolean;
+        }>) => {
             state.name = action.payload.name;
             state.size = action.payload.size;
             state.content = action.payload.content;
             state.format = action.payload.format;
+            state.lastModified = action.payload.lastModified || Date.now();
+            state.hasFileHandle = action.payload.hasFileHandle || false;
             state.loaded = true;
+        },
+        updateLogContent: (state, action: PayloadAction<{ content: string; lastModified?: number }>) => {
+            state.content = action.payload.content;
+            state.lastModified = action.payload.lastModified || Date.now();
+        },
+        setMonitoringState: (state, action: PayloadAction<boolean>) => {
+            state.isMonitoring = action.payload;
         },
         clearLogFile: (state) => {
             state.name = '';
@@ -34,9 +66,12 @@ const logFileSlice = createSlice({
             state.content = '';
             state.format = '';
             state.loaded = false;
+            state.lastModified = 0;
+            state.hasFileHandle = false;
+            state.isMonitoring = false;
         },
     },
 });
 
-export const { setLogFile, clearLogFile } = logFileSlice.actions;
+export const { setLogFile, updateLogContent, setMonitoringState, clearLogFile } = logFileSlice.actions;
 export default logFileSlice.reducer;
