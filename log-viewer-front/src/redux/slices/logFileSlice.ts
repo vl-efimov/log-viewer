@@ -57,6 +57,11 @@ const logFileSlice = createSlice({
             state.content = action.payload.content;
             state.lastModified = action.payload.lastModified || Date.now();
         },
+        appendLogContent: (state, action: PayloadAction<{ newContent: string; newSize: number; lastModified?: number }>) => {
+            state.content = state.content + action.payload.newContent;
+            state.size = action.payload.newSize;
+            state.lastModified = action.payload.lastModified || Date.now();
+        },
         setMonitoringState: (state, action: PayloadAction<boolean>) => {
             state.isMonitoring = action.payload;
         },
@@ -73,5 +78,5 @@ const logFileSlice = createSlice({
     },
 });
 
-export const { setLogFile, updateLogContent, setMonitoringState, clearLogFile } = logFileSlice.actions;
+export const { setLogFile, updateLogContent, appendLogContent, setMonitoringState, clearLogFile } = logFileSlice.actions;
 export default logFileSlice.reducer;

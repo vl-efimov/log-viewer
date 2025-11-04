@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RouteHome } from '../routes/routePaths';
 import { RootState } from '../redux/store';
-import { updateLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
+import { updateLogContent, appendLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
 import { getFileHandle } from '../redux/slices/logFileSlice';
 
 
@@ -17,22 +17,39 @@ const ViewLogsPage: React.FC = () => {
     const navigate = useNavigate();
     
     // Get data from Redux
-    const { content, name: fileName, isMonitoring, hasFileHandle } = useSelector((state: RootState) => state.logFile);
+    const { content, name: fileName, isMonitoring, hasFileHandle, size: fileSize } = useSelector((state: RootState) => state.logFile);
     
     const [lines, setLines] = useState<string[]>([]);
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
+    const [newLinesCount, setNewLinesCount] = useState<number>(0);
     const lastModifiedRef = useRef<number>(0);
+    const lastSizeRef = useRef<number>(0);
+    const previousLineCountRef = useRef<number>(0);
 
     // Load initial content from Redux
     useEffect(() => {
         if (content) {
-            setLines(content.split(/\r?\n/));
+            const newLines = content.split(/\r?\n/);
+            const lineCountDiff = newLines.length - previousLineCountRef.current;
+            
+            setLines(newLines);
             setLastUpdate(new Date());
+            
+            // Track new lines added
+            if (previousLineCountRef.current > 0 && lineCountDiff > 0) {
+                setNewLinesCount(lineCountDiff);
+                // Reset counter after 3 seconds
+                setTimeout(() => setNewLinesCount(0), 3000);
+            }
+            
+            previousLineCountRef.current = newLines.length;
+            // Initialize last size for incremental reading
+            lastSizeRef.current = fileSize;
         }
-    }, [content]);
+    }, [content, fileSize]);
 
-    // Poll for file changes using File System Access API
+    // Poll for file changes using File System Access API with incremental reading
     useEffect(() => {
         if (!isMonitoring || !autoRefresh || !hasFileHandle) return;
 
@@ -46,6 +63,7 @@ const ViewLogsPage: React.FC = () => {
                 // Read initial state
                 const file = await fileHandle.getFile();
                 lastModifiedRef.current = file.lastModified;
+                lastSizeRef.current = file.size;
 
                 // Start polling for changes
                 intervalId = window.setInterval(async () => {
@@ -55,15 +73,41 @@ const ViewLogsPage: React.FC = () => {
                         // Check if file was modified
                         if (file.lastModified > lastModifiedRef.current) {
                             lastModifiedRef.current = file.lastModified;
-                            const newContent = await file.text();
-                            
-                            // Update Redux store
-                            dispatch(updateLogContent({
-                                content: newContent,
-                                lastModified: file.lastModified,
-                            }));
-                            
-                            setLastUpdate(new Date());
+                            const currentSize = file.size;
+
+                            // Check if file was truncated (size decreased) - full reload needed
+                            if (currentSize < lastSizeRef.current) {
+                                console.log('File truncated, performing full reload');
+                                const fullContent = await file.text();
+                                
+                                dispatch(updateLogContent({
+                                    content: fullContent,
+                                    lastModified: file.lastModified,
+                                }));
+                                
+                                lastSizeRef.current = currentSize;
+                                setLastUpdate(new Date());
+                            }
+                            // File grew - read only new content (incremental)
+                            else if (currentSize > lastSizeRef.current) {
+                                console.log(`File grew from ${lastSizeRef.current} to ${currentSize} bytes, reading increment`);
+                                
+                                // Read only the new part
+                                const blob = await file.slice(lastSizeRef.current, currentSize).text();
+                                
+                                dispatch(appendLogContent({
+                                    newContent: blob,
+                                    newSize: currentSize,
+                                    lastModified: file.lastModified,
+                                }));
+                                
+                                lastSizeRef.current = currentSize;
+                                setLastUpdate(new Date());
+                            }
+                            // Size same but modified timestamp changed - probably same content, skip
+                            else {
+                                console.log('File modified but size unchanged, skipping update');
+                            }
                         }
                     } catch (error) {
                         console.error('Error reading file:', error);
@@ -172,9 +216,9 @@ const ViewLogsPage: React.FC = () => {
 
             <Alert severity="info" sx={{ mb: 1 }}>
                 <Typography variant="body2">
-                    <strong>Live Monitoring:</strong> 
+                    <strong>Live Monitoring (Incremental Mode):</strong> 
                     {hasFileHandle ? (
-                        <> The file is automatically checked for changes every second.</>
+                        <> The file is checked every second. Only new content is read for better performance.</>
                     ) : (
                         <> Automatic updates are not available. Use "Refresh Now" button to manually reload the file.</>
                     )}
@@ -216,6 +260,22 @@ const ViewLogsPage: React.FC = () => {
                 <Typography variant="caption" color="text.secondary">
                     Total lines: {lines.length}
                 </Typography>
+                {newLinesCount > 0 && (
+                    <Chip 
+                        label={`+${newLinesCount} new`}
+                        color="success"
+                        size="small"
+                        variant="outlined"
+                        sx={{ 
+                            animation: 'pulse 0.5s ease-in-out',
+                            '@keyframes pulse': {
+                                '0%': { transform: 'scale(1)' },
+                                '50%': { transform: 'scale(1.1)' },
+                                '100%': { transform: 'scale(1)' },
+                            }
+                        }}
+                    />
+                )}
             </Box>
 
             <Paper
