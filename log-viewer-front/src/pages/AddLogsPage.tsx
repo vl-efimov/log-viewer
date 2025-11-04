@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RouteViewLogs } from '../routes/routePaths';
 import { setLogFile, setMonitoringState, setFileHandle } from '../redux/slices/logFileSlice';
 import { RootState } from '../redux/store';
+import { detectLogFormat } from '../utils/logFormatDetector';
 
 const AddLogsPage: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,12 +25,15 @@ const AddLogsPage: React.FC = () => {
         // Read initial content
         const content = await file.text();
         
+        // Detect log format
+        const detectedFormat = detectLogFormat(content);
+        
         // Store in Redux
         dispatch(setLogFile({
             name: file.name,
             size: file.size,
             content: content,
-            format: '',
+            format: detectedFormat || 'Unknown',
             lastModified: file.lastModified,
             hasFileHandle: false, // Regular file input doesn't give us a handle
         }));
@@ -63,6 +67,9 @@ const AddLogsPage: React.FC = () => {
                 const file = await handle.getFile();
                 const content = await file.text();
 
+                // Detect log format
+                const detectedFormat = detectLogFormat(content);
+
                 // Store the handle globally
                 setFileHandle(handle);
 
@@ -71,7 +78,7 @@ const AddLogsPage: React.FC = () => {
                     name: file.name,
                     size: file.size,
                     content: content,
-                    format: '', // Will be detected later
+                    format: detectedFormat || 'Unknown',
                     lastModified: file.lastModified,
                     hasFileHandle: true, // We have a File System Access API handle!
                 }));
