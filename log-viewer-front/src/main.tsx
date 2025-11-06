@@ -5,9 +5,13 @@ import { Provider } from 'react-redux';
 import store from './redux/store';
 import { registerSW } from "virtual:pwa-register";
 import { ThemeProvider } from './components/ThemeProvider';
+import { initializeLogFormats } from './utils/logFormatDetector';
 
 import './locales/i18n';
 import './styles/theme.css';
+
+// Initialize log formats from JSON
+initializeLogFormats().catch(console.error);
 
 const updateSW = registerSW({
     onNeedRefresh () {

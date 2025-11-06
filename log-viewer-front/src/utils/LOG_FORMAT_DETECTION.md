@@ -2,19 +2,26 @@
 
 ## Overview
 
-The log format detection system has been refactored to separate configuration from code logic. This makes it easier to maintain, extend, and customize log format detection.
+The log format detection system loads all format definitions from a JSON configuration file (`public/log-formats.json`). This makes it easy to add, modify, or remove log formats without changing the code.
 
 ## Structure
 
 ### 1. **Core Module**: `src/utils/logFormatDetector.ts`
-- Contains the detection logic
+- Contains the detection and parsing logic
 - Defines TypeScript interfaces
-- Provides API for format registration and detection
+- Loads formats from JSON at application startup
+- Provides API for format detection and parsing
 
-### 2. **Configuration File**: `public/log-formats.json` (Optional)
-- JSON-based format definitions
+### 2. **Configuration File**: `public/log-formats.json`
+- JSON-based format definitions (the single source of truth)
 - Can be edited without code changes
-- Easy for non-developers to modify
+- Contains all regex patterns and field definitions
+
+## How It Works
+
+1. **Application Startup**: When the app starts, `initializeLogFormats()` is called in `main.tsx`
+2. **JSON Loading**: The function fetches `/log-formats.json` and converts string patterns to RegExp objects
+3. **Format Detection**: All detection and parsing functions use the loaded formats from JSON
 
 ## Usage
 
@@ -38,10 +45,10 @@ const line = "2025-10-30 12:34:56,789 INFO org.example.MyClass: Starting applica
 const parsed = parseLogLine(line, 'hdfs-v2');
 
 if (parsed) {
-  console.log('Timestamp:', parsed.fields.timestamp);  // "2025-10-30 12:34:56,789"
-  console.log('Level:', parsed.fields.level);          // "INFO"
-  console.log('Class:', parsed.fields.class);          // "org.example.MyClass"
-  console.log('Message:', parsed.fields.message);      // "Starting application"
+  console.log('Timestamp:', parsed.fields.timestamp);
+  console.log('Level:', parsed.fields.level);
+  console.log('Class:', parsed.fields.class);
+  console.log('Message:', parsed.fields.message);
 }
 
 // Auto-detect format and parse
@@ -58,13 +65,6 @@ const fields = getFormatFields('nginx');
 fields.forEach(field => {
   console.log(`${field.name}: ${field.description} (${field.type})`);
 });
-
-// Output:
-// ip: Client IP address (string)
-// user: Authenticated username (string)
-// timestamp: Request timestamp (datetime)
-// method: HTTP method (string)
-// ...
 ```
 
 ### Get All Available Formats
@@ -78,56 +78,9 @@ formats.forEach(format => {
 });
 ```
 
-### Register Custom Format
-
-```typescript
-import { registerCustomLogFormat } from '@/utils/logFormatDetector';
-
-registerCustomLogFormat({
-  id: 'custom-format',
-  name: 'My Custom Format',
-  description: 'Custom application log format',
-  priority: 95,
-  patterns: [
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \[.*\]/m
-  ],
-  validate: (content) => {
-    // Optional custom validation logic
-    return content.includes('MyApp');
-  }
-});
-```
-
 ## Adding New Formats
 
-### Method 1: Edit TypeScript Configuration
-
-Edit `src/utils/logFormatDetector.ts` and add to `LOG_FORMAT_PATTERNS`:
-
-```typescript
-{
-  id: 'my-format',
-  name: 'My Log Format',
-  description: 'Description of the format',
-  priority: 70,
-  patterns: [
-    /^(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}) \[(?<level>\w+)\] (?<message>.*)/m
-  ],
-  fields: [
-    { name: 'timestamp', description: 'ISO timestamp', type: 'datetime' },
-    { name: 'level', description: 'Log level', type: 'string' },
-    { name: 'message', description: 'Log message', type: 'string' },
-  ],
-  validate: (content) => {
-    // Optional: Additional validation
-    return true;
-  }
-}
-```
-
-### Method 2: Edit JSON Configuration
-
-Edit `public/log-formats.json`:
+Edit `public/log-formats.json` and add a new format object:
 
 ```json
 {

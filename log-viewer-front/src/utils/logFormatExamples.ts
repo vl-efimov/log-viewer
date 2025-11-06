@@ -169,3 +169,35 @@ export {
     exampleExtractFields,
     exampleValidateStructure,
 };
+
+
+// =============================
+// Main helper for log table UI
+// =============================
+/**
+ * Parses log file lines for table rendering.
+ * Returns array of { lineNumber, parsed, raw }
+ */
+export function parseLogFileForTable(logContent: string): Array<{
+    lineNumber: number;
+    parsed: ParsedLogLine | null;
+    raw: string;
+    error?: string;
+}> {
+    const lines = logContent.split(/\r?\n/);
+    return lines.map((raw, idx) => {
+        let parsed: ParsedLogLine | null = null;
+        let error: string | undefined = undefined;
+        try {
+            parsed = parseLogLineAuto(raw);
+        } catch (e) {
+            error = String(e);
+        }
+        return {
+            lineNumber: idx + 1,
+            parsed,
+            raw,
+            ...(error ? { error } : {}),
+        };
+    });
+}

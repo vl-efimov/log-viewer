@@ -55,164 +55,47 @@ export interface ParsedLogLine {
  * Predefined log format patterns
  * Ordered by priority (higher priority formats are checked first)
  */
-export const LOG_FORMAT_PATTERNS: LogFormatPattern[] = [
-    {
-        id: 'apache-error',
-        name: 'Apache Error Log',
-        description: 'Apache HTTP Server error log format',
-        priority: 100,
-        patterns: [
-            /^\[(?<timestamp>.*?)\] \[(?<level>[a-z]+)\](?: \[client (?<client>[^\]]+)\])?(?: (?<message>.*))?$/m
-        ],
-        fields: [
-            { name: 'timestamp', description: 'Log entry timestamp', type: 'datetime' },
-            { name: 'level', description: 'Log severity level', type: 'string' },
-            { name: 'client', description: 'Client IP address and port', type: 'string', optional: true },
-            { name: 'message', description: 'Error message text', type: 'string' },
-        ],
-    },
-    {
-        id: 'hdfs-v2',
-        name: 'HDFS v2',
-        description: 'Hadoop HDFS version 2 log format (YYYY-MM-DD HH:MM:SS,mmm)',
-        priority: 90,
-        patterns: [
-            /^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) (?<level>INFO|WARN|ERROR|DEBUG|TRACE|FATAL) (?<class>[\w.$:-]+): ?(?<message>.*)/m
-        ],
-        fields: [
-            { name: 'timestamp', description: 'Timestamp in format YYYY-MM-DD HH:MM:SS,mmm', type: 'datetime' },
-            { name: 'level', description: 'Log level', type: 'string' },
-            { name: 'class', description: 'Java class name', type: 'string' },
-            { name: 'message', description: 'Log message content', type: 'string' },
-        ],
-    },
-    {
-        id: 'hdfs-v1',
-        name: 'HDFS v1',
-        description: 'Hadoop HDFS version 1 log format (yyMMdd HHmmss)',
-        priority: 85,
-        patterns: [
-            /^(?<date>\d{6}) (?<time>\d{6}) (?<thread>\d+) (?<level>[A-Z]+) (?<class>[\w.$:-]+): ?(?<message>.*)/m
-        ],
-        fields: [
-            { name: 'date', description: 'Date in format yyMMdd', type: 'date' },
-            { name: 'time', description: 'Time in format HHmmss', type: 'time' },
-            { name: 'thread', description: 'Thread ID', type: 'number' },
-            { name: 'level', description: 'Log level', type: 'string' },
-            { name: 'class', description: 'Java class name', type: 'string' },
-            { name: 'message', description: 'Log message content', type: 'string' },
-        ],
-    },
-    {
-        id: 'bgl-new',
-        name: 'BGL (New)',
-        description: 'Blue Gene/L new format with structured job information',
-        priority: 80,
-        patterns: [
-            /^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) JOB (?<jobId>\d+) USER=(?<user>\w+) QUEUE=(?<queue>\w+) NODES=(?<nodes>\d+) CORES=(?<cores>\d+) RUNTIME=(?<runtime>\d{2}:\d{2}:\d{2}) STATUS=(?<status>\w+)/m
-        ],
-        fields: [
-            { name: 'timestamp', description: 'Job event timestamp', type: 'datetime' },
-            { name: 'jobId', description: 'Unique job identifier', type: 'number' },
-            { name: 'user', description: 'Username who submitted the job', type: 'string' },
-            { name: 'queue', description: 'Queue name', type: 'string' },
-            { name: 'nodes', description: 'Number of compute nodes', type: 'number' },
-            { name: 'cores', description: 'Total CPU cores used', type: 'number' },
-            { name: 'runtime', description: 'Job runtime in HH:MM:SS', type: 'duration' },
-            { name: 'status', description: 'Job completion status', type: 'string' },
-        ],
-    },
-    {
-        id: 'bgl-old',
-        name: 'BGL (Old)',
-        description: 'Blue Gene/L old format with timestamp',
-        priority: 75,
-        patterns: [
-            /(?<timestamp>\d{4}-\d{2}-\d{2}-\d{2}\.\d{2}\.\d{2}\.\d{6})/m
-        ],
-        fields: [
-            { name: 'timestamp', description: 'Timestamp in format YYYY-MM-DD-HH.MM.SS.microseconds', type: 'datetime' },
-        ],
-    },
-    {
-        id: 'nginx',
-        name: 'Nginx',
-        description: 'Nginx web server access log',
-        priority: 70,
-        patterns: [
-            /^(?<ip>\S+) - (?<user>\S+) \[(?<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} [+-]\d{4})\] "(?<method>\w+) (?<path>\S+) (?<protocol>HTTP\/[\d.]+)" (?<status>\d{3}) (?<bytes>\d+) "(?<referer>[^"]*)" "(?<userAgent>[^"]*)"/m
-        ],
-        validate: (content: string) => {
-            const nginxAgentRegex = /nginx/i;
-            const preview = content.split(/\r?\n/).slice(0, 50).join('\n');
-            return nginxAgentRegex.test(preview);
-        },
-        fields: [
-            { name: 'ip', description: 'Client IP address', type: 'string' },
-            { name: 'user', description: 'Authenticated username', type: 'string' },
-            { name: 'timestamp', description: 'Request timestamp', type: 'datetime' },
-            { name: 'method', description: 'HTTP method', type: 'string' },
-            { name: 'path', description: 'Request URI path', type: 'string' },
-            { name: 'protocol', description: 'HTTP protocol version', type: 'string' },
-            { name: 'status', description: 'HTTP response status code', type: 'number' },
-            { name: 'bytes', description: 'Response size in bytes', type: 'number' },
-            { name: 'referer', description: 'HTTP referer header', type: 'string' },
-            { name: 'userAgent', description: 'Client user agent string', type: 'string' },
-        ],
-    },
-    {
-        id: 'apache-access',
-        name: 'Apache Access Log',
-        description: 'Apache HTTP Server access log (Common Log Format)',
-        priority: 65,
-        patterns: [
-            /^(?<ip>\S+) (?<ident>\S+) (?<user>(?!-)\S+) \[(?<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} [+-]\d{4})\] "(?<method>\w+) (?<path>\S+) (?<protocol>HTTP\/[\d.]+)" (?<status>\d{3}) (?<bytes>\d+)/m
-        ],
-        fields: [
-            { name: 'ip', description: 'Client IP address', type: 'string' },
-            { name: 'ident', description: 'Client identity (RFC 1413)', type: 'string' },
-            { name: 'user', description: 'Authenticated username', type: 'string' },
-            { name: 'timestamp', description: 'Request timestamp', type: 'datetime' },
-            { name: 'method', description: 'HTTP method', type: 'string' },
-            { name: 'path', description: 'Request URI path', type: 'string' },
-            { name: 'protocol', description: 'HTTP protocol version', type: 'string' },
-            { name: 'status', description: 'HTTP response status code', type: 'number' },
-            { name: 'bytes', description: 'Response size in bytes', type: 'number' },
-        ],
-    },
-    {
-        id: 'syslog',
-        name: 'Syslog',
-        description: 'Standard Unix/Linux syslog format',
-        priority: 60,
-        patterns: [
-            /^(?<month>\w{3}) +(?<day>\d{1,2}) (?<time>\d{2}:\d{2}:\d{2}) (?<hostname>\S+) (?<process>\S+?)(?:\[(?<pid>\d+)\])?: ?(?<message>.*)/m
-        ],
-        fields: [
-            { name: 'month', description: 'Month abbreviation', type: 'string' },
-            { name: 'day', description: 'Day of month', type: 'number' },
-            { name: 'time', description: 'Time in HH:MM:SS', type: 'time' },
-            { name: 'hostname', description: 'Hostname or IP', type: 'string' },
-            { name: 'process', description: 'Process or daemon name', type: 'string' },
-            { name: 'pid', description: 'Process ID', type: 'number', optional: true },
-            { name: 'message', description: 'Log message content', type: 'string' },
-        ],
-    },
-    {
-        id: 'web-access-generic',
-        name: 'Web Access Log',
-        description: 'Generic web server access log format',
-        priority: 50,
-        patterns: [
-            /^(?<ip>\S+) - (?<user>\S+) \[(?<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} [+-]\d{4})\]/m
-        ],
-        fields: [
-            { name: 'ip', description: 'Client IP address', type: 'string' },
-            { name: 'user', description: 'Username', type: 'string' },
-            { name: 'timestamp', description: 'Request timestamp', type: 'datetime' },
-        ],
-    },
-];
+export let LOG_FORMAT_PATTERNS: LogFormatPattern[] = [];
+
+/**
+ * Loads log formats from JSON file
+ */
+export async function loadLogFormatsFromJSON(): Promise<void> {
+    try {
+        const response = await fetch('/log-formats.json');
+        const data = await response.json();
+        
+        // Convert JSON patterns (strings) to RegExp objects
+        LOG_FORMAT_PATTERNS = data.formats.map((format: {
+            id: string;
+            name: string;
+            description: string;
+            priority: number;
+            patterns: string[];
+            fields?: LogFormatField[];
+        }) => ({
+            ...format,
+            patterns: format.patterns.map((pattern: string) => new RegExp(pattern, 'm'))
+        }));
+        
+        console.log('Loaded log formats:', LOG_FORMAT_PATTERNS.length);
+    } catch (error) {
+        console.error('Failed to load log formats from JSON:', error);
+        // Fallback to empty array
+        LOG_FORMAT_PATTERNS = [];
+    }
+}
+
+/**
+ * Initialize log formats (call this at app startup)
+ */
+let formatsInitialized = false;
+export async function initializeLogFormats(): Promise<void> {
+    if (!formatsInitialized) {
+        await loadLogFormatsFromJSON();
+        formatsInitialized = true;
+    }
+}
 
 /**
  * Detects the log format based on content analysis
@@ -263,6 +146,7 @@ export function getAvailableLogFormats(): LogFormatPattern[] {
  */
 export function getLogFormatById(id: string): LogFormatPattern | undefined {
     return LOG_FORMAT_PATTERNS.find(format => format.id === id);
+
 }
 
 /**

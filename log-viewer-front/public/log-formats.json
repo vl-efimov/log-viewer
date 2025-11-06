@@ -2,7 +2,7 @@
   "formats": [
     {
       "id": "apache-error",
-      "name": "Apache Error Log",
+      "name": "Apache Error",
       "description": "Apache HTTP Server error log format",
       "priority": 100,
       "patterns": [
@@ -16,7 +16,7 @@
         },
         {
           "name": "level",
-          "description": "Log severity level (error, warn, info, etc.)",
+          "description": "Log severity level",
           "type": "string"
         },
         {
@@ -48,7 +48,7 @@
         },
         {
           "name": "level",
-          "description": "Log level (INFO, WARN, ERROR, DEBUG, TRACE, FATAL)",
+          "description": "Log level",
           "type": "string"
         },
         {
@@ -130,27 +130,27 @@
         },
         {
           "name": "queue",
-          "description": "Queue name (e.g., low, normal, high)",
+          "description": "Queue name",
           "type": "string"
         },
         {
           "name": "nodes",
-          "description": "Number of compute nodes allocated",
+          "description": "Number of compute nodes",
           "type": "number"
         },
         {
           "name": "cores",
-          "description": "Total number of CPU cores used",
+          "description": "Total CPU cores used",
           "type": "number"
         },
         {
           "name": "runtime",
-          "description": "Job runtime in HH:MM:SS format",
+          "description": "Job runtime in HH:MM:SS",
           "type": "duration"
         },
         {
           "name": "status",
-          "description": "Job completion status (COMPLETED, CANCELLED, FAILED)",
+          "description": "Job completion status",
           "type": "string"
         }
       ]
@@ -158,16 +158,51 @@
     {
       "id": "bgl-old",
       "name": "BGL (Old)",
-      "description": "Blue Gene/L old format with timestamp",
+      "description": "Blue Gene/L old format with extended fields",
       "priority": 75,
       "patterns": [
-        "(?<timestamp>\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{6})"
+        "^-?\\s*(?<id>\\d+)\\s+(?<date>\\d{4}\\.\\d{2}\\.\\d{2})\\s+(?<node>\\S+)\\s+(?<timestamp>\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{6})\\s+(?<node2>\\S+)\\s+(?<type>RAS|APP)\\s+(?<level>KERNEL|APP|FATAL|INFO)\\s+(?<message>.+)$"
       ],
       "fields": [
+        {
+          "name": "id",
+          "description": "Event ID",
+          "type": "number"
+        },
+        {
+          "name": "date",
+          "description": "Date in format YYYY.MM.DD",
+          "type": "date"
+        },
+        {
+          "name": "node",
+          "description": "Node",
+          "type": "string"
+        },
         {
           "name": "timestamp",
           "description": "Timestamp in format YYYY-MM-DD-HH.MM.SS.microseconds",
           "type": "datetime"
+        },
+        {
+          "name": "node2",
+          "description": "Node (repeat)",
+          "type": "string"
+        },
+        {
+          "name": "type",
+          "description": "Type (RAS/APP)",
+          "type": "string"
+        },
+        {
+          "name": "level",
+          "description": "Level (KERNEL/APP/FATAL/INFO)",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "description": "Message",
+          "type": "string"
         }
       ]
     },
@@ -177,9 +212,8 @@
       "description": "Nginx web server access log",
       "priority": 70,
       "patterns": [
-        "^(?<ip>\\S+) - (?<user>\\S+) \\[(?<timestamp>\\d{2}\\/\\w{3}\\/\\d{4}:\\d{2}:\\d{2}:\\d{2} [+-]\\d{4})\\] \"(?<method>\\w+) (?<path>\\S+) (?<protocol>HTTP\\/[\\d.]+)\" (?<status>\\d{3}) (?<bytes>\\d+) \"(?<referer>[^\"]*)\" \"(?<userAgent>[^\"]*)\""
+        "^(?<ip>\\S+) - (?<user>\\S+) \\[(?<timestamp>\\d{2}\\/\\w{3}\\/\\d{4}:\\d{2}:\\d{2}:\\d{2})(?: [+-]\\d{4})? \\] \"(?<method>\\w+) (?<path>\\S+) (?<protocol>HTTP\\/[\\d.]+)\" (?<status>\\d{3}) (?<bytes>\\d+) \"(?<referer>[^\"]*)\" \"(?<userAgent>[^\"]*)\""
       ],
-      "additionalCheck": "nginx",
       "fields": [
         {
           "name": "ip",
@@ -188,7 +222,7 @@
         },
         {
           "name": "user",
-          "description": "Authenticated username (or - if none)",
+          "description": "Authenticated username",
           "type": "string"
         },
         {
@@ -235,7 +269,7 @@
     },
     {
       "id": "apache-access",
-      "name": "Apache Access Log",
+      "name": "Apache Access",
       "description": "Apache HTTP Server access log (Common Log Format)",
       "priority": 65,
       "patterns": [
@@ -300,7 +334,7 @@
       "fields": [
         {
           "name": "month",
-          "description": "Month abbreviation (Jan, Feb, etc.)",
+          "description": "Month abbreviation",
           "type": "string"
         },
         {
@@ -310,12 +344,12 @@
         },
         {
           "name": "time",
-          "description": "Time in HH:MM:SS format",
+          "description": "Time in HH:MM:SS",
           "type": "time"
         },
         {
           "name": "hostname",
-          "description": "Hostname or IP of the logging machine",
+          "description": "Hostname or IP",
           "type": "string"
         },
         {
@@ -338,7 +372,7 @@
     },
     {
       "id": "web-access-generic",
-      "name": "Web Access Log",
+      "name": "Web Access",
       "description": "Generic web server access log format",
       "priority": 50,
       "patterns": [
@@ -352,7 +386,7 @@
         },
         {
           "name": "user",
-          "description": "Username (or - if none)",
+          "description": "Username",
           "type": "string"
         },
         {
