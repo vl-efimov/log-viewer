@@ -1,16 +1,5 @@
 import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Collapse from '@mui/material/Collapse';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import React from 'react';
@@ -26,37 +15,7 @@ import { parseLogFileForTable } from '../utils/logFormatExamples';
 
 const ViewLogsPage: React.FC = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
-    const [openGroups, setOpenGroups] = useState<{[key: number]: boolean}>({});
 
-    const handleToggleGroup = (groupStart: number) => {
-        setOpenGroups(prev => ({ ...prev, [groupStart]: !prev[groupStart] }));
-    };
-
-    // Grouping consecutive unparsed lines
-    function groupParsedLines(parsedLines: typeof parsedLines) {
-        const allFields = Array.from(new Set(parsedLines.flatMap(r => r.parsed?.fields ? Object.keys(r.parsed.fields) : [])));
-        const result: Array<any> = [];
-        let i = 0;
-        while (i < parsedLines.length) {
-            if (!parsedLines[i].parsed) {
-                let group = [];
-                while (i < parsedLines.length && !parsedLines[i].parsed) {
-                    group.push(parsedLines[i]);
-                    i++;
-                }
-                result.push({ type: 'unparsed', lines: group, startLine: group[0].lineNumber, allFields });
-            } else {
-                result.push({ type: 'parsed', line: parsedLines[i], allFields });
-                i++;
-            }
-        }
-        return result;
-    }
-    const [openRows, setOpenRows] = useState<{[key: number]: boolean}>({});
-
-    const handleToggleRow = (lineNumber: number) => {
-        setOpenRows(prev => ({ ...prev, [lineNumber]: !prev[lineNumber] }));
-    };
     const dispatch = useDispatch();
     const navigate = useNavigate();
     
@@ -320,92 +279,59 @@ const ViewLogsPage: React.FC = () => {
                 )}
             </Box>
 
-            <TableContainer component={Paper} sx={{ flexGrow: 1, overflow: 'auto', backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5', maxHeight: '70vh' }}>
-                <Table size="small" stickyHeader>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell sx={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: (theme) => theme.palette.background.paper }}>№</TableCell>
-                            {Array.from(new Set(parsedLines.flatMap(row => row.parsed?.fields ? Object.keys(row.parsed.fields) : []))).map(field => (
-                                <TableCell key={field} sx={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: (theme) => theme.palette.background.paper }}>{field}</TableCell>
-                            ))}
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {groupParsedLines(parsedLines).map((item, idx) => {
-                            if (item.type === 'unparsed') {
-                                return (
-                                    <React.Fragment key={item.startLine}>
-                                        <TableRow>
-                                            <TableCell
-                                                sx={{
-                                                    width: 48,
-                                                    p: 0,
-                                                    textAlign: 'center',
-                                                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#232323' : '#f7f7f7',
-                                                    borderRight: '1px solid #e0e0e0',
-                                                    cursor: 'pointer',
-                                                    transition: 'background 0.2s',
-                                                    '&:hover': {
-                                                        backgroundColor: (theme) => theme.palette.action.hover,
-                                                    },
-                                                }}
-                                                onClick={() => handleToggleGroup(item.startLine)}
-                                            >
-                                                <IconButton
-                                                    aria-label="expand group"
-                                                    size="small"
-                                                    sx={{ m: 0, p: 0, pointerEvents: 'none' }}
-                                                >
-                                                    {openGroups[item.startLine] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                                                </IconButton>
-                                            </TableCell>
-                                            <TableCell colSpan={item.allFields.length} sx={{ backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#232323' : '#f7f7f7' }}></TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                            <TableCell colSpan={item.allFields.length + 1} sx={{ p: 0, border: 0, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#232323' : '#f7f7f7' }}>
-                                                <Collapse in={openGroups[item.startLine]} timeout="auto" unmountOnExit>
-                                                    <Box sx={{ p: 1.5, fontFamily: 'monospace', fontSize: '0.95rem', color: 'text.secondary', backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#232323' : '#f7f7f7' }}>
-                                                        {item.lines.map(l => (
-                                                            <div
-                                                                key={l.lineNumber}
-                                                                style={{
-                                                                    marginBottom: 2,
-                                                                    cursor: 'pointer',
-                                                                    background: selectedLine === l.lineNumber ? '#bbdefb' : 'none',
-                                                                    borderRadius: selectedLine === l.lineNumber ? 4 : 0,
-                                                                }}
-                                                                onClick={() => setSelectedLine(l.lineNumber)}
-                                                            >
-                                                                {l.raw}
-                                                            </div>
-                                                        ))}
-                                                    </Box>
-                                                </Collapse>
-                                            </TableCell>
-                                        </TableRow>
-                                    </React.Fragment>
-                                );
-                            }
-                            // parsed
-                            const row = item.line;
-                            return (
-                                <TableRow
-                                    key={row.lineNumber}
-                                    hover
-                                    selected={selectedLine === row.lineNumber}
-                                    onClick={() => setSelectedLine(row.lineNumber)}
-                                    sx={{ cursor: 'pointer' }}
-                                >
-                                    <TableCell>{row.lineNumber}</TableCell>
-                                    {item.allFields.map(field => (
-                                        <TableCell key={field}>{row.parsed?.fields?.[field] ?? ''}</TableCell>
-                                    ))}
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Box 
+                sx={{ 
+                    flexGrow: 1, 
+                    overflow: 'auto', 
+                    maxHeight: '70vh',
+                    fontFamily: 'monospace',
+                    fontSize: '0.9rem',
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
+                    p: 2,
+                }}
+            >
+                {parsedLines.map((row) => (
+                    <Box
+                        key={row.lineNumber}
+                        sx={{
+                            display: 'flex',
+                            mb: 0.5,
+                            p: 0.5,
+                            cursor: 'pointer',
+                            backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : 'transparent',
+                            borderRadius: 1,
+                            '&:hover': {
+                                backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : (theme) => theme.palette.action.hover,
+                            },
+                        }}
+                        onClick={() => setSelectedLine(row.lineNumber)}
+                    >
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                minWidth: '60px',
+                                color: 'text.secondary',
+                                fontFamily: 'monospace',
+                                userSelect: 'none',
+                                mr: 2,
+                            }}
+                        >
+                            {row.lineNumber}
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                fontFamily: 'monospace',
+                                flex: 1,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                            }}
+                        >
+                            {row.raw}
+                        </Typography>
+                    </Box>
+                ))}
+            </Box>
         </Box>
     );
 }
