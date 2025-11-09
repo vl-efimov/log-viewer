@@ -7,12 +7,13 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
-import { RouteHome } from '../routes/routePaths';
 import { RootState } from '../redux/store';
 import { updateLogContent, appendLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
 import { getFileHandle, getLazyReader } from '../redux/slices/logFileSlice';
 import { parseLogFileForTable } from '../utils/logFormatExamples';
 import { LRUCache } from '../utils/lruCache';
+import NoFileSelected from '../components/NoFileSelected';
+import { RouteHome } from '../routes/routePaths';
 
 // Dynamic cache size based on file size
 const getCacheSize = (fileSize: number): number => {
@@ -306,38 +307,8 @@ const ViewLogsPage: React.FC = () => {
         navigate(RouteHome);
     };
 
-    const handleBackToHome = () => {
-        navigate(RouteHome);
-    };
-
     if (!isMonitoring) {
-        return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    gap: 2,
-                }}
-            >
-                <Typography variant="h5" gutterBottom>
-                    No file selected
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    Please select a log file from the Home page to start monitoring.
-                </Typography>
-                <Typography
-                    variant="body2"
-                    color="primary"
-                    sx={{ cursor: 'pointer', textDecoration: 'underline' }}
-                    onClick={handleBackToHome}
-                >
-                    Go to Home
-                </Typography>
-            </Box>
-        );
+        return <NoFileSelected />;
     }
 
     return (
