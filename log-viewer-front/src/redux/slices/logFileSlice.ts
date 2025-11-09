@@ -1,7 +1,9 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { LazyFileReader } from '../../utils/lazyFileReader';
 
 // Global storage for FileSystemFileHandle (can't be serialized in Redux)
 let globalFileHandle: FileSystemFileHandle | null = null;
+let globalLazyReader: LazyFileReader | null = null;
 
 export const setFileHandle = (handle: FileSystemFileHandle | null) => {
     globalFileHandle = handle;
@@ -9,6 +11,14 @@ export const setFileHandle = (handle: FileSystemFileHandle | null) => {
 
 export const getFileHandle = (): FileSystemFileHandle | null => {
     return globalFileHandle;
+};
+
+export const setLazyReader = (reader: LazyFileReader | null) => {
+    globalLazyReader = reader;
+};
+
+export const getLazyReader = (): LazyFileReader | null => {
+    return globalLazyReader;
 };
 
 interface LogFileState {
@@ -20,6 +30,8 @@ interface LogFileState {
     lastModified: number;
     hasFileHandle: boolean; // Flag indicating if we have a File System Access API handle
     isMonitoring: boolean; // Flag for live monitoring state
+    totalLines: number; // Total number of lines (from lazy indexing)
+    useLazyLoading: boolean; // Whether to use lazy loading
 }
 
 const initialState: LogFileState = {
@@ -31,6 +43,8 @@ const initialState: LogFileState = {
     lastModified: 0,
     hasFileHandle: false,
     isMonitoring: false,
+    totalLines: 0,
+    useLazyLoading: false,
 };
 
 const logFileSlice = createSlice({
@@ -44,6 +58,8 @@ const logFileSlice = createSlice({
             format: string;
             lastModified?: number;
             hasFileHandle?: boolean;
+            totalLines?: number;
+            useLazyLoading?: boolean;
         }>) => {
             state.name = action.payload.name;
             state.size = action.payload.size;
@@ -51,6 +67,8 @@ const logFileSlice = createSlice({
             state.format = action.payload.format;
             state.lastModified = action.payload.lastModified || Date.now();
             state.hasFileHandle = action.payload.hasFileHandle || false;
+            state.totalLines = action.payload.totalLines || 0;
+            state.useLazyLoading = action.payload.useLazyLoading || false;
             state.loaded = true;
         },
         updateLogContent: (state, action: PayloadAction<{ content: string; lastModified?: number }>) => {
@@ -74,6 +92,8 @@ const logFileSlice = createSlice({
             state.lastModified = 0;
             state.hasFileHandle = false;
             state.isMonitoring = false;
+            state.totalLines = 0;
+            state.useLazyLoading = false;
         },
     },
 });
