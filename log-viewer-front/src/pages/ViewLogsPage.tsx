@@ -23,6 +23,10 @@ const getCacheSize = (fileSize: number): number => {
 
 const LAZY_CACHE_SIZE = 2000; // Default cache size
 
+// Virtual pagination for very large files
+const VIRTUAL_PAGE_SIZE = 100000; // Show 100k lines at a time
+const VIRTUAL_BUFFER = 10000; // Buffer 10k lines before/after
+
 
 const ViewLogsPage: React.FC = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
@@ -45,6 +49,7 @@ const ViewLogsPage: React.FC = () => {
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [newLinesCount, setNewLinesCount] = useState<number>(0);
     const [cacheStats, setCacheStats] = useState({ size: 0, capacity: LAZY_CACHE_SIZE });
+    const [virtualWindow, setVirtualWindow] = useState({ start: 1, end: VIRTUAL_PAGE_SIZE });
     const lastModifiedRef = useRef<number>(0);
     const lastSizeRef = useRef<number>(0);
     const previousLineCountRef = useRef<number>(0);
@@ -52,19 +57,39 @@ const ViewLogsPage: React.FC = () => {
     const scrollToBottom = () => {
         if (virtuosoRef.current) {
             const count = useLazyLoading ? totalLines : parsedLines.length;
-            virtuosoRef.current.scrollToIndex({
-                index: count - 1,
-                align: 'end',
-                behavior: 'auto'
-            });
+            
+            if (useLazyLoading && totalLines > VIRTUAL_PAGE_SIZE) {
+                // For large files, adjust window to show last page
+                const newStart = Math.max(1, totalLines - VIRTUAL_PAGE_SIZE + 1);
+                const newEnd = totalLines;
+                setVirtualWindow({ start: newStart, end: newEnd });
+                
+                // Scroll to the last visible item in the window
+                setTimeout(() => {
+                    virtuosoRef.current?.scrollToIndex({
+                        index: VIRTUAL_PAGE_SIZE - 1,
+                        align: 'end',
+                        behavior: 'auto'
+                    });
+                }, 100);
+            } else {
+                virtuosoRef.current.scrollToIndex({
+                    index: count - 1,
+                    align: 'end',
+                    behavior: 'auto'
+                });
+            }
         }
     };
 
     // Function to get line content (lazy or from parsed)
     const getLineContent = useCallback(async (lineNumber: number): Promise<string> => {
         if (useLazyLoading) {
+            // Adjust for virtual window offset
+            const actualLineNumber = virtualWindow.start + lineNumber - 1;
+            
             // Check cache first
-            const cached = lazyCache.get(lineNumber);
+            const cached = lazyCache.get(actualLineNumber);
             if (cached !== undefined) {
                 return cached;
             }
@@ -72,10 +97,10 @@ const ViewLogsPage: React.FC = () => {
             // Read from lazy reader
             const reader = getLazyReader();
             if (reader) {
-                const content = await reader.readLine(lineNumber);
+                const content = await reader.readLine(actualLineNumber);
                 if (content !== null) {
                     // Add to LRU cache (automatically evicts old entries)
-                    lazyCache.set(lineNumber, content);
+                    lazyCache.set(actualLineNumber, content);
                     
                     // Update cache stats for UI
                     setCacheStats({ size: lazyCache.size(), capacity: lazyCache.getCapacity() });
@@ -83,13 +108,52 @@ const ViewLogsPage: React.FC = () => {
                     return content;
                 }
             }
-            return `Loading line ${lineNumber}...`;
+            return `Loading line ${actualLineNumber}...`;
         } else {
             // Get from parsed lines
             const line = parsedLines.find(l => l.lineNumber === lineNumber);
             return line?.raw || '';
         }
-    }, [useLazyLoading, lazyCache, parsedLines]);
+    }, [useLazyLoading, lazyCache, parsedLines, virtualWindow]);
+
+    // Handle scroll range changes to detect when near edges
+    const handleRangeChanged = useCallback((range: { startIndex: number, endIndex: number }) => {
+        if (!useLazyLoading || totalLines <= VIRTUAL_PAGE_SIZE) {
+            return; // No windowing needed
+        }
+
+        const { startIndex, endIndex } = range;
+        const windowSize = virtualWindow.end - virtualWindow.start + 1;
+        
+        // Check if near top edge (within buffer)
+        if (startIndex < VIRTUAL_BUFFER && virtualWindow.start > 1) {
+            const newStart = Math.max(1, virtualWindow.start - VIRTUAL_PAGE_SIZE / 2);
+            const newEnd = Math.min(totalLines, newStart + VIRTUAL_PAGE_SIZE - 1);
+            setVirtualWindow({ start: newStart, end: newEnd });
+            
+            // Scroll to middle to give room for both directions
+            setTimeout(() => {
+                virtuosoRef.current?.scrollToIndex({
+                    index: VIRTUAL_PAGE_SIZE / 2,
+                    align: 'center'
+                });
+            }, 100);
+        }
+        // Check if near bottom edge (within buffer)
+        else if (endIndex > windowSize - VIRTUAL_BUFFER && virtualWindow.end < totalLines) {
+            const newEnd = Math.min(totalLines, virtualWindow.end + VIRTUAL_PAGE_SIZE / 2);
+            const newStart = Math.max(1, newEnd - VIRTUAL_PAGE_SIZE + 1);
+            setVirtualWindow({ start: newStart, end: newEnd });
+            
+            // Scroll to middle to give room for both directions
+            setTimeout(() => {
+                virtuosoRef.current?.scrollToIndex({
+                    index: VIRTUAL_PAGE_SIZE / 2,
+                    align: 'center'
+                });
+            }, 100);
+        }
+    }, [useLazyLoading, totalLines, virtualWindow, VIRTUAL_PAGE_SIZE, VIRTUAL_BUFFER]);
 
     // Load initial content from Redux
     useEffect(() => {
@@ -357,6 +421,9 @@ const ViewLogsPage: React.FC = () => {
                 <Typography variant="caption" color="text.secondary">
                     Total lines: {useLazyLoading ? totalLines : parsedLines.length} | Content size: {(content?.length || 0).toLocaleString()} bytes | File size: {fileSize.toLocaleString()} bytes
                     {useLazyLoading && <> | 🚀 Lazy Loading | Cache: {cacheStats.size}/{cacheStats.capacity}</>}
+                    {useLazyLoading && totalLines > VIRTUAL_PAGE_SIZE && (
+                        <> | 📍 Viewing lines {virtualWindow.start.toLocaleString()}-{virtualWindow.end.toLocaleString()}</>
+                    )}
                 </Typography>
                 {newLinesCount > 0 && (
                     <Chip 
@@ -389,20 +456,31 @@ const ViewLogsPage: React.FC = () => {
                 <Virtuoso
                     ref={virtuosoRef}
                     style={{ height: '100%', width: '100%' }}
-                    totalCount={useLazyLoading ? totalLines : parsedLines.length}
+                    totalCount={useLazyLoading ? Math.min(VIRTUAL_PAGE_SIZE, totalLines) : parsedLines.length}
                     overscan={200}
                     fixedItemHeight={20}
-                    computeItemKey={(index) => index + 1}
+                    computeItemKey={(index) => {
+                        // Use global line number for stable keys
+                        return useLazyLoading ? virtualWindow.start + index : index + 1;
+                    }}
+                    rangeChanged={handleRangeChanged}
                     itemContent={(index) => {
-                        const lineNumber = index + 1;
+                        const lineNumber = useLazyLoading 
+                            ? index + 1  // Window-relative for fetching
+                            : index + 1; // Direct line number for parsed
+                        
+                        const displayLineNumber = useLazyLoading 
+                            ? virtualWindow.start + index  // Show actual global line number
+                            : lineNumber;
                         
                         if (useLazyLoading) {
                             // Lazy loading mode - render placeholder and fetch on mount
                             return (
                                 <LazyLogLine
                                     lineNumber={lineNumber}
-                                    selected={selectedLine === lineNumber}
-                                    onSelect={() => setSelectedLine(lineNumber)}
+                                    displayLineNumber={displayLineNumber}
+                                    selected={selectedLine === displayLineNumber}
+                                    onSelect={() => setSelectedLine(displayLineNumber)}
                                     getContent={getLineContent}
                                 />
                             );
@@ -471,10 +549,11 @@ const ViewLogsPage: React.FC = () => {
 // Component for lazily loaded log lines
 const LazyLogLine: React.FC<{
     lineNumber: number;
+    displayLineNumber: number;
     selected: boolean;
     onSelect: () => void;
     getContent: (lineNumber: number) => Promise<string>;
-}> = ({ lineNumber, selected, onSelect, getContent }) => {
+}> = ({ lineNumber, displayLineNumber, selected, onSelect, getContent }) => {
     const [content, setContent] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
@@ -522,7 +601,7 @@ const LazyLogLine: React.FC<{
                     flexShrink: 0,
                 }}
             >
-                {lineNumber}
+                {displayLineNumber}
             </Typography>
             <Typography
                 variant="body2"
