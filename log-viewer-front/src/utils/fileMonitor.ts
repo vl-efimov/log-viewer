@@ -54,7 +54,7 @@ export function createFileMonitor(
             fileHandle = handle;
             
             // Read initial content
-            const file = await fileHandle.getFile();
+            const file = await handle.getFile();
             lastModified = file.lastModified;
             const content = await file.text();
             onFileChange(content);
