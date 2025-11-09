@@ -6,6 +6,7 @@ import React from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
+import { Virtuoso } from 'react-virtuoso';
 import { RouteHome } from '../routes/routePaths';
 import { RootState } from '../redux/store';
 import { updateLogContent, appendLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
@@ -282,55 +283,58 @@ const ViewLogsPage: React.FC = () => {
             <Box 
                 sx={{ 
                     flexGrow: 1, 
-                    overflow: 'auto', 
-                    maxHeight: '70vh',
-                    fontFamily: 'monospace',
-                    fontSize: '0.9rem',
+                    height: '70vh',
                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
-                    p: 2,
                 }}
             >
-                {parsedLines.map((row) => (
-                    <Box
-                        key={row.lineNumber}
-                        sx={{
-                            display: 'flex',
-                            mb: 0.5,
-                            p: 0.5,
-                            cursor: 'pointer',
-                            backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : 'transparent',
-                            borderRadius: 1,
-                            '&:hover': {
-                                backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : (theme) => theme.palette.action.hover,
-                            },
-                        }}
-                        onClick={() => setSelectedLine(row.lineNumber)}
-                    >
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                minWidth: '60px',
-                                color: 'text.secondary',
-                                fontFamily: 'monospace',
-                                userSelect: 'none',
-                                mr: 2,
-                            }}
-                        >
-                            {row.lineNumber}
-                        </Typography>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                fontFamily: 'monospace',
-                                flex: 1,
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                            }}
-                        >
-                            {row.raw}
-                        </Typography>
-                    </Box>
-                ))}
+                <Virtuoso
+                    style={{ height: '100%', width: '100%' }}
+                    totalCount={parsedLines.length}
+                    itemContent={(index) => {
+                        const row = parsedLines[index];
+                        return (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    p: 0.5,
+                                    px: 2,
+                                    cursor: 'pointer',
+                                    backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : (theme) => theme.palette.action.hover,
+                                    },
+                                }}
+                                onClick={() => setSelectedLine(row.lineNumber)}
+                            >
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        minWidth: '60px',
+                                        color: 'text.secondary',
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.9rem',
+                                        userSelect: 'none',
+                                        mr: 2,
+                                    }}
+                                >
+                                    {row.lineNumber}
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.9rem',
+                                        flex: 1,
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                    }}
+                                >
+                                    {row.raw}
+                                </Typography>
+                            </Box>
+                        );
+                    }}
+                />
             </Box>
         </Box>
     );
