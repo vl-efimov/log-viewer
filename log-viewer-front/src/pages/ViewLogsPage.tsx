@@ -16,6 +16,17 @@ import { parseLogFileForTable } from '../utils/logFormatExamples';
 
 const ViewLogsPage: React.FC = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
+    const virtuosoRef = useRef<any>(null);
+
+    const scrollToBottom = () => {
+        if (virtuosoRef.current) {
+            virtuosoRef.current.scrollToIndex({
+                index: parsedLines.length - 1,
+                align: 'end',
+                behavior: 'auto'
+            });
+        }
+    };
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -39,7 +50,16 @@ const ViewLogsPage: React.FC = () => {
     // Load initial content from Redux
     useEffect(() => {
         const safeContent = content ?? "";
+        console.log('Content length in bytes:', safeContent.length);
+        console.log('Content lines count:', safeContent.split(/\r?\n/).length);
+        
         const parsed = parseLogFileForTable(safeContent);
+        console.log('Parsed lines count:', parsed.length);
+        if (parsed.length > 0) {
+            console.log('First line number:', parsed[0].lineNumber);
+            console.log('Last line number:', parsed[parsed.length - 1].lineNumber);
+        }
+        
         setParsedLines(parsed);
         setLastUpdate(new Date());
         // Track new lines added
@@ -200,10 +220,11 @@ const ViewLogsPage: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
-                gap: 2,
+                width: '100%',
+                overflow: 'hidden',
             }}
         >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Box>
                     <Typography variant="h6">
                         {fileName}
@@ -252,6 +273,18 @@ const ViewLogsPage: React.FC = () => {
                 >
                     Refresh Now
                 </Typography>
+                <Typography
+                    variant="button"
+                    sx={{
+                        cursor: 'pointer',
+                        color: 'primary.main',
+                        textDecoration: 'underline',
+                        '&:hover': { opacity: 0.8 }
+                    }}
+                    onClick={scrollToBottom}
+                >
+                    Jump to End
+                </Typography>
                 <Chip 
                     label={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
                     color={autoRefresh ? 'success' : 'default'}
@@ -260,7 +293,7 @@ const ViewLogsPage: React.FC = () => {
                     sx={{ cursor: 'pointer' }}
                 />
                 <Typography variant="caption" color="text.secondary">
-                    Total lines: {parsedLines.length}
+                    Total lines: {parsedLines.length} | Content size: {(content?.length || 0).toLocaleString()} bytes | File size: {fileSize.toLocaleString()} bytes
                 </Typography>
                 {newLinesCount > 0 && (
                     <Chip 
@@ -283,20 +316,33 @@ const ViewLogsPage: React.FC = () => {
             <Box 
                 sx={{ 
                     flexGrow: 1, 
-                    height: '70vh',
+                    flexShrink: 1,
+                    minHeight: 0,
                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
+                    borderRadius: 1,
+                    overflow: 'hidden',
                 }}
             >
                 <Virtuoso
+                    ref={virtuosoRef}
                     style={{ height: '100%', width: '100%' }}
                     totalCount={parsedLines.length}
+                    overscan={200}
+                    fixedItemHeight={20}
+                    computeItemKey={(index) => parsedLines[index]?.lineNumber || index}
                     itemContent={(index) => {
                         const row = parsedLines[index];
+                        if (!row) {
+                            console.warn(`Missing row at index ${index}, total: ${parsedLines.length}`);
+                            return null;
+                        }
+                        
                         return (
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    p: 0.5,
+                                    height: '20px',
+                                    alignItems: 'center',
                                     px: 2,
                                     cursor: 'pointer',
                                     backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : 'transparent',
@@ -309,12 +355,14 @@ const ViewLogsPage: React.FC = () => {
                                 <Typography
                                     variant="body2"
                                     sx={{
-                                        minWidth: '60px',
+                                        minWidth: '80px',
                                         color: 'text.secondary',
                                         fontFamily: 'monospace',
-                                        fontSize: '0.9rem',
+                                        fontSize: '0.8rem',
+                                        lineHeight: '20px',
                                         userSelect: 'none',
                                         mr: 2,
+                                        flexShrink: 0,
                                     }}
                                 >
                                     {row.lineNumber}
@@ -323,10 +371,12 @@ const ViewLogsPage: React.FC = () => {
                                     variant="body2"
                                     sx={{
                                         fontFamily: 'monospace',
-                                        fontSize: '0.9rem',
+                                        fontSize: '0.8rem',
+                                        lineHeight: '20px',
                                         flex: 1,
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-word',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
                                     }}
                                 >
                                     {row.raw}
