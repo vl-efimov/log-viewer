@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import React from 'react';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
@@ -11,9 +11,13 @@ import { RootState } from '../redux/store';
 import { updateLogContent, appendLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
 import { getFileHandle, getLazyReader } from '../redux/slices/logFileSlice';
 import { parseLogFileForTable } from '../utils/logFormatExamples';
+import { getFormatFields, detectLogFormat, type LogFormatField } from '../utils/logFormatDetector';
 import { LRUCache } from '../utils/lruCache';
 import NoFileSelected from '../components/NoFileSelected';
 import { RouteHome } from '../routes/routePaths';
+import { LogFiltersBar } from '../components/LogFiltersBar';
+import type { LogFilters } from '../types/filters';
+import { applyLogFilters, getFilteredCount } from '../utils/logFilters';
 
 // Dynamic cache size based on file size
 const getCacheSize = (fileSize: number): number => {
@@ -45,7 +49,9 @@ const ViewLogsPage: React.FC = () => {
         raw: string;
         error?: string;
             }>>([]);
+    const [filters, setFilters] = useState<LogFilters>({});
     const [lazyCache] = useState<LRUCache<number, string>>(() => new LRUCache(LAZY_CACHE_SIZE));
+    const [previewContent, setPreviewContent] = useState<string>(''); // Preview for format detection in lazy mode
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [newLinesCount, setNewLinesCount] = useState<number>(0);
@@ -57,28 +63,40 @@ const ViewLogsPage: React.FC = () => {
 
     const scrollToBottom = () => {
         if (virtuosoRef.current) {
-            const count = useLazyLoading ? totalLines : parsedLines.length;
-            
-            if (useLazyLoading && totalLines > VIRTUAL_PAGE_SIZE) {
-                // For large files, adjust window to show last page
-                const newStart = Math.max(1, totalLines - VIRTUAL_PAGE_SIZE + 1);
-                const newEnd = totalLines;
-                setVirtualWindow({ start: newStart, end: newEnd });
+            if (useLazyLoading) {
+                const count = totalLines;
                 
-                // Scroll to the last visible item in the window
-                setTimeout(() => {
-                    virtuosoRef.current?.scrollToIndex({
-                        index: VIRTUAL_PAGE_SIZE - 1,
+                if (count > VIRTUAL_PAGE_SIZE) {
+                    // For large files, adjust window to show last page
+                    const newStart = Math.max(1, count - VIRTUAL_PAGE_SIZE + 1);
+                    const newEnd = count;
+                    setVirtualWindow({ start: newStart, end: newEnd });
+                    
+                    // Scroll to the last visible item in the window
+                    setTimeout(() => {
+                        virtuosoRef.current?.scrollToIndex({
+                            index: VIRTUAL_PAGE_SIZE - 1,
+                            align: 'end',
+                            behavior: 'auto'
+                        });
+                    }, 100);
+                } else {
+                    virtuosoRef.current.scrollToIndex({
+                        index: count - 1,
                         align: 'end',
                         behavior: 'auto'
                     });
-                }, 100);
+                }
             } else {
-                virtuosoRef.current.scrollToIndex({
-                    index: count - 1,
-                    align: 'end',
-                    behavior: 'auto'
-                });
+                // For regular mode, scroll to last filtered line
+                const count = filteredLines.length;
+                if (count > 0) {
+                    virtuosoRef.current.scrollToIndex({
+                        index: count - 1,
+                        align: 'end',
+                        behavior: 'auto'
+                    });
+                }
             }
         }
     };
@@ -173,6 +191,27 @@ const ViewLogsPage: React.FC = () => {
             lazyCache.clear();
             setCacheStats({ size: 0, capacity: lazyCache.getCapacity() });
             
+            // Load first 50 lines for format detection
+            const loadPreview = async () => {
+                console.log('loadPreview: Starting to load preview lines for format detection');
+                const reader = getLazyReader();
+                console.log('loadPreview: LazyReader available:', !!reader);
+                
+                if (reader) {
+                    const previewLines: string[] = [];
+                    for (let i = 1; i <= Math.min(50, totalLines); i++) {
+                        const line = await reader.readLine(i);
+                        if (line) previewLines.push(line);
+                    }
+                    const preview = previewLines.join('\n');
+                    console.log('loadPreview: Loaded preview lines:', previewLines.length, 'chars:', preview.length);
+                    setPreviewContent(preview);
+                } else {
+                    console.warn('loadPreview: LazyReader not available yet');
+                }
+            };
+            loadPreview();
+            
             return;
         }
 
@@ -196,7 +235,65 @@ const ViewLogsPage: React.FC = () => {
         }
         previousLineCountRef.current = parsed.length;
         lastSizeRef.current = fileSize;
-    }, [content, fileSize, useLazyLoading, totalLines]);
+    }, [content, fileSize, useLazyLoading, totalLines, lazyCache]);
+
+    // Apply filters to parsed lines
+    const filteredLines = useMemo(() => {
+        return applyLogFilters(parsedLines, filters);
+    }, [parsedLines, filters]);
+
+    // Get filter statistics
+    const filterStats = useMemo(() => {
+        return getFilteredCount(parsedLines, filters);
+    }, [parsedLines, filters]);
+
+    // Get field definitions from detected format for filter configuration
+    const fieldDefinitions = useMemo((): LogFormatField[] => {
+        console.log('fieldDefinitions: Computing field definitions');
+        console.log('  - parsedLines.length:', parsedLines.length);
+        console.log('  - useLazyLoading:', useLazyLoading);
+        console.log('  - previewContent.length:', previewContent.length);
+        console.log('  - content:', content ? `${content.length} chars` : 'empty');
+        
+        // Try to get formatId from parsed lines first
+        if (parsedLines.length > 0) {
+            const firstParsed = parsedLines.find(line => line.parsed);
+            if (firstParsed?.parsed) {
+                console.log('  → Using formatId from parsedLines:', firstParsed.parsed.formatId);
+                const fields = getFormatFields(firstParsed.parsed.formatId);
+                console.log('  → Field definitions:', fields.length);
+                return fields;
+            }
+        }
+        
+        // For lazy loading, use preview content
+        if (useLazyLoading && previewContent) {
+            const formatId = detectLogFormat(previewContent);
+            console.log('  → Detected formatId from preview:', formatId, '(should be ID not name)');
+            if (formatId) {
+                const fields = getFormatFields(formatId);
+                console.log('  → Field definitions count:', fields.length);
+                if (fields.length > 0) {
+                    console.log('  → Field names:', fields.map(f => f.name).join(', '));
+                }
+                return fields;
+            }
+        }
+        
+        // For normal mode without parsed lines, detect from content
+        if (content) {
+            const formatId = detectLogFormat(content);
+            console.log('  → Detected formatId from content:', formatId);
+            if (formatId) {
+                const fields = getFormatFields(formatId);
+                console.log('  → Field definitions:', fields.length);
+                return fields;
+            }
+        }
+        
+        console.log('  → No field definitions found, returning empty array');
+        return [];
+    }, [parsedLines, content, useLazyLoading, previewContent]);
 
     // Poll for file changes using File System Access API with incremental reading
     useEffect(() => {
@@ -390,7 +487,11 @@ const ViewLogsPage: React.FC = () => {
                     sx={{ cursor: 'pointer' }}
                 />
                 <Typography variant="caption" color="text.secondary">
-                    Total lines: {useLazyLoading ? totalLines : parsedLines.length} | Content size: {(content?.length || 0).toLocaleString()} bytes | File size: {fileSize.toLocaleString()} bytes
+                    Total lines: {useLazyLoading ? totalLines : parsedLines.length}
+                    {!useLazyLoading && filterStats.filtered !== filterStats.total && (
+                        <> | Showing: {filterStats.filtered} ({filterStats.parsedFiltered} parsed + stacktraces)</>
+                    )}
+                    {' | '}Content size: {(content?.length || 0).toLocaleString()} bytes | File size: {fileSize.toLocaleString()} bytes
                     {useLazyLoading && <> | 🚀 Lazy Loading | Cache: {cacheStats.size}/{cacheStats.capacity}</>}
                     {useLazyLoading && totalLines > VIRTUAL_PAGE_SIZE && (
                         <> | 📍 Viewing lines {virtualWindow.start.toLocaleString()}-{virtualWindow.end.toLocaleString()}</>
@@ -414,6 +515,24 @@ const ViewLogsPage: React.FC = () => {
                 )}
             </Box>
 
+            {/* Lazy Loading Warning */}
+            {useLazyLoading && (
+                <Alert severity="info" sx={{ mb: 1 }}>
+                    <Typography variant="body2">
+                        <strong>Large File Mode:</strong> Filtering is displayed but not yet functional for files in lazy loading mode (&gt;50MB). 
+                        This feature requires parsing all {totalLines.toLocaleString()} lines which may cause performance issues.
+                        Filters are shown for reference based on detected format.
+                    </Typography>
+                </Alert>
+            )}
+
+            {/* Filters Bar */}
+            <LogFiltersBar
+                filters={filters}
+                onFiltersChange={setFilters}
+                fieldDefinitions={fieldDefinitions}
+            />
+
             <Box 
                 sx={{ 
                     flexGrow: 1, 
@@ -427,24 +546,23 @@ const ViewLogsPage: React.FC = () => {
                 <Virtuoso
                     ref={virtuosoRef}
                     style={{ height: '100%', width: '100%' }}
-                    totalCount={useLazyLoading ? Math.min(VIRTUAL_PAGE_SIZE, totalLines) : parsedLines.length}
+                    totalCount={useLazyLoading ? Math.min(VIRTUAL_PAGE_SIZE, totalLines) : filteredLines.length}
                     overscan={200}
                     fixedItemHeight={20}
                     computeItemKey={(index) => {
                         // Use global line number for stable keys
-                        return useLazyLoading ? virtualWindow.start + index : index + 1;
+                        if (useLazyLoading) {
+                            return virtualWindow.start + index;
+                        } else {
+                            return filteredLines[index]?.lineNumber || index;
+                        }
                     }}
                     rangeChanged={handleRangeChanged}
                     itemContent={(index) => {
-                        const lineNumber = useLazyLoading 
-                            ? index + 1  // Window-relative for fetching
-                            : index + 1; // Direct line number for parsed
-                        
-                        const displayLineNumber = useLazyLoading 
-                            ? virtualWindow.start + index  // Show actual global line number
-                            : lineNumber;
-                        
                         if (useLazyLoading) {
+                            const lineNumber = index + 1;  // Window-relative for fetching
+                            const displayLineNumber = virtualWindow.start + index;  // Show actual global line number
+                            
                             // Lazy loading mode - render placeholder and fetch on mount
                             return (
                                 <LazyLogLine
@@ -456,10 +574,10 @@ const ViewLogsPage: React.FC = () => {
                                 />
                             );
                         } else {
-                            // Regular mode - render from parsed lines
-                            const row = parsedLines[index];
+                            // Regular mode - render from filtered lines
+                            const row = filteredLines[index];
                             if (!row) {
-                                console.warn(`Missing row at index ${index}, total: ${parsedLines.length}`);
+                                console.warn(`Missing row at index ${index}, total: ${filteredLines.length}`);
                                 return null;
                             }
                             

@@ -12,6 +12,8 @@ export interface LogFormatField {
     type: 'string' | 'number' | 'datetime' | 'date' | 'time' | 'duration';
     /** Whether this field is optional */
     optional?: boolean;
+    /** Possible values for the field (for enums like log levels) */
+    enum?: string[];
 }
 
 export interface LogFormatPattern {
@@ -101,7 +103,7 @@ export async function initializeLogFormats(): Promise<void> {
  * Detects the log format based on content analysis
  * @param content The log file content as string
  * @param previewLines Number of lines to analyze (default: 50)
- * @returns The detected format name or 'Unknown format'
+ * @returns The detected format ID or 'unknown'
  */
 export function detectLogFormat(content: string, previewLines: number = 50): string {
     const preview = content.split(/\r?\n/).slice(0, previewLines).join('\n');
@@ -117,18 +119,18 @@ export function detectLogFormat(content: string, previewLines: number = 50): str
             // If there's additional validation, run it
             if (format.validate) {
                 if (format.validate(content)) {
-                    return format.name;
+                    return format.id;
                 }
                 // If validation fails, continue to next format
                 continue;
             }
             
             // Pattern matched and no additional validation needed
-            return format.name;
+            return format.id;
         }
     }
 
-    return 'Unknown format';
+    return 'unknown';
 }
 
 /**
@@ -182,9 +184,42 @@ export function parseLogLine(line: string, formatId: string): ParsedLogLine | nu
     for (const pattern of format.patterns) {
         const match = line.match(pattern);
         if (match && match.groups) {
+            const fields = { ...match.groups };
+            
+            // Special handling for syslog: combine month, day, time into timestamp
+            if (formatId === 'syslog' && fields.month && fields.day && fields.time) {
+                const currentYear = new Date().getFullYear();
+                const monthMap: Record<string, string> = {
+                    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                    'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                    'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                };
+                const month = monthMap[fields.month] || '01';
+                const day = fields.day.padStart(2, '0');
+                fields.timestamp = `${currentYear}-${month}-${day} ${fields.time}`;
+            }
+            
+            // Special handling for HDFS v1: combine date (YYMMDD), time (HHMMSS), milliseconds
+            if (formatId === 'hdfs-v1' && fields.date && fields.time && fields.milliseconds) {
+                // Parse YYMMDD
+                const yy = fields.date.substring(0, 2);
+                const mm = fields.date.substring(2, 4);
+                const dd = fields.date.substring(4, 6);
+                const year = parseInt(yy) < 50 ? `20${yy}` : `19${yy}`; // 00-49 = 2000-2049, 50-99 = 1950-1999
+                
+                // Parse HHMMSS
+                const hh = fields.time.substring(0, 2);
+                const min = fields.time.substring(2, 4);
+                const ss = fields.time.substring(4, 6);
+                
+                // Create ISO timestamp with milliseconds
+                const ms = fields.milliseconds.padStart(3, '0');
+                fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}.${ms}`;
+            }
+            
             return {
                 formatId,
-                fields: match.groups,
+                fields,
                 raw: line,
             };
         }
@@ -205,9 +240,42 @@ export function parseLogLineAuto(line: string): ParsedLogLine | null {
         for (const pattern of format.patterns) {
             const match = line.match(pattern);
             if (match && match.groups) {
+                const fields = { ...match.groups };
+                
+                // Special handling for syslog: combine month, day, time into timestamp
+                if (format.id === 'syslog' && fields.month && fields.day && fields.time) {
+                    const currentYear = new Date().getFullYear();
+                    const monthMap: Record<string, string> = {
+                        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                    };
+                    const month = monthMap[fields.month] || '01';
+                    const day = fields.day.padStart(2, '0');
+                    fields.timestamp = `${currentYear}-${month}-${day} ${fields.time}`;
+                }
+                
+                // Special handling for HDFS v1: combine date (YYMMDD), time (HHMMSS), milliseconds
+                if (format.id === 'hdfs-v1' && fields.date && fields.time && fields.milliseconds) {
+                    // Parse YYMMDD
+                    const yy = fields.date.substring(0, 2);
+                    const mm = fields.date.substring(2, 4);
+                    const dd = fields.date.substring(4, 6);
+                    const year = parseInt(yy) < 50 ? `20${yy}` : `19${yy}`; // 00-49 = 2000-2049, 50-99 = 1950-1999
+                    
+                    // Parse HHMMSS
+                    const hh = fields.time.substring(0, 2);
+                    const min = fields.time.substring(2, 4);
+                    const ss = fields.time.substring(4, 6);
+                    
+                    // Create ISO timestamp with milliseconds
+                    const ms = fields.milliseconds.padStart(3, '0');
+                    fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}.${ms}`;
+                }
+                
                 return {
                     formatId: format.id,
-                    fields: match.groups,
+                    fields,
                     raw: line,
                 };
             }

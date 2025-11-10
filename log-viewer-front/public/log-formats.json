@@ -17,7 +17,8 @@
         {
           "name": "level",
           "description": "Log severity level",
-          "type": "string"
+          "type": "string",
+          "enum": ["fatal", "error", "warn", "notice", "info", "debug", "trace"]
         },
         {
           "name": "client",
@@ -49,7 +50,8 @@
         {
           "name": "level",
           "description": "Log level",
-          "type": "string"
+          "type": "string",
+          "enum": ["INFO", "WARN", "ERROR", "DEBUG", "TRACE", "FATAL"]
         },
         {
           "name": "class",
@@ -66,31 +68,28 @@
     {
       "id": "hdfs-v1",
       "name": "HDFS v1",
-      "description": "Hadoop HDFS version 1 log format (yyMMdd HHmmss)",
+      "description": "Hadoop HDFS version 1 log format (yyMMdd HHmmss ms)",
       "priority": 85,
       "patterns": [
-        "^(?<date>\\d{6}) (?<time>\\d{6}) (?<thread>\\d+) (?<level>[A-Z]+) (?<class>[\\w.$:-]+): ?(?<message>.*)"
+        "^(?<date>\\d{6}) (?<time>\\d{6}) (?<milliseconds>\\d+) (?<level>[A-Z]+) (?<class>[\\w.$:-]+): ?(?<message>.*)"
       ],
       "fields": [
         {
-          "name": "date",
-          "description": "Date in format yyMMdd",
-          "type": "date"
-        },
-        {
-          "name": "time",
-          "description": "Time in format HHmmss",
-          "type": "time"
-        },
-        {
-          "name": "thread",
-          "description": "Thread ID",
-          "type": "number"
+          "name": "timestamp",
+          "description": "Combined date and time",
+          "type": "datetime"
         },
         {
           "name": "level",
           "description": "Log level",
-          "type": "string"
+          "type": "string",
+          "enum": ["INFO", "WARN", "ERROR", "DEBUG", "TRACE", "FATAL"]
+        },
+        {
+          "name": "thread",
+          "description": "Thread ID",
+          "type": "number",
+          "optional": true
         },
         {
           "name": "class",
@@ -131,7 +130,8 @@
         {
           "name": "queue",
           "description": "Queue name",
-          "type": "string"
+          "type": "string",
+          "enum": ["default", "priority", "batch", "express", "normal", "low", "high"]
         },
         {
           "name": "nodes",
@@ -151,7 +151,8 @@
         {
           "name": "status",
           "description": "Job completion status",
-          "type": "string"
+          "type": "string",
+          "enum": ["COMPLETED", "FAILED", "RUNNING", "PENDING", "CANCELLED", "TIMEOUT"]
         }
       ]
     },
@@ -192,12 +193,14 @@
         {
           "name": "type",
           "description": "Type (RAS/APP)",
-          "type": "string"
+          "type": "string",
+          "enum": ["RAS", "APP"]
         },
         {
           "name": "level",
           "description": "Level (KERNEL/APP/FATAL/INFO)",
-          "type": "string"
+          "type": "string",
+          "enum": ["KERNEL", "APP", "FATAL", "INFO"]
         },
         {
           "name": "message",
@@ -233,7 +236,8 @@
         {
           "name": "method",
           "description": "HTTP method (GET, POST, etc.)",
-          "type": "string"
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
         },
         {
           "name": "path",
@@ -299,7 +303,8 @@
         {
           "name": "method",
           "description": "HTTP method (GET, POST, etc.)",
-          "type": "string"
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
         },
         {
           "name": "path",
@@ -329,23 +334,13 @@
       "description": "Standard Unix/Linux syslog format",
       "priority": 60,
       "patterns": [
-        "^(?<month>\\w{3}) +(?<day>\\d{1,2}) (?<time>\\d{2}:\\d{2}:\\d{2}) (?<hostname>\\S+) (?<process>\\S+?)(?:\\[(?<pid>\\d+)\\])?: ?(?<message>.*)"
+        "^(?<month>\\w{3}) +(?<day>\\d{1,2}) (?<time>\\d{2}:\\d{2}:\\d{2}) (?<hostname>\\S+) (?<process>\\S+?)(?:\\[(?<pid>\\d+)\\])?: ?(?:(?<level>error|info|notice|crit|warning|debug|alert|emerg):)? ?(?<message>.*)"
       ],
       "fields": [
         {
-          "name": "month",
-          "description": "Month abbreviation",
-          "type": "string"
-        },
-        {
-          "name": "day",
-          "description": "Day of month",
-          "type": "number"
-        },
-        {
-          "name": "time",
-          "description": "Time in HH:MM:SS",
-          "type": "time"
+          "name": "timestamp",
+          "description": "Combined date and time",
+          "type": "datetime"
         },
         {
           "name": "hostname",
@@ -358,10 +353,17 @@
           "type": "string"
         },
         {
-          "name": "pid",
+          "name": "process id",
           "description": "Process ID",
           "type": "number",
           "optional": true
+        },
+        {
+          "name": "level",
+          "description": "Log severity level",
+          "type": "string",
+          "optional": true,
+          "enum": ["emerg", "alert", "crit", "error", "warning", "notice", "info", "debug"]
         },
         {
           "name": "message",
