@@ -11,6 +11,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [mode, setMode] = useState<ColorModeEnum | null>(null);
     const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_PRIMARY);
 
+
     useEffect(() => {
         const storedMode = localStorage.getItem('theme');
         const initialMode = (storedMode as ColorModeEnum) || ColorModeEnum.Dark;
@@ -19,6 +20,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const storedPrimary = localStorage.getItem('primaryColor');
         if (storedPrimary) setPrimaryColor(storedPrimary);
     }, []);
+
+    useEffect(() => {
+        const themeColor = mode === ColorModeEnum.Dark ? '#23272f' : '#ffffff';
+        let metaTag = document.querySelector('meta[name="theme-color"]');
+        if (!metaTag) {
+            metaTag = document.createElement('meta');
+            metaTag.setAttribute('name', 'theme-color');
+            document.head.appendChild(metaTag);
+        }
+        metaTag.setAttribute('content', themeColor);
+    }, [mode]);
 
     if (mode === null) {
         return <div />;
