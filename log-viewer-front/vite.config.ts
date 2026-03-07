@@ -23,25 +23,25 @@ export default defineConfig({
                 "theme_color": "#ffffff",
                 "icons": [
                     {
-                        "src": "/pwa-192x192.png",
+                        "src": "/log-viewer/pwa-192x192.png",
                         "sizes": "192x192",
                         "type": "image/png"
                     },
                     {
-                        "src": "/pwa-512x512.png",
+                        "src": "/log-viewer/pwa-512x512.png",
                         "sizes": "512x512",
                         "type": "image/png"
                     }
                 ],
                 "screenshots": [
                     {
-                        "src": "/screenshot-wide-desktop.png",
+                        "src": "/log-viewer/screenshot-wide-desktop.png",
                         "sizes": "2560x1440",
                         "type": "image/png",
                         "form_factor": "wide"
                     },
                     {
-                        "src": "/screenshot-wide-mobile.png",
+                        "src": "/log-viewer/screenshot-wide-mobile.png",
                         "sizes": "850x1440",
                         "type": "image/png",
                         "form_factor": "narrow"

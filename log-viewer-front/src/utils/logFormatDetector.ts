@@ -64,7 +64,7 @@ export let LOG_FORMAT_PATTERNS: LogFormatPattern[] = [];
  */
 export async function loadLogFormatsFromJSON(): Promise<void> {
     try {
-        const response = await fetch('/log-formats.json');
+        const response = await fetch('log-formats.json');
         const data = await response.json();
         
         // Convert JSON patterns (strings) to RegExp objects
