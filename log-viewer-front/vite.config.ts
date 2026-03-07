@@ -17,7 +17,7 @@ export default defineConfig({
                 "name": "My PWA App",
                 "short_name": "PWA App",
                 "description": "A simple PWA built with React, TypeScript, and Vite",
-                "start_url": ".",
+                "start_url": "/log-viewer/",
                 "display": "standalone",
                 "background_color": "#ffffff",
                 "theme_color": "#ffffff",
