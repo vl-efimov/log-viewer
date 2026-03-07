@@ -1,8 +1,12 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-
 import AppRoutes from './routes/AppRoutes';
+import { baseUrl } from './constants/BaseUrl';
+
+console.log(baseUrl, 'baseUrl');
+
 
 const router = createBrowserRouter(AppRoutes, {
+    basename: baseUrl,
     future: {
         v7_relativeSplatPath: true,
         v7_fetcherPersist: true,

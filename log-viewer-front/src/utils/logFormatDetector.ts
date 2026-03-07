@@ -3,6 +3,8 @@
  * Each format has a name, description, patterns for detection, and priority
  */
 
+import { baseUrl } from "../constants/BaseUrl";
+
 export interface LogFormatField {
     /** Field name (matches named capture group in regex) */
     name: string;
@@ -64,7 +66,7 @@ export let LOG_FORMAT_PATTERNS: LogFormatPattern[] = [];
  */
 export async function loadLogFormatsFromJSON(): Promise<void> {
     try {
-        const response = await fetch('log-formats.json');
+        const response = await fetch(`${baseUrl}log-formats.json`);
         const data = await response.json();
         
         // Convert JSON patterns (strings) to RegExp objects

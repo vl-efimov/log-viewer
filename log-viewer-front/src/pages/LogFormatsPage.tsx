@@ -12,6 +12,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import RegexHighlighter from '../components/RegexHighlighter';
+import { baseUrl } from '../constants/BaseUrl';
 
 const userFormats: Array<{
     id: string;
@@ -34,7 +35,7 @@ const LogFormatsPage: React.FC = () => {
 
     const loadFormats = async () => {
         try {
-            const response = await fetch('/log-formats.json');
+            const response = await fetch(`${baseUrl}log-formats.json`);
             const data = await response.json();
             setSystemFormats(data.formats || []);
         } catch (error) {
