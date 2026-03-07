@@ -15,6 +15,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { RouteHome, RouteDashboard, RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../routes/routePaths';
+import { baseUrl } from '../constants/BaseUrl';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -56,6 +57,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
         },
     ];
 
+    const isSelected = (path: string): boolean => {
+        const fullPath = `${baseUrl}${path}`.replace(/\//g, '/');
+        return location.pathname === fullPath || location.pathname === fullPath.replace(/\/$/, '');
+    };
+
     return (
         <Drawer
             variant="permanent"
@@ -79,7 +85,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                     overflow: 'auto',
                     paddingX: 1,
                     paddingTop: 1,
-
                     display: 'flex',
                     justifyContent: 'space-between',
                     flexDirection: 'column',
@@ -114,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                             <ListItemButton
                                                 component={Link}
                                                 to={item.path}
-                                                selected={location.pathname === item.path}
+                                                selected={isSelected(item.path)}
                                                 sx={{
                                                     borderRadius: 2,
                                                     overflow: 'hidden',
@@ -138,7 +143,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                     <ListItemButton
                         component={Link}
                         to={RouteSettings}
-                        selected={location.pathname === RouteSettings}
+                        selected={isSelected(RouteSettings)}
                         sx={{
                             borderRadius: 2,
                             overflow: 'hidden',
