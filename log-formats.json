@@ -1,0 +1,402 @@
+{
+  "formats": [
+    {
+      "id": "apache-error",
+      "name": "Apache Error",
+      "description": "Apache HTTP Server error log format",
+      "priority": 100,
+      "patterns": [
+        "^\\[(?<timestamp>.*?)\\] \\[(?<level>[a-z]+)\\](?: \\[client (?<client>[^\\]]+)\\])?(?: (?<message>.*))?$"
+      ],
+      "fields": [
+        {
+          "name": "timestamp",
+          "description": "Log entry timestamp",
+          "type": "datetime"
+        },
+        {
+          "name": "level",
+          "description": "Log severity level",
+          "type": "string",
+          "enum": ["fatal", "error", "warn", "notice", "info", "debug", "trace"]
+        },
+        {
+          "name": "client",
+          "description": "Client IP address and port",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "message",
+          "description": "Error message text",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "hdfs-v2",
+      "name": "HDFS v2",
+      "description": "Hadoop HDFS version 2 log format (YYYY-MM-DD HH:MM:SS,mmm)",
+      "priority": 90,
+      "patterns": [
+        "^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}) (?<level>INFO|WARN|ERROR|DEBUG|TRACE|FATAL) (?<class>[\\w.$:-]+): ?(?<message>.*)"
+      ],
+      "fields": [
+        {
+          "name": "timestamp",
+          "description": "Timestamp in format YYYY-MM-DD HH:MM:SS,mmm",
+          "type": "datetime"
+        },
+        {
+          "name": "level",
+          "description": "Log level",
+          "type": "string",
+          "enum": ["INFO", "WARN", "ERROR", "DEBUG", "TRACE", "FATAL"]
+        },
+        {
+          "name": "class",
+          "description": "Java class name",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "description": "Log message content",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "hdfs-v1",
+      "name": "HDFS v1",
+      "description": "Hadoop HDFS version 1 log format (yyMMdd HHmmss ms)",
+      "priority": 85,
+      "patterns": [
+        "^(?<date>\\d{6}) (?<time>\\d{6}) (?<milliseconds>\\d+) (?<level>[A-Z]+) (?<class>[\\w.$:-]+): ?(?<message>.*)"
+      ],
+      "fields": [
+        {
+          "name": "timestamp",
+          "description": "Combined date and time",
+          "type": "datetime"
+        },
+        {
+          "name": "level",
+          "description": "Log level",
+          "type": "string",
+          "enum": ["INFO", "WARN", "ERROR", "DEBUG", "TRACE", "FATAL"]
+        },
+        {
+          "name": "thread",
+          "description": "Thread ID",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "class",
+          "description": "Java class name",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "description": "Log message content",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "bgl-new",
+      "name": "BGL (New)",
+      "description": "Blue Gene/L new format with structured job information",
+      "priority": 80,
+      "patterns": [
+        "^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}) JOB (?<jobId>\\d+) USER=(?<user>\\w+) QUEUE=(?<queue>\\w+) NODES=(?<nodes>\\d+) CORES=(?<cores>\\d+) RUNTIME=(?<runtime>\\d{2}:\\d{2}:\\d{2}) STATUS=(?<status>\\w+)"
+      ],
+      "fields": [
+        {
+          "name": "timestamp",
+          "description": "Job event timestamp",
+          "type": "datetime"
+        },
+        {
+          "name": "jobId",
+          "description": "Unique job identifier",
+          "type": "number"
+        },
+        {
+          "name": "user",
+          "description": "Username who submitted the job",
+          "type": "string"
+        },
+        {
+          "name": "queue",
+          "description": "Queue name",
+          "type": "string",
+          "enum": ["default", "priority", "batch", "express", "normal", "low", "high"]
+        },
+        {
+          "name": "nodes",
+          "description": "Number of compute nodes",
+          "type": "number"
+        },
+        {
+          "name": "cores",
+          "description": "Total CPU cores used",
+          "type": "number"
+        },
+        {
+          "name": "runtime",
+          "description": "Job runtime in HH:MM:SS",
+          "type": "duration"
+        },
+        {
+          "name": "status",
+          "description": "Job completion status",
+          "type": "string",
+          "enum": ["COMPLETED", "FAILED", "RUNNING", "PENDING", "CANCELLED", "TIMEOUT"]
+        }
+      ]
+    },
+    {
+      "id": "bgl-old",
+      "name": "BGL (Old)",
+      "description": "Blue Gene/L old format with extended fields",
+      "priority": 75,
+      "patterns": [
+        "^-?\\s*(?<id>\\d+)\\s+(?<date>\\d{4}\\.\\d{2}\\.\\d{2})\\s+(?<node>\\S+)\\s+(?<timestamp>\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{6})\\s+(?<node2>\\S+)\\s+(?<type>RAS|APP)\\s+(?<level>KERNEL|APP|FATAL|INFO)\\s+(?<message>.+)$"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "description": "Event ID",
+          "type": "number"
+        },
+        {
+          "name": "date",
+          "description": "Date in format YYYY.MM.DD",
+          "type": "date"
+        },
+        {
+          "name": "node",
+          "description": "Node",
+          "type": "string"
+        },
+        {
+          "name": "timestamp",
+          "description": "Timestamp in format YYYY-MM-DD-HH.MM.SS.microseconds",
+          "type": "datetime"
+        },
+        {
+          "name": "node2",
+          "description": "Node (repeat)",
+          "type": "string"
+        },
+        {
+          "name": "type",
+          "description": "Type (RAS/APP)",
+          "type": "string",
+          "enum": ["RAS", "APP"]
+        },
+        {
+          "name": "level",
+          "description": "Level (KERNEL/APP/FATAL/INFO)",
+          "type": "string",
+          "enum": ["KERNEL", "APP", "FATAL", "INFO"]
+        },
+        {
+          "name": "message",
+          "description": "Message",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "nginx",
+      "name": "Nginx",
+      "description": "Nginx web server access log",
+      "priority": 70,
+      "patterns": [
+        "^(?<ip>\\S+) - (?<user>\\S+) \\[(?<timestamp>\\d{2}\\/\\w{3}\\/\\d{4}:\\d{2}:\\d{2}:\\d{2})(?: [+-]\\d{4})? \\] \"(?<method>\\w+) (?<path>\\S+) (?<protocol>HTTP\\/[\\d.]+)\" (?<status>\\d{3}) (?<bytes>\\d+) \"(?<referer>[^\"]*)\" \"(?<userAgent>[^\"]*)\""
+      ],
+      "fields": [
+        {
+          "name": "ip",
+          "description": "Client IP address",
+          "type": "string"
+        },
+        {
+          "name": "user",
+          "description": "Authenticated username",
+          "type": "string"
+        },
+        {
+          "name": "timestamp",
+          "description": "Request timestamp with timezone",
+          "type": "datetime"
+        },
+        {
+          "name": "method",
+          "description": "HTTP method (GET, POST, etc.)",
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
+        },
+        {
+          "name": "path",
+          "description": "Request URI path",
+          "type": "string"
+        },
+        {
+          "name": "protocol",
+          "description": "HTTP protocol version",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "description": "HTTP response status code",
+          "type": "number"
+        },
+        {
+          "name": "bytes",
+          "description": "Response size in bytes",
+          "type": "number"
+        },
+        {
+          "name": "referer",
+          "description": "HTTP referer header",
+          "type": "string"
+        },
+        {
+          "name": "userAgent",
+          "description": "Client user agent string",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "apache-access",
+      "name": "Apache Access",
+      "description": "Apache HTTP Server access log (Common Log Format)",
+      "priority": 65,
+      "patterns": [
+        "^(?<ip>\\S+) (?<ident>\\S+) (?<user>(?!-)\\S+) \\[(?<timestamp>\\d{2}\\/\\w{3}\\/\\d{4}:\\d{2}:\\d{2}:\\d{2} [+-]\\d{4})\\] \"(?<method>\\w+) (?<path>\\S+) (?<protocol>HTTP\\/[\\d.]+)\" (?<status>\\d{3}) (?<bytes>\\d+)"
+      ],
+      "fields": [
+        {
+          "name": "ip",
+          "description": "Client IP address",
+          "type": "string"
+        },
+        {
+          "name": "ident",
+          "description": "Client identity (RFC 1413)",
+          "type": "string"
+        },
+        {
+          "name": "user",
+          "description": "Authenticated username",
+          "type": "string"
+        },
+        {
+          "name": "timestamp",
+          "description": "Request timestamp with timezone",
+          "type": "datetime"
+        },
+        {
+          "name": "method",
+          "description": "HTTP method (GET, POST, etc.)",
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
+        },
+        {
+          "name": "path",
+          "description": "Request URI path",
+          "type": "string"
+        },
+        {
+          "name": "protocol",
+          "description": "HTTP protocol version",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "description": "HTTP response status code",
+          "type": "number"
+        },
+        {
+          "name": "bytes",
+          "description": "Response size in bytes",
+          "type": "number"
+        }
+      ]
+    },
+    {
+      "id": "syslog",
+      "name": "Syslog",
+      "description": "Standard Unix/Linux syslog format",
+      "priority": 60,
+      "patterns": [
+        "^(?<month>\\w{3}) +(?<day>\\d{1,2}) (?<time>\\d{2}:\\d{2}:\\d{2}) (?<hostname>\\S+) (?<process>\\S+?)(?:\\[(?<pid>\\d+)\\])?: ?(?:(?<level>error|info|notice|crit|warning|debug|alert|emerg):)? ?(?<message>.*)"
+      ],
+      "fields": [
+        {
+          "name": "timestamp",
+          "description": "Combined date and time",
+          "type": "datetime"
+        },
+        {
+          "name": "hostname",
+          "description": "Hostname or IP",
+          "type": "string"
+        },
+        {
+          "name": "process",
+          "description": "Process or daemon name",
+          "type": "string"
+        },
+        {
+          "name": "process id",
+          "description": "Process ID",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "level",
+          "description": "Log severity level",
+          "type": "string",
+          "optional": true,
+          "enum": ["emerg", "alert", "crit", "error", "warning", "notice", "info", "debug"]
+        },
+        {
+          "name": "message",
+          "description": "Log message content",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "web-access-generic",
+      "name": "Web Access",
+      "description": "Generic web server access log format",
+      "priority": 50,
+      "patterns": [
+        "^(?<ip>\\S+) - (?<user>\\S+) \\[(?<timestamp>\\d{2}\\/\\w{3}\\/\\d{4}:\\d{2}:\\d{2}:\\d{2} [+-]\\d{4})\\]"
+      ],
+      "fields": [
+        {
+          "name": "ip",
+          "description": "Client IP address",
+          "type": "string"
+        },
+        {
+          "name": "user",
+          "description": "Username",
+          "type": "string"
+        },
+        {
+          "name": "timestamp",
+          "description": "Request timestamp",
+          "type": "datetime"
+        }
+      ]
+    }
+  ]
+}
