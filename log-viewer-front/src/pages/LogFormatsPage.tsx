@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import AddLogFormatDialog from '../components/AddLogFormatDialog';
 import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
@@ -52,6 +52,7 @@ interface LogFormat {
 }
 
 const LogFormatsPage: React.FC = () => {
+    console.log('LogFormatsPage render');
     const [systemFormats, setSystemFormats] = useState<LogFormat[]>([]);
     const [userFormats, setUserFormats] = useState<UserLogFormat[]>([]);
     const [loading, setLoading] = useState(true);
@@ -79,12 +80,12 @@ const LogFormatsPage: React.FC = () => {
         setUserFormats(loadUserFormats());
     }, []);
 
-    const sortedSystemFormats = [...systemFormats].sort((a, b) => a.name.localeCompare(b.name));
-    const sortedUserFormats = [...userFormats].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedSystemFormats = useMemo(() => [...systemFormats].sort((a, b) => a.name.localeCompare(b.name)), [systemFormats]);
+    const sortedUserFormats = useMemo(() => [...userFormats].sort((a, b) => a.name.localeCompare(b.name)), [userFormats]);
 
     const [addOpen, setAddOpen] = useState(false);
 
-    const handleAddFormat = (name: string, description: string, regex: string) => {
+    const handleAddFormat = useCallback((name: string, description: string, regex: string) => {
         const newFormat: UserLogFormat = {
             id: `user-${Date.now()}`,
             name,
@@ -95,13 +96,13 @@ const LogFormatsPage: React.FC = () => {
         setUserFormats(updated);
         saveUserFormats(updated);
         setAddOpen(false);
-    }
+    }, [userFormats]);
 
-    const deleteUserFormat = (id: string) => {
+    const deleteUserFormat = useCallback((id: string) => {
         const updated = userFormats.filter(f => f.id !== id);
         setUserFormats(updated);
         saveUserFormats(updated);
-    }
+    }, [userFormats]);
 
     if (loading) {
         return (
