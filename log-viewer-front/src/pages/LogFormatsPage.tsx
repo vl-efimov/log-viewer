@@ -8,8 +8,11 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import ReplayIcon from '@mui/icons-material/Replay';
 import CircularProgress from '@mui/material/CircularProgress';
 import RegexHighlighter from '../components/RegexHighlighter';
 import { baseUrl } from '../constants/BaseUrl';
@@ -32,15 +35,20 @@ interface LogFormat {
 const LogFormatsPage: React.FC = () => {
     const [systemFormats, setSystemFormats] = useState<LogFormat[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const loadFormats = async () => {
+        setLoading(true);
+        setError(null);
         try {
             const response = await fetch(`${baseUrl}log-formats.json`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             setSystemFormats(data.formats || []);
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Failed to load log formats:', error);
             setSystemFormats([]);
+            setError('Failed to load supported log formats. Please check your connection or file location.');
         } finally {
             setLoading(false);
         }
@@ -118,35 +126,60 @@ const LogFormatsPage: React.FC = () => {
             >
                 Supported Log Formats
             </Typography>
-            <TableContainer component={Paper}>
-                <Table size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Description</TableCell>
-                            <TableCell>Regular Expressions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {sortedSystemFormats.map((format) => (
-                            <TableRow key={format.id}>
-                                <TableCell sx={{ verticalAlign: 'top' }}>{format.name}</TableCell>
-                                <TableCell sx={{ verticalAlign: 'top' }}>{format.description}</TableCell>
-                                <TableCell sx={{ verticalAlign: 'top' }}>
-                                    {format.patterns.map((pattern, i) => (
-                                        <Box 
-                                            key={i} 
-                                            sx={{ mb: i < format.patterns.length - 1 ? 2 : 0 }}
-                                        >
-                                            <RegexHighlighter pattern={pattern} />
-                                        </Box>
-                                    ))}
-                                </TableCell>
+            {error ? (
+                <Stack 
+                    sx={{ 
+                        mb: 4, 
+                        minWidth: 320 
+                    }} 
+                    spacing={2}
+                >
+                    <Alert
+                        severity="error"
+                        action={
+                            <Button
+                                color="inherit" 
+                                startIcon={<ReplayIcon />}
+                                onClick={loadFormats}
+                            >
+                                Retry
+                            </Button>
+                        }
+                    >
+                        {error}
+                    </Alert>
+                </Stack>
+            ) : (
+                <TableContainer component={Paper}>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Name</TableCell>
+                                <TableCell>Description</TableCell>
+                                <TableCell>Regular Expressions</TableCell>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                            {sortedSystemFormats.map((format) => (
+                                <TableRow key={format.id}>
+                                    <TableCell sx={{ verticalAlign: 'top' }}>{format.name}</TableCell>
+                                    <TableCell sx={{ verticalAlign: 'top' }}>{format.description}</TableCell>
+                                    <TableCell sx={{ verticalAlign: 'top' }}>
+                                        {format.patterns.map((pattern, i) => (
+                                            <Box 
+                                                key={i} 
+                                                sx={{ mb: i < format.patterns.length - 1 ? 2 : 0 }}
+                                            >
+                                                <RegexHighlighter pattern={pattern} />
+                                            </Box>
+                                        ))}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            )}
         </Box>
     );
 };
