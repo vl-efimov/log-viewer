@@ -1,5 +1,12 @@
 
 import { useEffect, useState } from 'react';
+import TextField from '@mui/material/TextField';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import IconButton from '@mui/material/IconButton';
+import AddIcon from '@mui/icons-material/Add';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -17,12 +24,28 @@ import CircularProgress from '@mui/material/CircularProgress';
 import RegexHighlighter from '../components/RegexHighlighter';
 import { baseUrl } from '../constants/BaseUrl';
 
-const userFormats: Array<{
+interface UserLogFormat {
     id: string;
     name: string;
     description: string;
     regex: string;
-}> = [];
+}
+
+const USER_FORMATS_KEY = 'logViewerUserFormats';
+
+function loadUserFormats(): UserLogFormat[] {
+    try {
+        const raw = localStorage.getItem(USER_FORMATS_KEY);
+        if (!raw) return [];
+        return JSON.parse(raw);
+    } catch {
+        return [];
+    }
+}
+
+function saveUserFormats(formats: UserLogFormat[]) {
+    localStorage.setItem(USER_FORMATS_KEY, JSON.stringify(formats));
+}
 
 interface LogFormat {
     id: string;
@@ -34,6 +57,7 @@ interface LogFormat {
 
 const LogFormatsPage: React.FC = () => {
     const [systemFormats, setSystemFormats] = useState<LogFormat[]>([]);
+    const [userFormats, setUserFormats] = useState<UserLogFormat[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -56,10 +80,55 @@ const LogFormatsPage: React.FC = () => {
 
     useEffect(() => {
         loadFormats();
+        setUserFormats(loadUserFormats());
     }, []);
 
     const sortedSystemFormats = [...systemFormats].sort((a, b) => a.name.localeCompare(b.name));
     const sortedUserFormats = [...userFormats].sort((a, b) => a.name.localeCompare(b.name));
+
+    const [addOpen, setAddOpen] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newDescription, setNewDescription] = useState('');
+    const [newRegex, setNewRegex] = useState('');
+    const [addError, setAddError] = useState<string | null>(null);
+
+    function handleAddFormat() {
+        setAddError(null);
+        if (!newName.trim() || !newRegex.trim()) {
+            setAddError('Name and regular expression are required.');
+            return;
+        }
+        let regexValid = true;
+        try {
+            new RegExp(newRegex);
+        } catch {
+            regexValid = false;
+        }
+        if (!regexValid) {
+            setAddError('Invalid regular expression.');
+            return;
+        }
+        const newFormat: UserLogFormat = {
+            id: `user-${Date.now()}`,
+            name: newName.trim(),
+            description: newDescription.trim(),
+            regex: newRegex.trim(),
+        };
+        const updated = [...userFormats, newFormat];
+        setUserFormats(updated);
+        saveUserFormats(updated);
+        setAddOpen(false);
+        setNewName('');
+        setNewDescription('');
+        setNewRegex('');
+        setAddError(null);
+    }
+
+    function deleteUserFormat(id: string) {
+        const updated = userFormats.filter(f => f.id !== id);
+        setUserFormats(updated);
+        saveUserFormats(updated);
+    }
 
     if (loading) {
         return (
@@ -69,18 +138,18 @@ const LogFormatsPage: React.FC = () => {
         );
     }
 
+
     return (
         <Box sx={{ p: 3 }}>
-            <Typography 
-                variant="h5" 
-                gutterBottom
-            >
-                Custom Formats
-            </Typography>
-            <TableContainer 
-                component={Paper} 
-                sx={{ mb: 4 }}
-            >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
+                    Custom Formats
+                </Typography>
+                <IconButton color="primary" onClick={() => setAddOpen(true)} size="large">
+                    <AddIcon />
+                </IconButton>
+            </Box>
+            <TableContainer component={Paper} sx={{ mb: 4 }}>
                 <Table size="small">
                     <TableHead>
                         <TableRow>
@@ -93,11 +162,7 @@ const LogFormatsPage: React.FC = () => {
                     <TableBody>
                         {sortedUserFormats.length === 0 ? (
                             <TableRow>
-                                <TableCell 
-                                    colSpan={4} 
-                                    align="center"
-                                    sx={{ color: 'text.secondary' }}
-                                >
+                                <TableCell colSpan={4} align="center" sx={{ color: 'text.secondary' }}>
                                     No custom formats
                                 </TableCell>
                             </TableRow>
@@ -110,8 +175,8 @@ const LogFormatsPage: React.FC = () => {
                                         <div style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{format.regex}</div>
                                     </TableCell>
                                     <TableCell>
-                                        <Button size="small" color="primary">Edit</Button>
-                                        <Button size="small" color="error">Delete</Button>
+                                        <Button size="small" color="primary" disabled>Edit</Button>
+                                        <Button size="small" color="error" onClick={() => deleteUserFormat(format.id)}>Delete</Button>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -119,6 +184,45 @@ const LogFormatsPage: React.FC = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            <Dialog 
+                open={addOpen} 
+                onClose={() => setAddOpen(false)}
+            >
+                <DialogTitle>Add Custom Log Format</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Name"
+                        fullWidth
+                        value={newName}
+                        onChange={e => setNewName(e.target.value)}
+                        sx={{ mb: 2 }}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Description"
+                        fullWidth
+                        value={newDescription}
+                        onChange={e => setNewDescription(e.target.value)}
+                        sx={{ mb: 2 }}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Regular Expression"
+                        fullWidth
+                        value={newRegex}
+                        onChange={e => setNewRegex(e.target.value)}
+                        placeholder={"e.g. ^(?<date>\\d{4}-\\d{2}-\\d{2}) (?<level>\\w+) (?<msg>.+)$"}
+                    />
+                    {addError && <Typography color="error" variant="body2" sx={{ mt: 1 }}>{addError}</Typography>}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setAddOpen(false)} color="secondary">Cancel</Button>
+                    <Button onClick={handleAddFormat} color="primary" variant="contained">Add</Button>
+                </DialogActions>
+            </Dialog>
 
             <Typography 
                 variant="h5" 
