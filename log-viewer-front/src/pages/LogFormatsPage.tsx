@@ -1,10 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import TextField from '@mui/material/TextField';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
+import AddLogFormatDialog from '../components/AddLogFormatDialog';
 import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
 import Table from '@mui/material/Table';
@@ -87,44 +83,21 @@ const LogFormatsPage: React.FC = () => {
     const sortedUserFormats = [...userFormats].sort((a, b) => a.name.localeCompare(b.name));
 
     const [addOpen, setAddOpen] = useState(false);
-    const [newName, setNewName] = useState('');
-    const [newDescription, setNewDescription] = useState('');
-    const [newRegex, setNewRegex] = useState('');
-    const [addError, setAddError] = useState<string | null>(null);
 
-    function handleAddFormat() {
-        setAddError(null);
-        if (!newName.trim() || !newRegex.trim()) {
-            setAddError('Name and regular expression are required.');
-            return;
-        }
-        let regexValid = true;
-        try {
-            new RegExp(newRegex);
-        } catch {
-            regexValid = false;
-        }
-        if (!regexValid) {
-            setAddError('Invalid regular expression.');
-            return;
-        }
+    const handleAddFormat = (name: string, description: string, regex: string) => {
         const newFormat: UserLogFormat = {
             id: `user-${Date.now()}`,
-            name: newName.trim(),
-            description: newDescription.trim(),
-            regex: newRegex.trim(),
+            name,
+            description,
+            regex,
         };
         const updated = [...userFormats, newFormat];
         setUserFormats(updated);
         saveUserFormats(updated);
         setAddOpen(false);
-        setNewName('');
-        setNewDescription('');
-        setNewRegex('');
-        setAddError(null);
     }
 
-    function deleteUserFormat(id: string) {
+    const deleteUserFormat = (id: string) => {
         const updated = userFormats.filter(f => f.id !== id);
         setUserFormats(updated);
         saveUserFormats(updated);
@@ -185,44 +158,11 @@ const LogFormatsPage: React.FC = () => {
                 </Table>
             </TableContainer>
 
-            <Dialog 
-                open={addOpen} 
+            <AddLogFormatDialog
+                open={addOpen}
                 onClose={() => setAddOpen(false)}
-            >
-                <DialogTitle>Add Custom Log Format</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Name"
-                        fullWidth
-                        value={newName}
-                        onChange={e => setNewName(e.target.value)}
-                        sx={{ mb: 2 }}
-                    />
-                    <TextField
-                        margin="dense"
-                        label="Description"
-                        fullWidth
-                        value={newDescription}
-                        onChange={e => setNewDescription(e.target.value)}
-                        sx={{ mb: 2 }}
-                    />
-                    <TextField
-                        margin="dense"
-                        label="Regular Expression"
-                        fullWidth
-                        value={newRegex}
-                        onChange={e => setNewRegex(e.target.value)}
-                        placeholder={"e.g. ^(?<date>\\d{4}-\\d{2}-\\d{2}) (?<level>\\w+) (?<msg>.+)$"}
-                    />
-                    {addError && <Typography color="error" variant="body2" sx={{ mt: 1 }}>{addError}</Typography>}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setAddOpen(false)} color="secondary">Cancel</Button>
-                    <Button onClick={handleAddFormat} color="primary" variant="contained">Add</Button>
-                </DialogActions>
-            </Dialog>
+                onAdd={handleAddFormat}
+            />
 
             <Typography 
                 variant="h5" 
