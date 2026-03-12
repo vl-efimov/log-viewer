@@ -16,6 +16,7 @@ import { LRUCache } from '../utils/lruCache';
 import NoFileSelected from '../components/NoFileSelected';
 import { RouteHome } from '../routes/routePaths';
 import { LogFiltersBar } from '../components/LogFiltersBar';
+import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
 import { applyLogFilters, getFilteredCount } from '../utils/logFilters';
 
@@ -431,7 +432,7 @@ const ViewLogsPage: React.FC = () => {
                 </Box>
             </Box>
 
-            <Alert severity="info" sx={{ mb: 1 }}>
+            {/* <Alert severity="info" sx={{ mb: 1 }}>
                 <Typography variant="body2">
                     <strong>Live Monitoring (Incremental Mode):</strong> 
                     {hasFileHandle ? (
@@ -440,7 +441,7 @@ const ViewLogsPage: React.FC = () => {
                         <> Automatic updates are not available. Use "Refresh Now" button to manually reload the file.</>
                     )}
                 </Typography>
-            </Alert>
+            </Alert> */}
 
             <Box sx={{ display: 'flex', gap: 2, mb: 1, alignItems: 'center' }}>
                 <Typography
@@ -524,6 +525,15 @@ const ViewLogsPage: React.FC = () => {
                         Filters are shown for reference based on detected format.
                     </Typography>
                 </Alert>
+            )}
+
+            {/* Log Timeline Histogram */}
+            {!useLazyLoading && parsedLines.length > 0 && (
+                <LogHistogram
+                    parsedLines={parsedLines}
+                    defaultCollapsed={false}
+                    height={150}
+                />
             )}
 
             {/* Filters Bar */}
