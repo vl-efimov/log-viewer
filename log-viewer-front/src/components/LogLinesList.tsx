@@ -3,20 +3,20 @@ import Typography from '@mui/material/Typography';
 import { type FC, type RefObject } from 'react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 
-interface FilteredLine {
-    lineNumber: number;
+interface DisplayLine {
+    displayLineNumber: number;
     raw: string;
 }
 
 interface LogLinesListProps {
-    filteredLines: FilteredLine[];
+    displayLines: DisplayLine[];
     selectedLine: number | null;
     onSelectLine: (lineNumber: number) => void;
     virtuosoRef: RefObject<VirtuosoHandle | null>;
 }
 
 const LogLinesList: FC<LogLinesListProps> = ({
-    filteredLines,
+    displayLines,
     selectedLine,
     onSelectLine,
     virtuosoRef,
@@ -25,16 +25,16 @@ const LogLinesList: FC<LogLinesListProps> = ({
         <Virtuoso
             ref={virtuosoRef}
             style={{ height: '100%', width: '100%' }}
-            totalCount={filteredLines.length}
+            totalCount={displayLines.length}
             overscan={200}
             fixedItemHeight={20}
             computeItemKey={(index) => {
-                return filteredLines[index]?.lineNumber || index;
+                return displayLines[index]?.displayLineNumber || index;
             }}
             itemContent={(index) => {
-                const row = filteredLines[index];
+                const row = displayLines[index];
                 if (!row) {
-                    console.warn(`Missing row at index ${index}, total: ${filteredLines.length}`);
+                    console.warn(`Missing row at index ${index}, total: ${displayLines.length}`);
                     return null;
                 }
 
@@ -51,7 +51,7 @@ const LogLinesList: FC<LogLinesListProps> = ({
                                 backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : (theme) => theme.palette.action.hover,
                             },
                         }}
-                        onClick={() => onSelectLine(row.lineNumber)}
+                        onClick={() => onSelectLine(row.displayLineNumber)}
                     >
                         <Typography
                             variant="body2"
@@ -66,7 +66,7 @@ const LogLinesList: FC<LogLinesListProps> = ({
                                 flexShrink: 0,
                             }}
                         >
-                            {row.lineNumber}
+                            {row.displayLineNumber}
                         </Typography>
                         <Typography
                             variant="body2"

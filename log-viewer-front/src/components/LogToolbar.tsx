@@ -1,6 +1,8 @@
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 interface LogToolbarProps {
     fileName: string;
@@ -10,6 +12,8 @@ interface LogToolbarProps {
     onScrollToBottom: () => void;
     autoRefresh: boolean;
     onToggleAutoRefresh: () => void;
+    viewMode: 'live-tail' | 'normal';
+    onViewModeChange: (mode: 'live-tail' | 'normal') => void;
     parsedLinesCount: number;
     filterStats: { filtered: number; total: number; parsedFiltered: number };
     contentSize: number;
@@ -25,12 +29,20 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     onScrollToBottom,
     autoRefresh,
     onToggleAutoRefresh,
+    viewMode,
+    onViewModeChange,
     parsedLinesCount,
     filterStats,
     contentSize,
     fileSize,
     newLinesCount,
 }) => {
+    const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, value: 'live-tail' | 'normal' | null) => {
+        if (value) {
+            onViewModeChange(value);
+        }
+    };
+
     return (
         <>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -90,6 +102,21 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     size="small"
                     sx={{ cursor: 'pointer' }}
                 />
+                <ToggleButtonGroup
+                    size="small"
+                    value={viewMode}
+                    exclusive
+                    onChange={handleViewModeChange}
+                    aria-label="log view mode"
+                    sx={{ ml: 1 }}
+                >
+                    <ToggleButton value="live-tail" aria-label="live tail">
+                        LiveTail
+                    </ToggleButton>
+                    <ToggleButton value="normal" aria-label="normal view">
+                        Normal
+                    </ToggleButton>
+                </ToggleButtonGroup>
                 <Typography variant="caption" color="text.secondary">
                     Total lines: {parsedLinesCount}
                     {filterStats.filtered !== filterStats.total && (

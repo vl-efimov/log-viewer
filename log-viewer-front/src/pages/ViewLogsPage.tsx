@@ -21,6 +21,7 @@ import LogToolbar from '../components/LogToolbar';
 const ViewLogsPage: React.FC = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
     const virtuosoRef = useRef<VirtuosoHandle>(null);
+    const [viewMode, setViewMode] = useState<'live-tail' | 'normal'>('live-tail');
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -49,11 +50,10 @@ const ViewLogsPage: React.FC = () => {
 
     const scrollToBottom = () => {
         if (virtuosoRef.current) {
-            const count = filteredLines.length;
-            if (count > 0) {
+            if (displayLines.length > 0) {
                 virtuosoRef.current.scrollToIndex({
-                    index: count - 1,
-                    align: 'end',
+                    index: viewMode === 'live-tail' ? 0 : displayLines.length - 1,
+                    align: viewMode === 'live-tail' ? 'start' : 'end',
                     behavior: 'auto'
                 });
             }
@@ -88,6 +88,21 @@ const ViewLogsPage: React.FC = () => {
     const filteredLines = useMemo(() => {
         return applyLogFilters(parsedLines, filters);
     }, [parsedLines, filters]);
+
+    const displayLines = useMemo(() => {
+        const total = filteredLines.length;
+        if (viewMode === 'live-tail') {
+            return filteredLines.slice().reverse().map((line, idx) => ({
+                raw: line.raw,
+                displayLineNumber: total - idx,
+            }));
+        }
+
+        return filteredLines.map((line) => ({
+            raw: line.raw,
+            displayLineNumber: line.lineNumber,
+        }));
+    }, [filteredLines, viewMode]);
 
     // Get filter statistics
     const filterStats = useMemo(() => {
@@ -263,6 +278,8 @@ const ViewLogsPage: React.FC = () => {
                 onScrollToBottom={scrollToBottom}
                 autoRefresh={autoRefresh}
                 onToggleAutoRefresh={handleToggleAutoRefresh}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
                 parsedLinesCount={parsedLines.length}
                 filterStats={filterStats}
                 contentSize={content?.length || 0}
@@ -297,7 +314,7 @@ const ViewLogsPage: React.FC = () => {
                 }}
             >
                 <LogLinesList
-                    filteredLines={filteredLines}
+                    displayLines={displayLines}
                     selectedLine={selectedLine}
                     onSelectLine={setSelectedLine}
                     virtuosoRef={virtuosoRef}
