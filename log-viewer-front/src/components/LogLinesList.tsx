@@ -9,7 +9,10 @@ interface DisplayLine {
 }
 
 interface LogLinesListProps {
-    displayLines: DisplayLine[];
+    displayLines?: DisplayLine[];
+    totalCount?: number;
+    getLineAtIndex?: (index: number) => DisplayLine | null;
+    onRangeChange?: (startIndex: number, endIndex: number) => void;
     selectedLine: number | null;
     onSelectLine: (lineNumber: number) => void;
     virtuosoRef: RefObject<VirtuosoHandle | null>;
@@ -17,24 +20,33 @@ interface LogLinesListProps {
 
 const LogLinesList: FC<LogLinesListProps> = ({
     displayLines,
+    totalCount,
+    getLineAtIndex,
+    onRangeChange,
     selectedLine,
     onSelectLine,
     virtuosoRef,
 }) => {
+    const resolvedTotalCount = totalCount ?? displayLines?.length ?? 0;
     return (
         <Virtuoso
             ref={virtuosoRef}
             style={{ height: '100%', width: '100%' }}
-            totalCount={displayLines.length}
+            totalCount={resolvedTotalCount}
             overscan={200}
             fixedItemHeight={20}
+            rangeChanged={(range) => {
+                if (onRangeChange) {
+                    onRangeChange(range.startIndex, range.endIndex);
+                }
+            }}
             computeItemKey={(index) => {
-                return displayLines[index]?.displayLineNumber || index;
+                const row = getLineAtIndex ? getLineAtIndex(index) : displayLines?.[index];
+                return row?.displayLineNumber || index;
             }}
             itemContent={(index) => {
-                const row = displayLines[index];
+                const row = getLineAtIndex ? getLineAtIndex(index) : displayLines?.[index];
                 if (!row) {
-                    console.warn(`Missing row at index ${index}, total: ${displayLines.length}`);
                     return null;
                 }
 
@@ -46,9 +58,9 @@ const LogLinesList: FC<LogLinesListProps> = ({
                             alignItems: 'center',
                             px: 2,
                             cursor: 'pointer',
-                            backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : 'transparent',
+                            backgroundColor: selectedLine === row.displayLineNumber ? '#e3f2fd' : 'transparent',
                             '&:hover': {
-                                backgroundColor: selectedLine === row.lineNumber ? '#e3f2fd' : (theme) => theme.palette.action.hover,
+                                backgroundColor: selectedLine === row.displayLineNumber ? '#e3f2fd' : (theme) => theme.palette.action.hover,
                             },
                         }}
                         onClick={() => onSelectLine(row.displayLineNumber)}

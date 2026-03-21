@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-// Global storage for FileSystemFileHandle (can't be serialized in Redux)
+// Global storage for FileSystemFileHandle and File (can't be serialized in Redux)
 let globalFileHandle: FileSystemFileHandle | null = null;
+let globalFileObject: File | null = null;
 
 export const setFileHandle = (handle: FileSystemFileHandle | null) => {
     globalFileHandle = handle;
@@ -8,6 +9,14 @@ export const setFileHandle = (handle: FileSystemFileHandle | null) => {
 
 export const getFileHandle = (): FileSystemFileHandle | null => {
     return globalFileHandle;
+};
+
+export const setFileObject = (file: File | null) => {
+    globalFileObject = file;
+};
+
+export const getFileObject = (): File | null => {
+    return globalFileObject;
 };
 
 
@@ -20,6 +29,7 @@ interface LogFileState {
     lastModified: number;
     hasFileHandle: boolean; // Flag indicating if we have a File System Access API handle
     isMonitoring: boolean; // Flag for live monitoring state
+    isLargeFile: boolean; // Flag for chunked loading mode
 }
 
 const initialState: LogFileState = {
@@ -31,6 +41,7 @@ const initialState: LogFileState = {
     lastModified: 0,
     hasFileHandle: false,
     isMonitoring: false,
+    isLargeFile: false,
 };
 
 const logFileSlice = createSlice({
@@ -44,6 +55,7 @@ const logFileSlice = createSlice({
             format: string;
             lastModified?: number;
             hasFileHandle?: boolean;
+            isLargeFile?: boolean;
         }>) => {
             state.name = action.payload.name;
             state.size = action.payload.size;
@@ -51,6 +63,7 @@ const logFileSlice = createSlice({
             state.format = action.payload.format;
             state.lastModified = action.payload.lastModified || Date.now();
             state.hasFileHandle = action.payload.hasFileHandle || false;
+            state.isLargeFile = action.payload.isLargeFile || false;
             state.loaded = true;
         },
         updateLogContent: (state, action: PayloadAction<{ content: string; lastModified?: number }>) => {
@@ -74,6 +87,7 @@ const logFileSlice = createSlice({
             state.lastModified = 0;
             state.hasFileHandle = false;
             state.isMonitoring = false;
+            state.isLargeFile = false;
         },
     },
 });

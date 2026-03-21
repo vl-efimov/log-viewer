@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { setLogFile, setMonitoringState, setFileHandle } from '../redux/slices/logFileSlice';
+import { setLogFile, setMonitoringState, setFileHandle, setFileObject } from '../redux/slices/logFileSlice';
 import { detectLogFormat } from '../utils/logFormatDetector';
+
+const LARGE_FILE_BYTES = 1024 * 1024 * 1024; // 1 GB
+const FORMAT_PREVIEW_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export const useFileLoader = () => {
     const dispatch = useDispatch();
@@ -11,12 +14,17 @@ export const useFileLoader = () => {
         setIndexing(true);
 
         try {
-            const content = await file.text();
-            const detectedFormat = detectLogFormat(content);
+            const isLargeFile = file.size >= LARGE_FILE_BYTES;
+            const previewBlob = file.slice(0, Math.min(file.size, FORMAT_PREVIEW_BYTES));
+            const previewText = await previewBlob.text();
+            const detectedFormat = detectLogFormat(previewText);
 
             if (handle) {
                 setFileHandle(handle);
             }
+            setFileObject(file);
+
+            const content = isLargeFile ? previewText : await file.text();
 
             dispatch(setLogFile({
                 name: file.name,
@@ -25,6 +33,7 @@ export const useFileLoader = () => {
                 format: detectedFormat || 'Unknown',
                 lastModified: file.lastModified,
                 hasFileHandle: !!handle,
+                isLargeFile,
             }));
         } finally {
             setIndexing(false);
@@ -77,6 +86,7 @@ export const useFileLoader = () => {
     const stopMonitoring = () => {
         dispatch(setMonitoringState(false));
         setFileHandle(null);
+        setFileObject(null);
     };
 
     return {
