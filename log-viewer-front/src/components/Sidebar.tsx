@@ -6,15 +6,13 @@ import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton';
 import Divider from '@mui/material/Divider';
 import ListSubheader from '@mui/material/ListSubheader';
-import HomeIcon from '@mui/icons-material/Home';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import PreviewIcon from '@mui/icons-material/Preview';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { RouteHome, RouteDashboard, RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../routes/routePaths';
+import { RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../routes/routePaths';
 import { baseUrl } from '../constants/BaseUrl';
 
 interface SidebarProps {
@@ -36,15 +34,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
 
     const topMenuItems = [
         {
-            subheader: 'Start',
-            items: [
-                { text: 'Home', icon: <HomeIcon />, path: RouteHome },
-            ]
-        },
-        {
             subheader: 'Logs',
             items: [
-                { text: 'Dashboard', icon: <DashboardIcon />, path: RouteDashboard },
                 { text: 'View logs', icon: <PreviewIcon />, path: RouteViewLogs },
             ]
         },

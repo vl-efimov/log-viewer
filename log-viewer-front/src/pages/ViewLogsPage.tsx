@@ -14,11 +14,11 @@ import { parseLogFileForTable } from '../utils/logFormatExamples';
 import { getFormatFields, detectLogFormat, type LogFormatField } from '../utils/logFormatDetector';
 import { LRUCache } from '../utils/lruCache';
 import NoFileSelected from '../components/NoFileSelected';
-import { RouteHome } from '../routes/routePaths';
 import { LogFiltersBar } from '../components/LogFiltersBar';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
 import { applyLogFilters, getFilteredCount } from '../utils/logFilters';
+import { RouteViewLogs } from '../routes/routePaths';
 
 // Dynamic cache size based on file size
 const getCacheSize = (fileSize: number): number => {
@@ -402,7 +402,7 @@ const ViewLogsPage: React.FC = () => {
     const handleReloadFile = () => {
         // Stop current monitoring and navigate back to home to select a new file
         dispatch(setMonitoringState(false));
-        navigate(RouteHome);
+        navigate(RouteViewLogs);
     };
 
     if (!isMonitoring) {
