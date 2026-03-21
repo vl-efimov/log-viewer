@@ -2,7 +2,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
-import { RouteHome } from '../routes/routePaths';
+import { RouteViewLogs } from '../routes/routePaths';
 
 interface NoFileSelectedProps {
     title?: string;
@@ -18,7 +18,7 @@ const NoFileSelected: React.FC<NoFileSelectedProps> = ({
     const navigate = useNavigate();
 
     const handleBackToHome = () => {
-        navigate(RouteHome);
+        navigate(RouteViewLogs);
     };
 
     return (

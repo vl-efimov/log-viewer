@@ -12,6 +12,8 @@ import { ThemeContext } from '../contexts/ThemeContext';
 import ThemePaletteDrawer from './ThemePaletteDrawer';
 import ThemeToggleButton from './ThemeToggleButton';
 import Box from '@mui/material/Box';
+import { COLLAPSED_SIDEBAR_WIDTH } from '../constants/sidebar';
+import { ColorModeEnum } from '../constants/ColorModeEnum';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -25,24 +27,41 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const { toggleTheme, mode, primaryColor, setPrimaryColor } = themeCtx;
     const [drawerOpen, setDrawerOpen] = useState(false);
 
-    const textColor = mode === 'light' ? '#fff' : undefined;
+    const textColor = mode === ColorModeEnum.Light ? '#fff' : undefined;
+
     return (
         <AppBar
             sx={{
+                pl: 0,
                 backgroundColor: (theme) => theme.custom?.headerBg,
             }}
         >
-            <Toolbar>
-                <IconButton
+            <Toolbar 
+                sx={{
+                    paddingLeft: '0 !important'
+                }}
+            >
+                <Box 
                     sx={{
-                        marginRight: 2,
-                        color: textColor,
+                        width: `${COLLAPSED_SIDEBAR_WIDTH}px`,
+                        minWidth: `${COLLAPSED_SIDEBAR_WIDTH}px`,
+                        maxWidth: `${COLLAPSED_SIDEBAR_WIDTH}px`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
                     }}
-                    aria-label="menu"
-                    onClick={toggleSidebar}
                 >
-                    {isSidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
-                </IconButton>
+                    <IconButton
+                        sx={{
+                            color: textColor,
+                        }}
+                        aria-label="menu"
+                        onClick={toggleSidebar}
+                    >
+                        {isSidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
+                    </IconButton>
+                </Box>
                 <Typography
                     sx={{
                         flexGrow: 1,

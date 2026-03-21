@@ -10,10 +10,13 @@ import PreviewIcon from '@mui/icons-material/Preview';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import SettingsIcon from '@mui/icons-material/Settings';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../routes/routePaths';
+import { RouteAbout } from '../routes/routePaths';
 import { baseUrl } from '../constants/BaseUrl';
+import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../constants/sidebar';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -57,12 +60,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
         <Drawer
             variant="permanent"
             sx={{
-                width: isSidebarOpen ? 240 : 73,
+                width: isSidebarOpen ? EXPANDED_SIDEBAR_WIDTH : COLLAPSED_SIDEBAR_WIDTH,
                 flexShrink: 0,
                 transition: 'width 0.3s ease',
                 '& .MuiDrawer-paper': {
-                    width: isSidebarOpen ? 240 : 73,
-                    boxSizing: 'border-box',
+                    width: isSidebarOpen ? EXPANDED_SIDEBAR_WIDTH : COLLAPSED_SIDEBAR_WIDTH,
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'width 0.3s ease',
@@ -131,6 +133,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                 </div>
 
                 <List>
+                    <ListItemButton
+                        component={Link}
+                        to={RouteAbout}
+                        selected={isSelected(RouteAbout)}
+                        sx={{
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            height: '48px',
+                        }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}><InfoOutlinedIcon /></ListItemIcon>
+                        {isRendered && <ListItemText primary={'About'} />}
+                    </ListItemButton>
+                    <Divider sx={{ marginY: 1 }} />
                     <ListItemButton
                         component={Link}
                         to={RouteSettings}
