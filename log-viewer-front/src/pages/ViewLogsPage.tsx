@@ -13,12 +13,13 @@ import { getFileHandle, getLazyReader } from '../redux/slices/logFileSlice';
 import { parseLogFileForTable } from '../utils/logFormatExamples';
 import { getFormatFields, detectLogFormat, type LogFormatField } from '../utils/logFormatDetector';
 import { LRUCache } from '../utils/lruCache';
-import NoFileSelected from '../components/NoFileSelected';
 import { LogFiltersBar } from '../components/LogFiltersBar';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
 import { applyLogFilters, getFilteredCount } from '../utils/logFilters';
 import { RouteViewLogs } from '../routes/routePaths';
+import { FileSelectionView } from '../components/FileSelectionView';
+import { useFileLoader } from '../hooks/useFileLoader';
 
 // Dynamic cache size based on file size
 const getCacheSize = (fileSize: number): number => {
@@ -61,6 +62,11 @@ const ViewLogsPage: React.FC = () => {
     const lastModifiedRef = useRef<number>(0);
     const lastSizeRef = useRef<number>(0);
     const previousLineCountRef = useRef<number>(0);
+    const {
+        indexing,
+        handleFileInputChange,
+        handleFileSystemAccess,
+    } = useFileLoader();
 
     const scrollToBottom = () => {
         if (virtuosoRef.current) {
@@ -406,7 +412,13 @@ const ViewLogsPage: React.FC = () => {
     };
 
     if (!isMonitoring) {
-        return <NoFileSelected />;
+        return(         
+            <FileSelectionView
+                indexing={indexing}
+                onFileSelect={handleFileSystemAccess}
+                onFileInputChange={handleFileInputChange}
+            />
+        );
     }
 
     return (
