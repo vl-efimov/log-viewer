@@ -13,10 +13,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../routes/routePaths';
-import { RouteAbout } from '../routes/routePaths';
-import { baseUrl } from '../constants/BaseUrl';
-import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../constants/sidebar';
+import { RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../../routes/routePaths';
+import { RouteAbout } from '../../routes/routePaths';
+import { baseUrl } from '../../constants/BaseUrl';
+import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constants/sidebar';
 
 interface SidebarProps {
     isSidebarOpen: boolean;

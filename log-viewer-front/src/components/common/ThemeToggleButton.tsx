@@ -2,7 +2,7 @@ import IconButton from '@mui/material/IconButton';
 import Slide from '@mui/material/Slide';
 import LightMode from '@mui/icons-material/LightMode';
 import DarkMode from '@mui/icons-material/DarkMode';
-import { ColorModeEnum } from '../constants/ColorModeEnum';
+import { ColorModeEnum } from '../../constants/ColorModeEnum';
 
 interface ThemeToggleButtonProps {
     mode: ColorModeEnum;

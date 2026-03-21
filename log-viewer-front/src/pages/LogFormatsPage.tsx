@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import AddLogFormatDialog from '../components/AddLogFormatDialog';
+import AddLogFormatDialog from '../components/log-patterns/AddLogFormatDialog';
 import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
 import Table from '@mui/material/Table';
@@ -17,7 +17,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CircularProgress from '@mui/material/CircularProgress';
-import RegexHighlighter from '../components/RegexHighlighter';
+import RegexHighlighter from '../components/log-patterns/RegexHighlighter';
 import { baseUrl } from '../constants/BaseUrl';
 
 interface UserLogFormat {

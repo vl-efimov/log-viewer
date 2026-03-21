@@ -1,7 +1,7 @@
-import gbFlag from '../assets/flags/gb-flag.svg';
-import ruFlag from '../assets/flags/ru-flag.svg';
-import czFlag from '../assets/flags/cz-flag.svg';
-import { Languages } from '../constants/LanguagesEnum';
+import gbFlag from '../../assets/flags/gb-flag.svg';
+import ruFlag from '../../assets/flags/ru-flag.svg';
+import czFlag from '../../assets/flags/cz-flag.svg';
+import { Languages } from '../../constants/LanguagesEnum';
 
 interface FlagProps {
     language: string;

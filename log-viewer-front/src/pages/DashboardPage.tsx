@@ -1,6 +1,6 @@
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
-import NoFileSelected from '../components/NoFileSelected';
+import NoFileSelected from '../components/common/NoFileSelected';
 
 const DashboardPage: React.FC = () => {
     const { isMonitoring } = useSelector((state: RootState) => state.logFile);

@@ -5,7 +5,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useTranslation } from 'react-i18next';
 import Flag from './Flag';
-import { Languages } from '../constants/LanguagesEnum';
+import { Languages } from '../../constants/LanguagesEnum';
 import Typography from '@mui/material/Typography';
 
 const LANGUAGES = [Languages.EN, Languages.RU, Languages.CZ];

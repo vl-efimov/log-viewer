@@ -1,8 +1,8 @@
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
-import AppStatusBar from '../components/AppStatusBar';
+import Header from '../components/common/Header';
+import Sidebar from '../components/common/Sidebar';
+import AppStatusBar from '../components/common/AppStatusBar';
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 

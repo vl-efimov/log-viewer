@@ -8,8 +8,8 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import StorageIcon from '@mui/icons-material/Storage';
 import CategoryIcon from '@mui/icons-material/Category';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../redux/store';
-import { clearLogFile, setFileHandle } from '../redux/slices/logFileSlice';
+import { RootState } from '../../redux/store';
+import { clearLogFile, setFileHandle } from '../../redux/slices/logFileSlice';
 
 const VSCODE_BLUE = '#007acc';
 const VSCODE_TEXT = '#fff';

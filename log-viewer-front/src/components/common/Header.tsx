@@ -8,12 +8,12 @@ import PaletteIcon from '@mui/icons-material/Palette';
 import LanguageSelect from './LanguageSelect';
 import { useTranslation } from 'react-i18next';
 import { useState, useContext } from 'react';
-import { ThemeContext } from '../contexts/ThemeContext';
+import { ThemeContext } from '../../contexts/ThemeContext';
 import ThemePaletteDrawer from './ThemePaletteDrawer';
 import ThemeToggleButton from './ThemeToggleButton';
 import Box from '@mui/material/Box';
-import { COLLAPSED_SIDEBAR_WIDTH } from '../constants/sidebar';
-import { ColorModeEnum } from '../constants/ColorModeEnum';
+import { COLLAPSED_SIDEBAR_WIDTH } from '../../constants/sidebar';
+import { ColorModeEnum } from '../../constants/ColorModeEnum';
 
 interface HeaderProps {
     isSidebarOpen: boolean;

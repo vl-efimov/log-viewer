@@ -4,7 +4,7 @@ import App from './App';
 import { Provider } from 'react-redux';
 import store from './redux/store';
 import { registerSW } from "virtual:pwa-register";
-import { ThemeProvider } from './components/ThemeProvider';
+import { ThemeProvider } from './providers/ThemeProvider';
 import { initializeLogFormats } from './utils/logFormatDetector';
 
 import './locales/i18n';
