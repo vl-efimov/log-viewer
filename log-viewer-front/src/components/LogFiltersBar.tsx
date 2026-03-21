@@ -41,9 +41,6 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 }) => {
     const [expanded, setExpanded] = useState(false);
 
-    // Debug: Log field definitions
-    console.log('LogFiltersBar: Received fieldDefinitions:', fieldDefinitions.length, fieldDefinitions);
-
     // Get current year
     const currentYear = new Date().getFullYear();
     const minDate = `${currentYear - 30}-01-01T00:00`;

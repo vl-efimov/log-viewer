@@ -1,6 +1,5 @@
 import Box from '@mui/material/Box';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import { RootState } from '../redux/store';
@@ -12,7 +11,6 @@ import { LogFiltersBar } from '../components/LogFiltersBar';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
 import { applyLogFilters, getFilteredCount } from '../utils/logFilters';
-import { RouteViewLogs } from '../routes/routePaths';
 import { FileSelectionView } from '../components/FileSelectionView';
 import { useFileLoader } from '../hooks/useFileLoader';
 import LogLinesList from '../components/LogLinesList';
@@ -24,7 +22,6 @@ const ViewLogsPage: React.FC = () => {
     const [viewMode, setViewMode] = useState<'live-tail' | 'normal'>('live-tail');
 
     const dispatch = useDispatch();
-    const navigate = useNavigate();
     
     // Get data from Redux
     const { content, name: fileName, isMonitoring, hasFileHandle, size: fileSize } = useSelector((state: RootState) => state.logFile);
@@ -247,7 +244,6 @@ const ViewLogsPage: React.FC = () => {
     const handleReloadFile = () => {
         // Stop current monitoring and navigate back to home to select a new file
         dispatch(setMonitoringState(false));
-        navigate(RouteViewLogs);
     };
 
     if (!isMonitoring) {

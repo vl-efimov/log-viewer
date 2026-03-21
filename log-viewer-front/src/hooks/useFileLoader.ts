@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { RouteViewLogs } from '../routes/routePaths';
 import { setLogFile, setMonitoringState, setFileHandle } from '../redux/slices/logFileSlice';
 import { detectLogFormat } from '../utils/logFormatDetector';
 
 export const useFileLoader = () => {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
     const [indexing, setIndexing] = useState(false);
 
     const loadFile = async (file: File, handle?: FileSystemFileHandle) => {
         setIndexing(true);
+
         try {
             const content = await file.text();
             const detectedFormat = detectLogFormat(content);
@@ -33,10 +31,6 @@ export const useFileLoader = () => {
         }
         
         dispatch(setMonitoringState(true));
-
-        setTimeout(() => {
-            navigate(RouteViewLogs);
-        }, 300);
     };
 
     const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
