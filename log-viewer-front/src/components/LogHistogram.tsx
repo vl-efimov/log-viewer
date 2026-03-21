@@ -1,14 +1,12 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Collapse from '@mui/material/Collapse';
 import Tooltip from '@mui/material/Tooltip';
-import Slider from '@mui/material/Slider';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { BarChart } from '@mui/x-charts/BarChart';
-import { axisClasses } from '@mui/x-charts/ChartsAxis';
+import ReactECharts from 'echarts-for-react';
 import type { ParsedLogLine } from '../utils/logFormatDetector';
 
 // Log level colors - consistent across different log formats
@@ -225,10 +223,24 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     onTimeRangeChange,
 }) => {
     const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
-    const [sliderRange, setSliderRange] = useState<[number, number]>([0, 100]);
+    const [selectedRange, setSelectedRange] = useState<{ start: number | null; end: number | null }>({
+        start: null,
+        end: null,
+    });
+    const [zoomShade, setZoomShade] = useState<{ leftPercent: number; rightPercent: number }>({
+        leftPercent: 0,
+        rightPercent: 0,
+    });
+    const pendingZoomRef = useRef<{
+        start: number;
+        end: number;
+        leftPercent: number;
+        rightPercent: number;
+        fullRange: boolean;
+    } | null>(null);
+    const zoomRafRef = useRef<number | null>(null);
     
-    // Process parsed lines into histogram data
-    const { chartData, logLevels, bucketSize, timeRange } = useMemo(() => {
+    const { validLines, timeRange } = useMemo(() => {
         // Extract lines with valid timestamps and levels
         const validLines = parsedLines.filter(line => {
             if (!line.parsed?.fields?.timestamp) return false;
@@ -236,7 +248,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         });
         
         if (validLines.length === 0) {
-            return { chartData: [], logLevels: [], bucketSize: 60000, timeRange: null };
+            return { validLines: [], timeRange: null };
         }
         
         // Get all timestamps
@@ -247,34 +259,46 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         
         const minTime = Math.min(...timestamps);
         const maxTime = Math.max(...timestamps);
-        const bucketSize = calculateBucketSize(minTime, maxTime);
-        
-        // Create buckets
+        return {
+            validLines,
+            timeRange: { min: minTime, max: maxTime },
+        };
+    }, [parsedLines]);
+
+    const buildHistogram = useCallback((
+        lines: typeof validLines,
+        range: { start: number; end: number },
+        targetBuckets?: number
+    ) => {
+        if (lines.length === 0) {
+            return { chartData: [], logLevels: [], bucketSize: 60000 };
+        }
+
+        const bucketSize = calculateBucketSize(range.start, range.end, targetBuckets);
         const buckets: Map<number, Record<string, number>> = new Map();
         const levelSet = new Set<string>();
-        
-        validLines.forEach(line => {
+
+        lines.forEach(line => {
             const ts = parseTimestamp(line.parsed!.fields.timestamp)!.getTime();
+            if (ts < range.start || ts > range.end) return;
             const bucketKey = Math.floor(ts / bucketSize) * bucketSize;
             const level = (line.parsed!.fields.level || 'UNKNOWN').toUpperCase();
-            
+
             levelSet.add(level);
-            
+
             if (!buckets.has(bucketKey)) {
                 buckets.set(bucketKey, {});
             }
             const bucket = buckets.get(bucketKey)!;
             bucket[level] = (bucket[level] || 0) + 1;
         });
-        
-        // Sort levels by priority (errors on top)
+
         const logLevels = Array.from(levelSet).sort((a, b) => {
             const priorityA = LOG_LEVEL_PRIORITY[a] || 0;
             const priorityB = LOG_LEVEL_PRIORITY[b] || 0;
-            return priorityA - priorityB; // Lower priority at bottom of stack
+            return priorityA - priorityB;
         });
-        
-        // Convert to chart data format
+
         const chartData: HistogramDataPoint[] = Array.from(buckets.entries())
             .sort(([a], [b]) => a - b)
             .map(([timestamp, levels]) => ({
@@ -282,67 +306,235 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 timestamp,
                 ...levels,
             }));
-        
-        return {
-            chartData,
-            logLevels,
-            bucketSize,
-            timeRange: { min: minTime, max: maxTime },
-        };
-    }, [parsedLines]);
-    
-    // Calculate visible data based on slider range
-    const visibleChartData = useMemo(() => {
-        if (chartData.length === 0) return [];
-        const startIdx = Math.floor((sliderRange[0] / 100) * chartData.length);
-        const endIdx = Math.ceil((sliderRange[1] / 100) * chartData.length);
-        return chartData.slice(startIdx, Math.max(endIdx, startIdx + 1));
-    }, [chartData, sliderRange]);
-    
-    // Prepare series for MUI X Charts
-    const series = useMemo(() => {
-        return logLevels.map(level => ({
-            dataKey: level,
-            label: level,
-            stack: 'total',
-            color: LOG_LEVEL_COLORS[level] || LOG_LEVEL_COLORS['UNKNOWN'],
-        }));
-    }, [logLevels]);
-    
-    // Handle slider change
-    const handleSliderChange = useCallback((_event: Event, newValue: number | number[]) => {
-        const range = newValue as [number, number];
-        setSliderRange(range);
+
+        return { chartData, logLevels, bucketSize };
     }, []);
-    
-    // Notify parent when slider is committed
-    const handleSliderChangeCommitted = useCallback((_event: React.SyntheticEvent | Event, newValue: number | number[]) => {
-        if (!onTimeRangeChange || !timeRange || chartData.length === 0) return;
-        
-        const range = newValue as [number, number];
-        const startIdx = Math.floor((range[0] / 100) * chartData.length);
-        const endIdx = Math.ceil((range[1] / 100) * chartData.length);
-        
-        if (range[0] === 0 && range[1] === 100) {
-            // Full range - clear filter
-            onTimeRangeChange(null, null);
-        } else {
-            const startTime = chartData[startIdx]?.timestamp ?? timeRange.min;
-            const endTime = chartData[Math.min(endIdx, chartData.length - 1)]?.timestamp ?? timeRange.max;
-            onTimeRangeChange(startTime, endTime + bucketSize);
+
+    const fullHistogram = useMemo(() => {
+        if (!timeRange) {
+            return { chartData: [], logLevels: [], bucketSize: 60000 };
         }
-    }, [onTimeRangeChange, timeRange, chartData, bucketSize]);
+        return buildHistogram(validLines, { start: timeRange.min, end: timeRange.max });
+    }, [validLines, timeRange, buildHistogram]);
+
+    const zoomHistogram = useMemo(() => {
+        if (!timeRange) {
+            return { chartData: [], logLevels: [], bucketSize: 60000 };
+        }
+        return buildHistogram(validLines, { start: timeRange.min, end: timeRange.max }, 200);
+    }, [validLines, timeRange, buildHistogram]);
+
+    const mainHistogram = useMemo(() => {
+        if (!timeRange) {
+            return { chartData: [], logLevels: [], bucketSize: 60000 };
+        }
+
+        const start = selectedRange.start ?? timeRange.min;
+        const end = selectedRange.end ?? timeRange.max;
+
+        return buildHistogram(validLines, { start, end });
+    }, [validLines, timeRange, selectedRange, buildHistogram]);
+
+    const zoomSliderGrid = {
+        top: 6,
+        right: 20,
+        left: 40,
+        bottom: 28,
+    };
+
+    const zoomChartGrid = {
+        ...zoomSliderGrid,
+        top: 18,
+        bottom: 5,
+    };
+
+    useEffect(() => {
+        if (!timeRange) return;
+        setZoomShade({ leftPercent: 0, rightPercent: 0 });
+    }, [timeRange?.min, timeRange?.max]);
     
-    // Format slider value labels
-    const formatSliderLabel = useCallback((value: number) => {
-        if (chartData.length === 0) return '';
-        const idx = Math.floor((value / 100) * chartData.length);
-        const safeIdx = Math.min(idx, chartData.length - 1);
-        return chartData[safeIdx]?.time ?? '';
-    }, [chartData]);
+    const chartOption = useMemo(() => {
+        const timeLabels = mainHistogram.chartData.map(point => point.time);
+        const series = mainHistogram.logLevels.map(level => ({
+            name: level,
+            type: 'bar',
+            stack: 'total',
+            emphasis: { focus: 'series' },
+            itemStyle: { color: LOG_LEVEL_COLORS[level] || LOG_LEVEL_COLORS.UNKNOWN },
+            data: mainHistogram.chartData.map(point => (typeof point[level] === 'number' ? point[level] : 0)),
+        }));
+
+        return {
+            tooltip: { trigger: 'axis' },
+            legend: { top: 0 },
+            grid: { top: 20, right: 20, left: 40, bottom: 10 },
+            xAxis: {
+                type: 'category',
+                data: timeLabels,
+                axisLabel: { fontSize: 10 },
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { fontSize: 10 },
+            },
+            series,
+        };
+    }, [mainHistogram]);
+
+    const zoomChartOption = useMemo(() => {
+        const totals = zoomHistogram.chartData.map(point =>
+            zoomHistogram.logLevels.reduce((sum, level) => sum + (typeof point[level] === 'number' ? (point[level] as number) : 0), 0)
+        );
+
+        return {
+            tooltip: { show: false },
+            grid: zoomChartGrid,
+            xAxis: {
+                type: 'time',
+                axisLabel: { show: false },
+                axisTick: { show: false },
+                axisLine: { show: false },
+                splitLine: { show: false },
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { show: false },
+                splitLine: { show: false },
+                axisLine: { show: false },
+                axisTick: { show: false },
+            },
+            series: [
+                {
+                    type: 'line',
+                    data: zoomHistogram.chartData.map((point, index) => [point.timestamp, totals[index]]),
+                    smooth: true,
+                    symbol: 'none',
+                    lineStyle: { width: 1, color: '#90caf9' },
+                },
+            ],
+        };
+    }, [zoomHistogram]);
+
+    const zoomSliderOption = useMemo(() => {
+        if (!timeRange) {
+            return {};
+        }
+
+        return {
+            animation: false,
+            backgroundColor: 'rgba(0, 0, 0, 0)',
+            grid: zoomSliderGrid,
+            xAxis: {
+                type: 'time',
+                min: timeRange.min,
+                max: timeRange.max,
+                axisLabel: { show: false },
+                axisTick: { show: false },
+                axisLine: { show: false },
+                splitLine: { show: false },
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { show: false },
+                splitLine: { show: false },
+                axisLine: { show: false },
+                axisTick: { show: false },
+            },
+            series: [],
+            dataZoom: [
+                {
+                    type: 'slider',
+                    xAxisIndex: 0,
+                    filterMode: 'none',
+                    realtime: true,
+                    throttle: 8,
+                    height: '100%',
+                    top: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0)',
+                    fillerColor: 'rgba(0, 0, 0, 0)',
+                    dataBackground: {
+                        lineStyle: { color: 'rgba(0, 0, 0, 0)' },
+                        areaStyle: { color: 'rgba(0, 0, 0, 0)' },
+                    },
+                    selectedDataBackground: {
+                        lineStyle: { color: 'rgba(0, 0, 0, 0)' },
+                        areaStyle: { color: 'rgba(0, 0, 0, 0)' },
+                    },
+                    borderColor: 'rgba(0, 0, 0, 0.2)',
+                    moveHandleSize: 14,
+                    showDataShadow: false,
+                    handleSize: '100%',
+                    handleIcon: 'path://M50,0 L50,100 M44,40 L56,40 L56,60 L44,60 Z M47,44 L47,56 M53,44 L53,56',
+                    handleStyle: {
+                        color: '#b0b0b0',
+                        borderColor: '#7a7a7a',
+                        opacity: 1,
+                    },
+                },
+            ],
+        };
+    }, [timeRange, zoomSliderGrid]);
+
+    const handleZoom = useCallback((params: { start?: number; end?: number; startValue?: number; endValue?: number; batch?: Array<{ start?: number; end?: number; startValue?: number; endValue?: number }> }) => {
+        if (!timeRange || zoomHistogram.chartData.length === 0) return;
+
+        const payload = params?.batch?.[0] ?? params ?? {};
+        const startValue = payload.startValue ?? params.startValue;
+        const endValue = payload.endValue ?? params.endValue;
+
+        let startTime = timeRange.min;
+        let endTime = timeRange.max;
+
+        if (typeof startValue === 'number' && typeof endValue === 'number') {
+            startTime = Math.max(timeRange.min, Math.floor(startValue));
+            endTime = Math.min(timeRange.max, Math.ceil(endValue));
+        } else {
+            const startPercent = typeof payload.start === 'number' ? payload.start : (typeof params.start === 'number' ? params.start : 0);
+            const endPercent = typeof payload.end === 'number' ? payload.end : (typeof params.end === 'number' ? params.end : 100);
+            startTime = timeRange.min + ((timeRange.max - timeRange.min) * startPercent) / 100;
+            endTime = timeRange.min + ((timeRange.max - timeRange.min) * endPercent) / 100;
+        }
+
+        const total = Math.max(1, timeRange.max - timeRange.min);
+        const leftPercent = Math.max(0, Math.min(100, ((startTime - timeRange.min) / total) * 100));
+        const rightPercent = Math.max(0, Math.min(100, ((timeRange.max - endTime) / total) * 100));
+        const isFullRange = startTime <= timeRange.min && endTime >= timeRange.max;
+
+        pendingZoomRef.current = {
+            start: startTime,
+            end: endTime,
+            leftPercent,
+            rightPercent,
+            fullRange: isFullRange,
+        };
+
+        if (zoomRafRef.current !== null) return;
+
+        zoomRafRef.current = requestAnimationFrame(() => {
+            zoomRafRef.current = null;
+            const pending = pendingZoomRef.current;
+            if (!pending) return;
+
+            if (pending.fullRange) {
+                setSelectedRange({ start: null, end: null });
+                setZoomShade({ leftPercent: 0, rightPercent: 0 });
+                if (onTimeRangeChange) {
+                    onTimeRangeChange(null, null);
+                }
+                return;
+            }
+
+            setZoomShade({ leftPercent: pending.leftPercent, rightPercent: pending.rightPercent });
+            setSelectedRange({ start: pending.start, end: pending.end });
+            if (onTimeRangeChange) {
+                onTimeRangeChange(pending.start, pending.end);
+            }
+        });
+    }, [onTimeRangeChange, timeRange, zoomHistogram]);
     
     // Don't render if no valid data
-    if (chartData.length === 0) {
+    if (fullHistogram.chartData.length === 0) {
         return null;
     }
     
@@ -360,7 +552,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
                     Log Timeline
                     <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                        ({visibleChartData.length}/{chartData.length} intervals, {formatBucketSize(bucketSize)} each)
+                        ({mainHistogram.chartData.length} intervals, {formatBucketSize(mainHistogram.bucketSize)} each)
                     </Typography>
                 </Typography>
                 <Tooltip title={isCollapsed ? 'Expand histogram' : 'Collapse histogram'}>
@@ -379,65 +571,54 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         mt: 0.5,
                     }}
                 >
-                    <BarChart
-                        dataset={visibleChartData}
-                        xAxis={[{ 
-                            scaleType: 'band', 
-                            dataKey: 'time',
-                            tickLabelStyle: { fontSize: 10 },
-                        }]}
-                        yAxis={[{ 
-                            tickLabelStyle: { fontSize: 10 },
-                        }]}
-                        series={series}
-                        height={height}
-                        margin={{ top: 20, right: 20, left: 40, bottom: 30 }}
-                        slotProps={{
-                            legend: {
-                                direction: 'horizontal' as const,
-                                position: { vertical: 'top' as const, horizontal: 'center' as const },
-                            },
-                        }}
-                        sx={{
-                            [`& .${axisClasses.root}`]: {
-                                [`& .${axisClasses.tick}, & .${axisClasses.line}`]: {
-                                    stroke: (theme) => theme.palette.text.secondary,
-                                },
-                                [`& .${axisClasses.tickLabel}`]: {
-                                    fill: (theme) => theme.palette.text.secondary,
-                                },
-                            },
-                        }}
+                    <ReactECharts
+                        option={chartOption}
+                        style={{ height }}
                     />
-                    
-                    {/* Range slider */}
-                    <Box sx={{ px: 2, pt: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                            Time Range Filter
-                        </Typography>
-                        <Slider
-                            value={sliderRange}
-                            onChange={handleSliderChange}
-                            onChangeCommitted={handleSliderChangeCommitted}
-                            valueLabelDisplay="auto"
-                            valueLabelFormat={formatSliderLabel}
-                            min={0}
-                            max={100}
-                            size="small"
-                            sx={{
-                                '& .MuiSlider-valueLabel': {
-                                    fontSize: 10,
-                                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                                },
-                            }}
-                        />
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {chartData[0]?.time}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {chartData[chartData.length - 1]?.time}
-                            </Typography>
+                    <Box sx={{ mt: 1 }}>
+                        <Box sx={{ position: 'relative' }}>
+                            <ReactECharts
+                                option={zoomChartOption}
+                                style={{ height: 110 }}
+                            />
+                            <Box sx={{ position: 'absolute', inset: 0 }}>
+                                <ReactECharts
+                                    option={zoomSliderOption}
+                                    style={{ height: '100%' }}
+                                    onEvents={{ datazoom: handleZoom }}
+                                />
+                            </Box>
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: 14,
+                                    left: `${zoomSliderGrid.left + 6}px`,
+                                    right: `${zoomSliderGrid.right - 6}px`,
+                                    bottom: 0,
+                                    pointerEvents: 'none',
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        bottom: 0,
+                                        width: `${zoomShade.leftPercent}%`,
+                                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                    }}
+                                />
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        width: `${zoomShade.rightPercent}%`,
+                                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                    }}
+                                />
+                            </Box>
                         </Box>
                     </Box>
                 </Box>
