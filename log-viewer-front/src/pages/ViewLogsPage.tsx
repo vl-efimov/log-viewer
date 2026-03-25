@@ -1,4 +1,6 @@
 import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { VirtuosoHandle } from 'react-virtuoso';
@@ -6,7 +8,7 @@ import { RootState } from '../redux/store';
 import { updateLogContent, appendLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
 import { parseLogFileForTable } from '../utils/logFormatExamples';
-import { getFormatFields, detectLogFormat, type LogFormatField } from '../utils/logFormatDetector';
+import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField } from '../utils/logFormatDetector';
 import { LogFiltersBar } from '../components/LogFiltersBar';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
@@ -22,6 +24,11 @@ const RANGE_LOAD_PADDING = 60;
 const MAX_CACHE_LINES = 500;
 const MAX_CACHE_BYTES = 8 * 1024 * 1024; // 8 MB
 const MAX_RANGE_BYTES = 512 * 1024; // 512 KB
+const MAX_VIRTUAL_ROWS = 1_500_000;
+const WINDOW_REBASE_MARGIN = 200_000;
+const HISTOGRAM_SCAN_CHUNK_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_HISTOGRAM_SAMPLE_LINES = 50_000;
+const HISTOGRAM_YIELD_EVERY_CHUNKS = 8;
 
 type LineIndex = {
     chunks: Uint32Array[];
@@ -87,6 +94,16 @@ const ViewLogsPage: React.FC = () => {
     const cacheBytesRef = useRef<number>(0);
     const [lineCount, setLineCount] = useState<number>(0);
     const [lineCacheVersion, setLineCacheVersion] = useState<number>(0);
+    const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
+    const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
+    const [histogramProgress, setHistogramProgress] = useState<number>(0);
+    const [largeFileHistogramLines, setLargeFileHistogramLines] = useState<Array<{
+        lineNumber: number;
+        parsed: import('../utils/logFormatDetector').ParsedLogLine | null;
+        raw: string;
+        error?: string;
+            }>>([]);
+    const rebaseAnchorRef = useRef<number | null>(null);
     const rangeLoadStateRef = useRef<{ pending: { start: number; end: number } | null; isLoading: boolean }>({
         pending: null,
         isLoading: false,
@@ -215,12 +232,9 @@ const ViewLogsPage: React.FC = () => {
         if (effectiveEnd < end) {
             const state = rangeLoadStateRef.current;
             const nextRange = { start: effectiveEnd + 1, end };
-            state.pending = state.pending
-                ? {
-                    start: Math.min(state.pending.start, nextRange.start),
-                    end: Math.max(state.pending.end, nextRange.end),
-                }
-                : nextRange;
+            // Keep sequential continuation local, but allow external viewport requests
+            // to overwrite this range in requestRangeLoad.
+            state.pending = nextRange;
         }
 
         setLineCacheVersion((version) => version + 1);
@@ -233,14 +247,8 @@ const ViewLogsPage: React.FC = () => {
 
         if (nextEnd < 0) return;
 
-        if (state.pending) {
-            state.pending = {
-                start: Math.min(state.pending.start, nextStart),
-                end: Math.max(state.pending.end, nextEnd),
-            };
-        } else {
-            state.pending = { start: nextStart, end: nextEnd };
-        }
+        // Always prioritize latest viewport request to keep UI responsive on big jumps.
+        state.pending = { start: nextStart, end: nextEnd };
 
         if (state.isLoading) return;
 
@@ -257,12 +265,50 @@ const ViewLogsPage: React.FC = () => {
         void run();
     }, [lineCount, loadLinesForRange]);
 
+    const getVirtualWindowSize = useCallback((start: number, total: number): number => {
+        if (total <= MAX_VIRTUAL_ROWS) return total;
+        const remaining = total - start;
+        return Math.max(0, Math.min(MAX_VIRTUAL_ROWS, remaining));
+    }, []);
+
+    const clampWindowStart = useCallback((start: number, total: number): number => {
+        if (total <= MAX_VIRTUAL_ROWS) return 0;
+        const maxStart = total - MAX_VIRTUAL_ROWS;
+        return Math.max(0, Math.min(start, maxStart));
+    }, []);
+
+    const setWindowAroundDisplayIndex = useCallback((displayIndex: number): number => {
+        if (!isLargeFile || lineCount <= MAX_VIRTUAL_ROWS) {
+            setVirtualWindowStart(0);
+            return Math.max(0, Math.min(displayIndex, Math.max(0, lineCount - 1)));
+        }
+
+        const desiredStart = clampWindowStart(
+            displayIndex - Math.floor(MAX_VIRTUAL_ROWS / 2),
+            lineCount,
+        );
+        const virtualIndex = Math.max(0, displayIndex - desiredStart);
+
+        setVirtualWindowStart(desiredStart);
+        return virtualIndex;
+    }, [clampWindowStart, isLargeFile, lineCount]);
+
     const scrollToBottom = () => {
         if (virtuosoRef.current) {
-            const totalDisplayCount = isLargeFile ? lineCount : displayLines.length;
+            const totalDisplayCount = isLargeFile
+                ? getVirtualWindowSize(virtualWindowStart, lineCount)
+                : displayLines.length;
             if (totalDisplayCount > 0) {
+                let targetIndex = viewMode === 'live-tail' ? 0 : totalDisplayCount - 1;
+
+                if (isLargeFile) {
+                    const globalTarget = viewMode === 'live-tail' ? 0 : Math.max(0, lineCount - 1);
+                    targetIndex = setWindowAroundDisplayIndex(globalTarget);
+                    rebaseAnchorRef.current = targetIndex;
+                }
+
                 virtuosoRef.current.scrollToIndex({
-                    index: viewMode === 'live-tail' ? 0 : totalDisplayCount - 1,
+                    index: targetIndex,
                     align: viewMode === 'live-tail' ? 'start' : 'end',
                     behavior: 'auto'
                 });
@@ -335,36 +381,71 @@ const ViewLogsPage: React.FC = () => {
 
         if (lineCount === 0) return null;
 
+        const globalDisplayIndex = virtualWindowStart + displayIndex;
+
         const fileIndex = viewMode === 'live-tail'
-            ? lineCount - 1 - displayIndex
-            : displayIndex;
+            ? lineCount - 1 - globalDisplayIndex
+            : globalDisplayIndex;
 
         if (fileIndex < 0 || fileIndex >= lineCount) return null;
 
         const rawEntry = lineCacheRef.current.get(fileIndex);
 
         const displayLineNumber = viewMode === 'live-tail'
-            ? lineCount - displayIndex
+            ? lineCount - globalDisplayIndex
             : fileIndex + 1;
 
         return { raw: rawEntry?.text ?? 'Loading...', displayLineNumber };
-    }, [displayLines, isLargeFile, lineCount, viewMode, lineCacheVersion]);
+    }, [displayLines, isLargeFile, lineCount, viewMode, lineCacheVersion, virtualWindowStart]);
 
     const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
         if (!isLargeFile || lineCount === 0) return;
 
-        const safeStart = Math.max(0, Math.min(startIndex, lineCount - 1));
-        const safeEnd = Math.max(0, Math.min(endIndex, lineCount - 1));
+        const virtualCount = getVirtualWindowSize(virtualWindowStart, lineCount);
+        const safeStart = Math.max(0, Math.min(startIndex, Math.max(0, virtualCount - 1)));
+        const safeEnd = Math.max(0, Math.min(endIndex, Math.max(0, virtualCount - 1)));
+        const globalStart = virtualWindowStart + safeStart;
+        const globalEnd = virtualWindowStart + safeEnd;
 
         const mappedStart = viewMode === 'live-tail'
-            ? lineCount - 1 - safeEnd
-            : safeStart;
+            ? lineCount - 1 - globalEnd
+            : globalStart;
         const mappedEnd = viewMode === 'live-tail'
-            ? lineCount - 1 - safeStart
-            : safeEnd;
+            ? lineCount - 1 - globalStart
+            : globalEnd;
 
         requestRangeLoad(mappedStart, mappedEnd);
-    }, [isLargeFile, lineCount, requestRangeLoad, viewMode]);
+
+        if (lineCount <= MAX_VIRTUAL_ROWS) return;
+
+        const nearTop = safeStart < WINDOW_REBASE_MARGIN;
+        const nearBottom = safeEnd > Math.max(0, virtualCount - 1 - WINDOW_REBASE_MARGIN);
+
+        if (!nearTop && !nearBottom) return;
+
+        const globalAnchor = Math.floor((globalStart + globalEnd) / 2);
+        const nextWindowStart = clampWindowStart(
+            globalAnchor - Math.floor(MAX_VIRTUAL_ROWS / 2),
+            lineCount,
+        );
+
+        if (nextWindowStart === virtualWindowStart) return;
+
+        rebaseAnchorRef.current = Math.max(0, globalAnchor - nextWindowStart);
+        setVirtualWindowStart(nextWindowStart);
+    }, [
+        clampWindowStart,
+        getVirtualWindowSize,
+        isLargeFile,
+        lineCount,
+        requestRangeLoad,
+        viewMode,
+        virtualWindowStart,
+    ]);
+
+    const histogramSourceLines = useMemo(() => {
+        return isLargeFile ? largeFileHistogramLines : parsedLines;
+    }, [isLargeFile, largeFileHistogramLines, parsedLines]);
 
     // Get filter statistics
     const filterStats = useMemo(() => {
@@ -454,6 +535,112 @@ const ViewLogsPage: React.FC = () => {
             requestRangeLoad(0, Math.min(RANGE_LOAD_PADDING, lineCount - 1));
         }
     }, [viewMode, isLargeFile, lineCount, requestRangeLoad]);
+
+    useEffect(() => {
+        if (!isLargeFile || !isMonitoring || lineCount === 0) {
+            setIsHistogramLoading(false);
+            setHistogramProgress(0);
+            setLargeFileHistogramLines([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        const scanFileForHistogram = async () => {
+            const file = await getActiveFile();
+            if (!file || cancelled) return;
+
+            setIsHistogramLoading(true);
+            setHistogramProgress(0);
+
+            const sampleStep = Math.max(1, Math.ceil(lineCount / MAX_HISTOGRAM_SAMPLE_LINES));
+            const decoder = new TextDecoder('utf-8');
+            const sampled: Array<{
+                lineNumber: number;
+                parsed: import('../utils/logFormatDetector').ParsedLogLine | null;
+                raw: string;
+                error?: string;
+            }> = [];
+
+            let processedBytes = 0;
+            let lineNumber = 1;
+            let carry = '';
+            let chunkCounter = 0;
+
+            while (processedBytes < file.size && !cancelled) {
+                const nextEnd = Math.min(file.size, processedBytes + HISTOGRAM_SCAN_CHUNK_BYTES);
+                const buffer = await file.slice(processedBytes, nextEnd).arrayBuffer();
+                processedBytes = nextEnd;
+
+                const text = decoder.decode(buffer, { stream: processedBytes < file.size });
+                const combined = carry + text;
+                const parts = combined.split(/\r?\n/);
+                carry = parts.pop() ?? '';
+
+                for (const raw of parts) {
+                    if ((lineNumber - 1) % sampleStep === 0) {
+                        sampled.push({
+                            lineNumber,
+                            parsed: parseLogLineAuto(raw),
+                            raw,
+                        });
+                    }
+                    lineNumber += 1;
+                }
+
+                chunkCounter += 1;
+                if (chunkCounter >= HISTOGRAM_YIELD_EVERY_CHUNKS) {
+                    chunkCounter = 0;
+                    setHistogramProgress(Math.min(99, Math.round((processedBytes / Math.max(1, file.size)) * 100)));
+                    await new Promise((resolve) => setTimeout(resolve, 0));
+                }
+            }
+
+            if (!cancelled && carry.length > 0) {
+                if ((lineNumber - 1) % sampleStep === 0) {
+                    sampled.push({
+                        lineNumber,
+                        parsed: parseLogLineAuto(carry),
+                        raw: carry,
+                    });
+                }
+            }
+
+            if (cancelled) return;
+
+            setLargeFileHistogramLines(sampled);
+            setHistogramProgress(100);
+            setIsHistogramLoading(false);
+        };
+
+        void scanFileForHistogram();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [getActiveFile, isLargeFile, isMonitoring, lineCount, fileName]);
+
+    useEffect(() => {
+        if (!isLargeFile) {
+            setVirtualWindowStart(0);
+            return;
+        }
+
+        setVirtualWindowStart((current) => clampWindowStart(current, lineCount));
+    }, [clampWindowStart, isLargeFile, lineCount]);
+
+    useEffect(() => {
+        if (!isLargeFile) return;
+        if (rebaseAnchorRef.current === null) return;
+        if (!virtuosoRef.current) return;
+
+        const virtualCount = getVirtualWindowSize(virtualWindowStart, lineCount);
+        if (virtualCount <= 0) return;
+
+        const anchor = Math.max(0, Math.min(rebaseAnchorRef.current, virtualCount - 1));
+        virtuosoRef.current.scrollToIndex({ index: anchor, align: 'center', behavior: 'auto' });
+        rebaseAnchorRef.current = null;
+    }, [getVirtualWindowSize, isLargeFile, lineCount, virtualWindowStart]);
 
     // Poll for file changes using File System Access API with incremental reading
     useEffect(() => {
@@ -672,9 +859,28 @@ const ViewLogsPage: React.FC = () => {
             />
 
             {/* Log Timeline Histogram */}
-            {parsedLines.length > 0 && (
+            {isLargeFile && isHistogramLoading && (
+                <Box
+                    sx={{
+                        height: 150,
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 2,
+                        backgroundColor: (theme) => theme.palette.background.paper,
+                    }}
+                >
+                    <CircularProgress size={24} />
+                    <Typography variant="body2" color="text.secondary">
+                        Building full-file histogram in background... {histogramProgress}%
+                    </Typography>
+                </Box>
+            )}
+            {(!isLargeFile || !isHistogramLoading) && histogramSourceLines.length > 0 && (
                 <LogHistogram
-                    parsedLines={parsedLines}
+                    parsedLines={histogramSourceLines}
                     defaultCollapsed={false}
                     height={150}
                 />
@@ -699,7 +905,7 @@ const ViewLogsPage: React.FC = () => {
             >
                 <LogLinesList
                     displayLines={displayLines}
-                    totalCount={isLargeFile ? lineCount : displayLines.length}
+                    totalCount={isLargeFile ? getVirtualWindowSize(virtualWindowStart, lineCount) : displayLines.length}
                     getLineAtIndex={getLineAtIndex}
                     onRangeChange={isLargeFile ? handleRangeChange : undefined}
                     selectedLine={selectedLine}

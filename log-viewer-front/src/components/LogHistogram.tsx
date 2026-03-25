@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -12,15 +12,21 @@ import type { ParsedLogLine } from '../utils/logFormatDetector';
 // Log level colors - consistent across different log formats
 const LOG_LEVEL_COLORS: Record<string, string> = {
     // Error levels
-    'FATAL': '#d32f2f',
-    'fatal': '#d32f2f',
-    'CRITICAL': '#d32f2f',
-    'critical': '#d32f2f',
-    'ERROR': '#f44336',
-    'error': '#f44336',
-    'err': '#f44336',
-    'SEVERE': '#f44336',
-    'severe': '#f44336',
+    'EMERG': '#5d0000',
+    'emerg': '#5d0000',
+    'ALERT': '#7f0000',
+    'alert': '#7f0000',
+    'CRIT': '#9a1111',
+    'crit': '#9a1111',
+    'FATAL': '#b71c1c',
+    'fatal': '#b71c1c',
+    'CRITICAL': '#c62828',
+    'critical': '#c62828',
+    'ERROR': '#d84315',
+    'error': '#d84315',
+    'err': '#e64a19',
+    'SEVERE': '#f4511e',
+    'severe': '#f4511e',
     
     // Warning levels
     'WARN': '#ff9800',
@@ -55,6 +61,12 @@ const LOG_LEVEL_COLORS: Record<string, string> = {
 
 // Priority order for stacking (higher = drawn on top)
 const LOG_LEVEL_PRIORITY: Record<string, number> = {
+    'EMERG': 110,
+    'emerg': 110,
+    'ALERT': 105,
+    'alert': 105,
+    'CRIT': 100,
+    'crit': 100,
     'FATAL': 100,
     'fatal': 100,
     'CRITICAL': 95,
@@ -212,6 +224,64 @@ function formatTimeLabel(timestamp: number, bucketSize: number): string {
     }
 }
 
+function formatAxisTimeLabel(timestamp: number, rangeMs: number, bucketSize: number): string {
+    const date = new Date(timestamp);
+    const monthDay = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const monthYear = date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+    const year = date.toLocaleDateString(undefined, { year: 'numeric' });
+    const hhmm = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const hhmmss = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const isMidnight = date.getHours() === 0 && date.getMinutes() === 0;
+
+    // Very coarse scales: only year or month-year labels.
+    if (rangeMs >= 2 * 365 * 86400000 || bucketSize >= 180 * 86400000) {
+        return year;
+    }
+
+    if (rangeMs >= 180 * 86400000 || bucketSize >= 30 * 86400000) {
+        return monthYear;
+    }
+
+    // Coarse day scale: date-only labels (no repeated date tick labels).
+    if (bucketSize >= 86400000) {
+        return monthDay;
+    }
+
+    // Mixed scale with repeated dates in one day: midnight tick uses date, others use time.
+    if (bucketSize >= 60000) {
+        return isMidnight ? monthDay : hhmm;
+    }
+
+    if (bucketSize >= 1000) {
+        return isMidnight ? monthDay : hhmmss;
+    }
+
+    return hhmmss;
+}
+
+function parseZoomBoundary(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const asNumber = Number(value);
+        if (Number.isFinite(asNumber)) {
+            return asNumber;
+        }
+
+        const parsed = new Date(value).getTime();
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    if (value instanceof Date) {
+        const ts = value.getTime();
+        return Number.isFinite(ts) ? ts : null;
+    }
+
+    return null;
+}
+
 /**
  * LogHistogram component - displays a histogram of log entries over time,
  * with stacked bars colored by log level and a range slider
@@ -231,14 +301,6 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         leftPercent: 0,
         rightPercent: 0,
     });
-    const pendingZoomRef = useRef<{
-        start: number;
-        end: number;
-        leftPercent: number;
-        rightPercent: number;
-        fullRange: boolean;
-    } | null>(null);
-    const zoomRafRef = useRef<number | null>(null);
     
     const { validLines, timeRange } = useMemo(() => {
         // Extract lines with valid timestamps and levels
@@ -354,24 +416,50 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     }, [timeRange?.min, timeRange?.max]);
     
     const chartOption = useMemo(() => {
-        const timeLabels = mainHistogram.chartData.map(point => point.time);
+        const bucketMidOffset = Math.floor(mainHistogram.bucketSize / 2);
         const series = mainHistogram.logLevels.map(level => ({
             name: level,
             type: 'bar',
             stack: 'total',
             emphasis: { focus: 'series' },
             itemStyle: { color: LOG_LEVEL_COLORS[level] || LOG_LEVEL_COLORS.UNKNOWN },
-            data: mainHistogram.chartData.map(point => (typeof point[level] === 'number' ? point[level] : 0)),
+            data: mainHistogram.chartData.map(point => [
+                point.timestamp + bucketMidOffset,
+                typeof point[level] === 'number' ? point[level] : 0,
+            ]),
         }));
+
+        const selectedStart = selectedRange.start ?? timeRange?.min ?? 0;
+        const selectedEnd = selectedRange.end ?? timeRange?.max ?? selectedStart;
+        const selectedRangeMs = Math.max(1, selectedEnd - selectedStart);
+        const splitNumber = selectedRangeMs <= 3600000
+            ? 16
+            : selectedRangeMs <= 6 * 3600000
+                ? 14
+                : selectedRangeMs <= 86400000
+                    ? 14
+                    : selectedRangeMs <= 7 * 86400000
+                        ? 16
+                        : selectedRangeMs <= 30 * 86400000
+                            ? 14
+                            : 12;
 
         return {
             tooltip: { trigger: 'axis' },
             legend: { top: 0 },
             grid: { top: 20, right: 20, left: 40, bottom: 10 },
             xAxis: {
-                type: 'category',
-                data: timeLabels,
-                axisLabel: { fontSize: 10 },
+                type: 'time',
+                min: selectedStart,
+                max: selectedEnd,
+                splitNumber,
+                axisLabel: {
+                    fontSize: 10,
+                    hideOverlap: false,
+                    showMinLabel: true,
+                    showMaxLabel: true,
+                    formatter: (value: number) => formatAxisTimeLabel(value, selectedRangeMs, mainHistogram.bucketSize),
+                },
             },
             yAxis: {
                 type: 'value',
@@ -379,9 +467,10 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             },
             series,
         };
-    }, [mainHistogram]);
+    }, [mainHistogram, selectedRange, timeRange]);
 
     const zoomChartOption = useMemo(() => {
+        const zoomBucketMidOffset = Math.floor(zoomHistogram.bucketSize / 2);
         const totals = zoomHistogram.chartData.map(point =>
             zoomHistogram.logLevels.reduce((sum, level) => sum + (typeof point[level] === 'number' ? (point[level] as number) : 0), 0)
         );
@@ -406,7 +495,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             series: [
                 {
                     type: 'line',
-                    data: zoomHistogram.chartData.map((point, index) => [point.timestamp, totals[index]]),
+                    data: zoomHistogram.chartData.map((point, index) => [point.timestamp + zoomBucketMidOffset, totals[index]]),
                     smooth: true,
                     symbol: 'none',
                     lineStyle: { width: 1, color: '#90caf9' },
@@ -476,19 +565,25 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         };
     }, [timeRange, zoomSliderGrid]);
 
-    const handleZoom = useCallback((params: { start?: number; end?: number; startValue?: number; endValue?: number; batch?: Array<{ start?: number; end?: number; startValue?: number; endValue?: number }> }) => {
+    const handleZoom = useCallback((params: {
+        start?: number;
+        end?: number;
+        startValue?: number | string | Date;
+        endValue?: number | string | Date;
+        batch?: Array<{ start?: number; end?: number; startValue?: number | string | Date; endValue?: number | string | Date }>;
+    }) => {
         if (!timeRange || zoomHistogram.chartData.length === 0) return;
 
         const payload = params?.batch?.[0] ?? params ?? {};
-        const startValue = payload.startValue ?? params.startValue;
-        const endValue = payload.endValue ?? params.endValue;
+        const parsedStartValue = parseZoomBoundary(payload.startValue ?? params.startValue);
+        const parsedEndValue = parseZoomBoundary(payload.endValue ?? params.endValue);
 
         let startTime = timeRange.min;
         let endTime = timeRange.max;
 
-        if (typeof startValue === 'number' && typeof endValue === 'number') {
-            startTime = Math.max(timeRange.min, Math.floor(startValue));
-            endTime = Math.min(timeRange.max, Math.ceil(endValue));
+        if (parsedStartValue !== null && parsedEndValue !== null) {
+            startTime = Math.max(timeRange.min, Math.floor(parsedStartValue));
+            endTime = Math.min(timeRange.max, Math.ceil(parsedEndValue));
         } else {
             const startPercent = typeof payload.start === 'number' ? payload.start : (typeof params.start === 'number' ? params.start : 0);
             const endPercent = typeof payload.end === 'number' ? payload.end : (typeof params.end === 'number' ? params.end : 100);
@@ -496,41 +591,32 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             endTime = timeRange.min + ((timeRange.max - timeRange.min) * endPercent) / 100;
         }
 
+        if (endTime <= startTime) {
+            endTime = Math.min(timeRange.max, startTime + 1000);
+        }
+
         const total = Math.max(1, timeRange.max - timeRange.min);
         const leftPercent = Math.max(0, Math.min(100, ((startTime - timeRange.min) / total) * 100));
         const rightPercent = Math.max(0, Math.min(100, ((timeRange.max - endTime) / total) * 100));
-        const isFullRange = startTime <= timeRange.min && endTime >= timeRange.max;
+        const edgeToleranceMs = Math.max(1000, total * 0.001);
+        const isFullRange =
+            startTime <= timeRange.min + edgeToleranceMs &&
+            endTime >= timeRange.max - edgeToleranceMs;
 
-        pendingZoomRef.current = {
-            start: startTime,
-            end: endTime,
-            leftPercent,
-            rightPercent,
-            fullRange: isFullRange,
-        };
-
-        if (zoomRafRef.current !== null) return;
-
-        zoomRafRef.current = requestAnimationFrame(() => {
-            zoomRafRef.current = null;
-            const pending = pendingZoomRef.current;
-            if (!pending) return;
-
-            if (pending.fullRange) {
-                setSelectedRange({ start: null, end: null });
-                setZoomShade({ leftPercent: 0, rightPercent: 0 });
-                if (onTimeRangeChange) {
-                    onTimeRangeChange(null, null);
-                }
-                return;
-            }
-
-            setZoomShade({ leftPercent: pending.leftPercent, rightPercent: pending.rightPercent });
-            setSelectedRange({ start: pending.start, end: pending.end });
+        if (isFullRange) {
+            setSelectedRange({ start: null, end: null });
+            setZoomShade({ leftPercent: 0, rightPercent: 0 });
             if (onTimeRangeChange) {
-                onTimeRangeChange(pending.start, pending.end);
+                onTimeRangeChange(null, null);
             }
-        });
+            return;
+        }
+
+        setZoomShade({ leftPercent, rightPercent });
+        setSelectedRange({ start: startTime, end: endTime });
+        if (onTimeRangeChange) {
+            onTimeRangeChange(startTime, endTime);
+        }
     }, [onTimeRangeChange, timeRange, zoomHistogram]);
     
     // Don't render if no valid data
@@ -574,6 +660,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     <ReactECharts
                         option={chartOption}
                         style={{ height }}
+                        notMerge={true}
                     />
                     <Box sx={{ mt: 1 }}>
                         <Box sx={{ position: 'relative' }}>
