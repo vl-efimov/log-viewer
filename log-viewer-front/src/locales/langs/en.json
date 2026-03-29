@@ -1,4 +1,55 @@
 {
-    "appTitle": "LogViewer"
+  "appTitle": "LogViewer",
+  "common": {
+    "unknown": "unknown"
+  },
+  "sidebar": {
+    "groups": {
+      "logs": "Logs",
+      "resources": "Resources"
+    },
+    "items": {
+      "viewLogs": "View logs",
+      "dashboard": "Dashboard",
+      "logFormats": "Log formats",
+      "pretrainedModels": "Pretrained models",
+      "about": "About",
+      "settings": "Settings"
+    }
+  },
+  "dashboard": {
+    "title": "Logs Dashboard",
+    "selectFileDescription": "Select a log file to view statistics and analytics.",
+    "noDataDescription": "No data available yet for analytics.",
+    "fileAndFormat": "File: {{fileName}} | Detected format: {{format}}",
+    "largeFilePreviewNotice": "Large file mode: dashboard is based on file preview and can differ from the full-table view.",
+    "largeFileFullScanNotice": "Large file mode: all dashboard charts are calculated from the full file (timeline uses sampled points).",
+    "histogramBuilding": "Building full-file histogram in background... {{progress}}%",
+    "noParsedWarning": "Dashboard did not parse any lines. Add/update a matching log format to unlock analytics.",
+    "detectedFormatsTitle": "Detected formats in current file",
+    "noParsedFormats": "No parsed formats",
+    "topFieldsTitle": "Top field distributions",
+    "topFieldsDescription": "Additional distributions by other fields.",
+    "metrics": {
+      "totalLines": "Total lines",
+      "parsedLines": "Parsed lines",
+      "unparsedLines": "Unparsed lines",
+      "parseRate": "Parse rate"
+    },
+    "charts": {
+      "levels": "Levels",
+      "httpStatus": "HTTP / Status",
+      "httpMethods": "HTTP Methods"
+    },
+    "dynamicFields": {
+      "queue": "Queue",
+      "type": "Type",
+      "component": "Component",
+      "host": "Host",
+      "user": "User",
+      "class": "Class",
+      "ip": "IP",
+      "generic": "Field: {{field}}"
+    }
   }
-  
+}

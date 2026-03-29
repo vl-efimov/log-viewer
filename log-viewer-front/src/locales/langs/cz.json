@@ -1,4 +1,55 @@
 {
-    "appTitle": "Prohlížeč logů"
+  "appTitle": "Prohlížeč logů",
+  "common": {
+    "unknown": "neznámý"
+  },
+  "sidebar": {
+    "groups": {
+      "logs": "Logy",
+      "resources": "Zdroje"
+    },
+    "items": {
+      "viewLogs": "Zobrazit logy",
+      "dashboard": "Dashboard",
+      "logFormats": "Formáty logů",
+      "pretrainedModels": "Předtrénované modely",
+      "about": "O aplikaci",
+      "settings": "Nastavení"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard logů",
+    "selectFileDescription": "Vyberte soubor logu pro zobrazení statistik a analytiky.",
+    "noDataDescription": "Zatím nejsou k dispozici data pro analytiku.",
+    "fileAndFormat": "Soubor: {{fileName}} | Detekovaný formát: {{format}}",
+    "largeFilePreviewNotice": "Režim velkého souboru: dashboard vychází z náhledu souboru a může se lišit od plného zobrazení tabulky.",
+    "largeFileFullScanNotice": "Režim velkého souboru: všechny grafy dashboardu jsou počítány z celého souboru (timeline používá vzorkování bodů).",
+    "histogramBuilding": "Sestavuji histogram z celého souboru na pozadí... {{progress}}%",
+    "noParsedWarning": "Dashboard neparsoval žádný řádek. Přidejte nebo upravte odpovídající formát logu.",
+    "detectedFormatsTitle": "Detekované formáty v aktuálním souboru",
+    "noParsedFormats": "Žádné parsované formáty",
+    "topFieldsTitle": "Nejčastější distribuce polí",
+    "topFieldsDescription": "Další distribuce podle jiných polí.",
+    "metrics": {
+      "totalLines": "Celkem řádků",
+      "parsedLines": "Parsované řádky",
+      "unparsedLines": "Neparsované řádky",
+      "parseRate": "Úspěšnost parsování"
+    },
+    "charts": {
+      "levels": "Úrovně",
+      "httpStatus": "HTTP / Stav",
+      "httpMethods": "HTTP metody"
+    },
+    "dynamicFields": {
+      "queue": "Fronta",
+      "type": "Typ",
+      "component": "Komponenta",
+      "host": "Host",
+      "user": "Uživatel",
+      "class": "Třída",
+      "ip": "IP",
+      "generic": "Pole: {{field}}"
+    }
   }
-  
+}

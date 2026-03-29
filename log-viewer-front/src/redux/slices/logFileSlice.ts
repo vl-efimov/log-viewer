@@ -25,6 +25,7 @@ interface LogFileState {
     size: number;
     content: string;
     format: string;
+    analyticsSessionId: string;
     loaded: boolean;
     lastModified: number;
     hasFileHandle: boolean; // Flag indicating if we have a File System Access API handle
@@ -37,6 +38,7 @@ const initialState: LogFileState = {
     size: 0,
     content: '',
     format: '',
+    analyticsSessionId: '',
     loaded: false,
     lastModified: 0,
     hasFileHandle: false,
@@ -61,6 +63,7 @@ const logFileSlice = createSlice({
             state.size = action.payload.size;
             state.content = action.payload.content;
             state.format = action.payload.format;
+            state.analyticsSessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
             state.lastModified = action.payload.lastModified || Date.now();
             state.hasFileHandle = action.payload.hasFileHandle || false;
             state.isLargeFile = action.payload.isLargeFile || false;
@@ -83,6 +86,7 @@ const logFileSlice = createSlice({
             state.size = 0;
             state.content = '';
             state.format = '';
+            state.analyticsSessionId = '';
             state.loaded = false;
             state.lastModified = 0;
             state.hasFileHandle = false;

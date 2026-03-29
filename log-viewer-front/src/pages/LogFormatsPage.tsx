@@ -19,6 +19,12 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import CircularProgress from '@mui/material/CircularProgress';
 import RegexHighlighter from '../components/log-patterns/RegexHighlighter';
 import { baseUrl } from '../constants/BaseUrl';
+import {
+    USER_FORMATS_STORAGE_KEY,
+    buildCustomFormatPattern,
+    registerCustomLogFormat,
+    unregisterLogFormat,
+} from '../utils/logFormatDetector';
 
 interface UserLogFormat {
     id: string;
@@ -27,11 +33,9 @@ interface UserLogFormat {
     regex: string;
 }
 
-const USER_FORMATS_KEY = 'logViewerUserFormats';
-
 function loadUserFormats(): UserLogFormat[] {
     try {
-        const raw = localStorage.getItem(USER_FORMATS_KEY);
+        const raw = localStorage.getItem(USER_FORMATS_STORAGE_KEY);
         if (!raw) return [];
         return JSON.parse(raw);
     } catch {
@@ -40,7 +44,7 @@ function loadUserFormats(): UserLogFormat[] {
 }
 
 function saveUserFormats(formats: UserLogFormat[]) {
-    localStorage.setItem(USER_FORMATS_KEY, JSON.stringify(formats));
+    localStorage.setItem(USER_FORMATS_STORAGE_KEY, JSON.stringify(formats));
 }
 
 interface LogFormat {
@@ -92,6 +96,11 @@ const LogFormatsPage: React.FC = () => {
             description,
             regex,
         };
+        const runtimeFormat = buildCustomFormatPattern(newFormat);
+        if (runtimeFormat) {
+            registerCustomLogFormat(runtimeFormat);
+        }
+
         const updated = [...userFormats, newFormat];
         setUserFormats(updated);
         saveUserFormats(updated);
@@ -99,6 +108,7 @@ const LogFormatsPage: React.FC = () => {
     }, [userFormats]);
 
     const deleteUserFormat = useCallback((id: string) => {
+        unregisterLogFormat(id);
         const updated = userFormats.filter(f => f.id !== id);
         setUserFormats(updated);
         saveUserFormats(updated);

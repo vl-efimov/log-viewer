@@ -5,6 +5,15 @@
 
 import { baseUrl } from "../constants/BaseUrl";
 
+export const USER_FORMATS_STORAGE_KEY = 'logViewerUserFormats';
+
+interface StoredUserLogFormat {
+    id: string;
+    name: string;
+    description: string;
+    regex: string;
+}
+
 export interface LogFormatField {
     /** Field name (matches named capture group in regex) */
     name: string;
@@ -61,6 +70,93 @@ export interface ParsedLogLine {
  */
 export let LOG_FORMAT_PATTERNS: LogFormatPattern[] = [];
 
+function loadUserFormatsFromStorage(): StoredUserLogFormat[] {
+    if (typeof window === 'undefined') {
+        return [];
+    }
+
+    try {
+        const raw = window.localStorage.getItem(USER_FORMATS_STORAGE_KEY);
+        if (!raw) {
+            return [];
+        }
+
+        const parsed = JSON.parse(raw) as StoredUserLogFormat[];
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed.filter((item) => {
+            return Boolean(item?.id && item?.name && item?.regex);
+        });
+    } catch {
+        return [];
+    }
+}
+
+function extractNamedGroups(regexSource: string): string[] {
+    const groups = new Set<string>();
+    const namedGroupRegex = /\(\?<([A-Za-z_][A-Za-z0-9_]*)>/g;
+    let match: RegExpExecArray | null = namedGroupRegex.exec(regexSource);
+
+    while (match) {
+        groups.add(match[1]);
+        match = namedGroupRegex.exec(regexSource);
+    }
+
+    return Array.from(groups);
+}
+
+function getFieldType(name: string): LogFormatField['type'] {
+    const normalized = name.toLowerCase();
+
+    if (normalized.includes('timestamp') || normalized.includes('datetime')) {
+        return 'datetime';
+    }
+
+    if (normalized === 'date') {
+        return 'date';
+    }
+
+    if (normalized === 'time') {
+        return 'time';
+    }
+
+    if (
+        normalized.includes('count')
+        || normalized.includes('size')
+        || normalized.includes('bytes')
+        || normalized.includes('ms')
+        || normalized.includes('code')
+        || normalized.includes('status')
+    ) {
+        return 'number';
+    }
+
+    return 'string';
+}
+
+function toCustomFormatPattern(format: StoredUserLogFormat): LogFormatPattern | null {
+    try {
+        const groups = extractNamedGroups(format.regex);
+
+        return {
+            id: format.id,
+            name: format.name,
+            description: format.description,
+            priority: 110,
+            patterns: [new RegExp(format.regex, 'm')],
+            fields: groups.map((group) => ({
+                name: group,
+                description: `Custom field: ${group}`,
+                type: getFieldType(group),
+            })),
+        };
+    } catch {
+        return null;
+    }
+}
+
 /**
  * Loads log formats from JSON file
  */
@@ -97,6 +193,13 @@ let formatsInitialized = false;
 export async function initializeLogFormats(): Promise<void> {
     if (!formatsInitialized) {
         await loadLogFormatsFromJSON();
+        const userFormats = loadUserFormatsFromStorage();
+        userFormats.forEach((format) => {
+            const mapped = toCustomFormatPattern(format);
+            if (mapped) {
+                registerCustomLogFormat(mapped);
+            }
+        });
         formatsInitialized = true;
     }
 }
@@ -169,6 +272,25 @@ export function registerCustomLogFormat(format: LogFormatPattern): void {
         // Add new format
         LOG_FORMAT_PATTERNS.push(format);
     }
+}
+
+/**
+ * Removes a log format by ID.
+ */
+export function unregisterLogFormat(id: string): void {
+    LOG_FORMAT_PATTERNS = LOG_FORMAT_PATTERNS.filter(format => format.id !== id);
+}
+
+/**
+ * Maps user-defined format data to runtime pattern structure.
+ */
+export function buildCustomFormatPattern(format: {
+    id: string;
+    name: string;
+    description: string;
+    regex: string;
+}): LogFormatPattern | null {
+    return toCustomFormatPattern(format);
 }
 
 /**

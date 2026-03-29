@@ -1,4 +1,55 @@
 {
-    "appTitle": "Журнал"
+  "appTitle": "Журнал",
+  "common": {
+    "unknown": "неизвестно"
+  },
+  "sidebar": {
+    "groups": {
+      "logs": "Логи",
+      "resources": "Ресурсы"
+    },
+    "items": {
+      "viewLogs": "Просмотр логов",
+      "dashboard": "Дашборд",
+      "logFormats": "Форматы логов",
+      "pretrainedModels": "Предобученные модели",
+      "about": "О приложении",
+      "settings": "Настройки"
+    }
+  },
+  "dashboard": {
+    "title": "Дашборд логов",
+    "selectFileDescription": "Выберите файл логов, чтобы посмотреть статистику и аналитику.",
+    "noDataDescription": "Пока нет данных для аналитики.",
+    "fileAndFormat": "Файл: {{fileName}} | Обнаруженный формат: {{format}}",
+    "largeFilePreviewNotice": "Режим большого файла: дашборд строится по preview файла и может отличаться от полного просмотра таблицы.",
+    "largeFileFullScanNotice": "Режим большого файла: все графики дашборда считаются по всему файлу (таймлайн использует сэмплирование точек).",
+    "histogramBuilding": "Строим гистограмму по всему файлу в фоне... {{progress}}%",
+    "noParsedWarning": "Дашборд не смог разобрать ни одной строки. Добавьте или обновите подходящий формат логов.",
+    "detectedFormatsTitle": "Обнаруженные форматы в текущем файле",
+    "noParsedFormats": "Нет распознанных форматов",
+    "topFieldsTitle": "Топ распределений по полям",
+    "topFieldsDescription": "Дополнительные распределения по другим полям.",
+    "metrics": {
+      "totalLines": "Всего строк",
+      "parsedLines": "Распознано строк",
+      "unparsedLines": "Нераспознанные строки",
+      "parseRate": "Доля распознавания"
+    },
+    "charts": {
+      "levels": "Уровни",
+      "httpStatus": "HTTP / Статус",
+      "httpMethods": "HTTP-методы"
+    },
+    "dynamicFields": {
+      "queue": "Очередь",
+      "type": "Тип",
+      "component": "Компонент",
+      "host": "Хост",
+      "user": "Пользователь",
+      "class": "Класс",
+      "ip": "IP",
+      "generic": "Поле: {{field}}"
+    }
   }
-  
+}

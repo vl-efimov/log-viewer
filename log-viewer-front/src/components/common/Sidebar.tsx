@@ -7,13 +7,15 @@ import ListItemButton from '@mui/material/ListItemButton';
 import Divider from '@mui/material/Divider';
 import ListSubheader from '@mui/material/ListSubheader';
 import PreviewIcon from '@mui/icons-material/Preview';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import SettingsIcon from '@mui/icons-material/Settings';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../../routes/routePaths';
+import { useTranslation } from 'react-i18next';
+import { RouteDashboard, RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../../routes/routePaths';
 import { RouteAbout } from '../../routes/routePaths';
 import { baseUrl } from '../../constants/BaseUrl';
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constants/sidebar';
@@ -25,6 +27,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
     const [isRendered, setIsRendered] = useState(isSidebarOpen);
     const location = useLocation();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (isSidebarOpen) {
@@ -37,16 +40,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
 
     const topMenuItems = [
         {
-            subheader: 'Logs',
+            subheader: t('sidebar.groups.logs'),
             items: [
-                { text: 'View logs', icon: <PreviewIcon />, path: RouteViewLogs },
+                { text: t('sidebar.items.viewLogs'), icon: <PreviewIcon />, path: RouteViewLogs },
+                { text: t('sidebar.items.dashboard'), icon: <DashboardIcon />, path: RouteDashboard },
             ]
         },
         {
-            subheader: 'Resources',
+            subheader: t('sidebar.groups.resources'),
             items: [
-                { text: 'Log formats', icon: <DescriptionIcon />, path: RouteLogFormats },
-                { text: 'Pretrained models', icon: <ModelTrainingIcon />, path: RoutePretrainedModels },
+                { text: t('sidebar.items.logFormats'), icon: <DescriptionIcon />, path: RouteLogFormats },
+                { text: t('sidebar.items.pretrainedModels'), icon: <ModelTrainingIcon />, path: RoutePretrainedModels },
             ]
         },
     ];
@@ -145,7 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                         }}
                     >
                         <ListItemIcon sx={{ minWidth: 40 }}><InfoOutlinedIcon /></ListItemIcon>
-                        {isRendered && <ListItemText primary={'About'} />}
+                        {isRendered && <ListItemText primary={t('sidebar.items.about')} />}
                     </ListItemButton>
                     <Divider sx={{ marginY: 1 }} />
                     <ListItemButton
@@ -160,7 +164,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                         }}
                     >
                         <ListItemIcon sx={{ minWidth: 40 }}><SettingsIcon /></ListItemIcon>
-                        {isRendered && <ListItemText primary={'Settings'} />}
+                        {isRendered && <ListItemText primary={t('sidebar.items.settings')} />}
                     </ListItemButton>
                 </List>
             </Box>

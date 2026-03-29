@@ -7,6 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 import type { ParsedLogLine } from '../utils/logFormatDetector';
 
 // Log level colors - consistent across different log formats
@@ -35,6 +36,10 @@ const LOG_LEVEL_COLORS: Record<string, string> = {
     'warning': '#ff9800',
     'NOTICE': '#ffc107',
     'notice': '#ffc107',
+    'KERNEL': '#ef6c00',
+    'kernel': '#ef6c00',
+    'APP': '#3949ab',
+    'app': '#3949ab',
     
     // Info levels
     'INFO': '#2196f3',
@@ -82,6 +87,10 @@ const LOG_LEVEL_PRIORITY: Record<string, number> = {
     'warning': 70,
     'NOTICE': 60,
     'notice': 60,
+    'KERNEL': 58,
+    'kernel': 58,
+    'APP': 52,
+    'app': 52,
     'INFO': 50,
     'info': 50,
     'DEBUG': 30,
@@ -109,6 +118,33 @@ interface LogHistogramProps {
     height?: number;
     /** Callback when time range changes via slider */
     onTimeRangeChange?: (startTime: number | null, endTime: number | null) => void;
+}
+
+interface TimedParsedLine {
+    lineNumber: number;
+    parsed: ParsedLogLine;
+    raw: string;
+    timestampMs: number;
+}
+
+const CATEGORY_FIELD_CANDIDATES = [
+    'level',
+    'status',
+    'method',
+    'type',
+    'queue',
+    'component',
+    'host',
+    'process',
+    'class',
+];
+
+const CHART_CATEGORY_COLORS = ['#5C6BC0', '#26A69A', '#EF5350', '#FFA726', '#42A5F5', '#AB47BC', '#66BB6A', '#8D6E63'];
+
+function resolveLocale(language: string): string {
+    if (language === 'cz') return 'cs-CZ';
+    if (language === 'ru') return 'ru-RU';
+    return 'en-US';
 }
 
 /**
@@ -158,8 +194,133 @@ function parseTimestamp(timestamp: string): Date | null {
             return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(min), parseInt(sec));
         }
     }
+
+    // Format: YYYY-MM-DD-HH.MM.SS.microseconds (BGL old style)
+    const bglOldMatch = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})\.(\d{2})\.(\d{2})\.(\d{1,6})$/);
+    if (bglOldMatch) {
+        const [, year, month, day, hour, min, sec, micros] = bglOldMatch;
+        const ms = Math.floor(parseInt(micros.padEnd(6, '0').slice(0, 6), 10) / 1000);
+        return new Date(
+            parseInt(year, 10),
+            parseInt(month, 10) - 1,
+            parseInt(day, 10),
+            parseInt(hour, 10),
+            parseInt(min, 10),
+            parseInt(sec, 10),
+            ms
+        );
+    }
     
     return null;
+}
+
+function extractTimestampFromParsedLine(parsed: ParsedLogLine): number | null {
+    const directCandidates = [parsed.fields.timestamp, parsed.fields.datetime];
+
+    for (const candidate of directCandidates) {
+        if (!candidate) continue;
+        const ts = parseTimestamp(candidate);
+        if (ts) {
+            return ts.getTime();
+        }
+    }
+
+    if (parsed.fields.date && parsed.fields.time) {
+        const msPart = parsed.fields.milliseconds || parsed.fields.ms;
+        const combined = msPart
+            ? `${parsed.fields.date} ${parsed.fields.time},${msPart}`
+            : `${parsed.fields.date} ${parsed.fields.time}`;
+        const ts = parseTimestamp(combined);
+        if (ts) {
+            return ts.getTime();
+        }
+    }
+
+    if (parsed.fields.date) {
+        const ts = parseTimestamp(parsed.fields.date);
+        if (ts) {
+            return ts.getTime();
+        }
+    }
+
+    return null;
+}
+
+function isFieldSuitableForGrouping(
+    field: string,
+    stats: { present: number; unique: number; maxLength: number },
+    totalLines: number
+): boolean {
+    if (stats.present === 0 || stats.unique <= 1) {
+        return false;
+    }
+
+    const presenceRatio = totalLines > 0 ? stats.present / totalLines : 0;
+    if (presenceRatio < 0.2) {
+        return false;
+    }
+
+    if (field === 'level') {
+        return stats.unique <= 16 && stats.maxLength <= 20;
+    }
+
+    if (field === 'status') {
+        // Status values are often words like RUNNING/COMPLETED, so keep this wider
+        // than generic fields to preserve semantic priority over queue.
+        return stats.unique <= 120 && stats.maxLength <= 24;
+    }
+
+    return stats.unique <= 12 && stats.maxLength <= 28;
+}
+
+function selectCategoryField(lines: TimedParsedLine[]): string | null {
+    const statsByField = new Map<string, { present: number; unique: number; maxLength: number }>();
+    for (const field of CATEGORY_FIELD_CANDIDATES) {
+        let present = 0;
+        const values = new Set<string>();
+        let maxLength = 0;
+
+        for (const line of lines) {
+            const value = line.parsed.fields[field];
+            if (!value) continue;
+            const normalized = value.trim();
+            if (!normalized) continue;
+            present += 1;
+            values.add(normalized.toUpperCase());
+            if (normalized.length > maxLength) {
+                maxLength = normalized.length;
+            }
+        }
+        statsByField.set(field, { present, unique: values.size, maxLength });
+    }
+
+    // Prefer fields by semantic priority order from CATEGORY_FIELD_CANDIDATES.
+    for (const field of CATEGORY_FIELD_CANDIDATES) {
+        const stats = statsByField.get(field);
+        if (!stats) continue;
+        if (isFieldSuitableForGrouping(field, stats, lines.length)) {
+            return field;
+        }
+    }
+
+    return null;
+}
+
+function getCategoryColor(category: string, categoryField: string | null): string {
+    if (category === 'UNKNOWN' || category === 'unknown') {
+        return LOG_LEVEL_COLORS.UNKNOWN;
+    }
+
+    if (categoryField === 'level') {
+        return LOG_LEVEL_COLORS[category] || LOG_LEVEL_COLORS.UNKNOWN;
+    }
+
+    let hash = 0;
+    for (let i = 0; i < category.length; i += 1) {
+        hash = (hash * 31 + category.charCodeAt(i)) >>> 0;
+    }
+
+    return CHART_CATEGORY_COLORS[hash % CHART_CATEGORY_COLORS.length];
 }
 
 /**
@@ -209,28 +370,28 @@ function formatBucketSize(ms: number): string {
 /**
  * Formats timestamp for display on X axis
  */
-function formatTimeLabel(timestamp: number, bucketSize: number): string {
+function formatTimeLabel(timestamp: number, bucketSize: number, locale: string): string {
     const date = new Date(timestamp);
     
     if (bucketSize >= 86400000) {
         // Day or larger: show date
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
     } else if (bucketSize >= 3600000) {
         // Hour or larger: show date and hour
-        return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
     } else {
         // Smaller: show time with seconds
-        return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
 }
 
-function formatAxisTimeLabel(timestamp: number, rangeMs: number, bucketSize: number): string {
+function formatAxisTimeLabel(timestamp: number, rangeMs: number, bucketSize: number, locale: string): string {
     const date = new Date(timestamp);
-    const monthDay = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const monthYear = date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-    const year = date.toLocaleDateString(undefined, { year: 'numeric' });
-    const hhmm = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    const hhmmss = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const monthDay = date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+    const monthYear = date.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
+    const year = date.toLocaleDateString(locale, { year: 'numeric' });
+    const hhmm = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    const hhmmss = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const isMidnight = date.getHours() === 0 && date.getMinutes() === 0;
 
     // Very coarse scales: only year or month-year labels.
@@ -292,6 +453,8 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     height = 180,
     onTimeRangeChange,
 }) => {
+    const { i18n } = useTranslation();
+    const locale = useMemo(() => resolveLocale(i18n.language), [i18n.language]);
     const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
     const [selectedRange, setSelectedRange] = useState<{ start: number | null; end: number | null }>({
         start: null,
@@ -303,10 +466,23 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     });
     
     const { validLines, timeRange } = useMemo(() => {
-        // Extract lines with valid timestamps and levels
-        const validLines = parsedLines.filter(line => {
-            if (!line.parsed?.fields?.timestamp) return false;
-            return parseTimestamp(line.parsed.fields.timestamp) !== null;
+        // Extract lines with valid timestamps from any known time fields.
+        const validLines: TimedParsedLine[] = parsedLines.flatMap((line) => {
+            if (!line.parsed) {
+                return [];
+            }
+
+            const timestampMs = extractTimestampFromParsedLine(line.parsed);
+            if (timestampMs === null) {
+                return [];
+            }
+
+            return [{
+                lineNumber: line.lineNumber,
+                parsed: line.parsed,
+                raw: line.raw,
+                timestampMs,
+            }];
         });
         
         if (validLines.length === 0) {
@@ -314,10 +490,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         }
         
         // Get all timestamps
-        const timestamps = validLines.map(line => {
-            const ts = parseTimestamp(line.parsed!.fields.timestamp);
-            return ts!.getTime();
-        });
+        const timestamps = validLines.map(line => line.timestampMs);
         
         const minTime = Math.min(...timestamps);
         const maxTime = Math.max(...timestamps);
@@ -326,6 +499,8 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             timeRange: { min: minTime, max: maxTime },
         };
     }, [parsedLines]);
+
+    const categoryField = useMemo(() => selectCategoryField(validLines), [validLines]);
 
     const buildHistogram = useCallback((
         lines: typeof validLines,
@@ -338,24 +513,26 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
         const bucketSize = calculateBucketSize(range.start, range.end, targetBuckets);
         const buckets: Map<number, Record<string, number>> = new Map();
-        const levelSet = new Set<string>();
+        const categorySet = new Set<string>();
 
         lines.forEach(line => {
-            const ts = parseTimestamp(line.parsed!.fields.timestamp)!.getTime();
+            const ts = line.timestampMs;
             if (ts < range.start || ts > range.end) return;
             const bucketKey = Math.floor(ts / bucketSize) * bucketSize;
-            const level = (line.parsed!.fields.level || 'UNKNOWN').toUpperCase();
+            const category = categoryField
+                ? (line.parsed.fields[categoryField] || 'UNKNOWN').toUpperCase()
+                : 'UNKNOWN';
 
-            levelSet.add(level);
+            categorySet.add(category);
 
             if (!buckets.has(bucketKey)) {
                 buckets.set(bucketKey, {});
             }
             const bucket = buckets.get(bucketKey)!;
-            bucket[level] = (bucket[level] || 0) + 1;
+            bucket[category] = (bucket[category] || 0) + 1;
         });
 
-        const logLevels = Array.from(levelSet).sort((a, b) => {
+        const logLevels = Array.from(categorySet).sort((a, b) => {
             const priorityA = LOG_LEVEL_PRIORITY[a] || 0;
             const priorityB = LOG_LEVEL_PRIORITY[b] || 0;
             return priorityA - priorityB;
@@ -364,13 +541,13 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         const chartData: HistogramDataPoint[] = Array.from(buckets.entries())
             .sort(([a], [b]) => a - b)
             .map(([timestamp, levels]) => ({
-                time: formatTimeLabel(timestamp, bucketSize),
+                time: formatTimeLabel(timestamp, bucketSize, locale),
                 timestamp,
                 ...levels,
             }));
 
         return { chartData, logLevels, bucketSize };
-    }, []);
+    }, [categoryField, locale]);
 
     const fullHistogram = useMemo(() => {
         if (!timeRange) {
@@ -422,7 +599,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             type: 'bar',
             stack: 'total',
             emphasis: { focus: 'series' },
-            itemStyle: { color: LOG_LEVEL_COLORS[level] || LOG_LEVEL_COLORS.UNKNOWN },
+            itemStyle: { color: getCategoryColor(level, categoryField) },
             data: mainHistogram.chartData.map(point => [
                 point.timestamp + bucketMidOffset,
                 typeof point[level] === 'number' ? point[level] : 0,
@@ -458,7 +635,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     hideOverlap: false,
                     showMinLabel: true,
                     showMaxLabel: true,
-                    formatter: (value: number) => formatAxisTimeLabel(value, selectedRangeMs, mainHistogram.bucketSize),
+                    formatter: (value: number) => formatAxisTimeLabel(value, selectedRangeMs, mainHistogram.bucketSize, locale),
                 },
             },
             yAxis: {
@@ -467,7 +644,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             },
             series,
         };
-    }, [mainHistogram, selectedRange, timeRange]);
+    }, [categoryField, locale, mainHistogram, selectedRange, timeRange]);
 
     const zoomChartOption = useMemo(() => {
         const zoomBucketMidOffset = Math.floor(zoomHistogram.bucketSize / 2);
@@ -640,6 +817,11 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
                         ({mainHistogram.chartData.length} intervals, {formatBucketSize(mainHistogram.bucketSize)} each)
                     </Typography>
+                    {categoryField && (
+                        <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                            grouped by {categoryField}
+                        </Typography>
+                    )}
                 </Typography>
                 <Tooltip title={isCollapsed ? 'Expand histogram' : 'Collapse histogram'}>
                     <IconButton size="small">
