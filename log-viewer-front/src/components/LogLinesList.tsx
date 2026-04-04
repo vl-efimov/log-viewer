@@ -5,7 +5,9 @@ import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 
 interface DisplayLine {
     displayLineNumber: number;
+    sourceLineNumber?: number;
     raw: string;
+    anomalyStatus?: 'anomaly' | 'normal';
 }
 
 interface LogLinesListProps {
@@ -79,6 +81,30 @@ const LogLinesList: FC<LogLinesListProps> = ({
                             }}
                         >
                             {row.displayLineNumber}
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                minWidth: '72px',
+                                color: row.anomalyStatus === 'anomaly'
+                                    ? '#d81b60'
+                                    : row.anomalyStatus === 'normal'
+                                        ? 'text.secondary'
+                                        : 'text.disabled',
+                                fontWeight: row.anomalyStatus === 'anomaly' ? 700 : 400,
+                                fontFamily: 'monospace',
+                                fontSize: '0.75rem',
+                                lineHeight: '20px',
+                                userSelect: 'none',
+                                mr: 2,
+                                flexShrink: 0,
+                            }}
+                        >
+                            {row.anomalyStatus === 'anomaly'
+                                ? 'ANOMALY'
+                                : row.anomalyStatus === 'normal'
+                                    ? 'NORMAL'
+                                    : 'UNDEFINED'}
                         </Typography>
                         <Typography
                             variant="body2"

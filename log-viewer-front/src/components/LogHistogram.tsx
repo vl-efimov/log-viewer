@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -118,6 +118,15 @@ interface LogHistogramProps {
     height?: number;
     /** Callback when time range changes via slider */
     onTimeRangeChange?: (startTime: number | null, endTime: number | null) => void;
+    /** Optional anomaly regions from backend */
+    anomalyRegions?: Array<{
+        start_line: number;
+        end_line: number;
+        start_timestamp: string | null;
+        end_timestamp: string | null;
+    }>;
+    anomalyLineNumbers?: number[];
+    onAnomalyRangeSelect?: (startLine: number, endLine: number) => void;
 }
 
 interface TimedParsedLine {
@@ -125,6 +134,14 @@ interface TimedParsedLine {
     parsed: ParsedLogLine;
     raw: string;
     timestampMs: number;
+}
+
+interface ResolvedAnomalyRange {
+    key: string;
+    start: number;
+    end: number;
+    startLine: number;
+    endLine: number;
 }
 
 const CATEGORY_FIELD_CANDIDATES = [
@@ -452,6 +469,9 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     defaultCollapsed = false,
     height = 180,
     onTimeRangeChange,
+    anomalyRegions,
+    anomalyLineNumbers,
+    onAnomalyRangeSelect,
 }) => {
     const { i18n } = useTranslation();
     const locale = useMemo(() => resolveLocale(i18n.language), [i18n.language]);
@@ -464,6 +484,10 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         leftPercent: 0,
         rightPercent: 0,
     });
+    const [hoveredAnomalyRangeKey, setHoveredAnomalyRangeKey] = useState<string | null>(null);
+    const [hoveredAnomalyPointer, setHoveredAnomalyPointer] = useState<{ x: number; y: number } | null>(null);
+    const [sliderReadyVersion, setSliderReadyVersion] = useState(0);
+    const zoomSliderRef = useRef<ReactECharts | null>(null);
     
     const { validLines, timeRange } = useMemo(() => {
         // Extract lines with valid timestamps from any known time fields.
@@ -489,11 +513,19 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             return { validLines: [], timeRange: null };
         }
         
-        // Get all timestamps
-        const timestamps = validLines.map(line => line.timestampMs);
-        
-        const minTime = Math.min(...timestamps);
-        const maxTime = Math.max(...timestamps);
+        // Use an iterative scan to avoid stack overflow on very large arrays.
+        let minTime = validLines[0].timestampMs;
+        let maxTime = validLines[0].timestampMs;
+        for (let i = 1; i < validLines.length; i += 1) {
+            const ts = validLines[i].timestampMs;
+            if (ts < minTime) {
+                minTime = ts;
+            }
+            if (ts > maxTime) {
+                maxTime = ts;
+            }
+        }
+
         return {
             validLines,
             timeRange: { min: minTime, max: maxTime },
@@ -646,8 +678,379 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         };
     }, [categoryField, locale, mainHistogram, selectedRange, timeRange]);
 
+    const resolvedAnomalyRanges = useMemo((): ResolvedAnomalyRange[] => {
+        const zoomLineMinX = timeRange?.min ?? null;
+        const zoomLineMaxX = timeRange?.max ?? null;
+
+        const sanitizeRanges = <T extends { start: number; end: number; startLine: number; endLine: number }>(ranges: T[]): T[] => (
+            ranges
+                .filter((range) => Number.isFinite(range.start) && Number.isFinite(range.end) && range.end > range.start)
+                .sort((a, b) => a.start - b.start)
+        );
+
+        const sortedValid = [...validLines].sort((a, b) => a.lineNumber - b.lineNumber);
+        const timestampByLine = new Map<number, number>();
+        const validLineNumbers: number[] = [];
+        for (const line of sortedValid) {
+            timestampByLine.set(line.lineNumber, line.timestampMs);
+            validLineNumbers.push(line.lineNumber);
+        }
+
+        const lowerBound = (arr: number[], value: number): number => {
+            let left = 0;
+            let right = arr.length;
+            while (left < right) {
+                const mid = Math.floor((left + right) / 2);
+                if (arr[mid] < value) {
+                    left = mid + 1;
+                } else {
+                    right = mid;
+                }
+            }
+            return left;
+        };
+
+        const resolveStartTimestamp = (startLine: number, endLine: number): number | null => {
+            const direct = timestampByLine.get(startLine);
+            if (direct !== undefined) {
+                return direct;
+            }
+
+            const idx = lowerBound(validLineNumbers, startLine);
+            if (idx >= validLineNumbers.length) {
+                return null;
+            }
+            const candidateLine = validLineNumbers[idx];
+            if (candidateLine > endLine) {
+                return null;
+            }
+            return timestampByLine.get(candidateLine) ?? null;
+        };
+
+        const resolveEndTimestamp = (startLine: number, endLine: number): number | null => {
+            const direct = timestampByLine.get(endLine);
+            if (direct !== undefined) {
+                return direct;
+            }
+
+            const idx = lowerBound(validLineNumbers, endLine + 1) - 1;
+            if (idx < 0) {
+                return null;
+            }
+            const candidateLine = validLineNumbers[idx];
+            if (candidateLine < startLine) {
+                return null;
+            }
+            return timestampByLine.get(candidateLine) ?? null;
+        };
+
+        const fromLines = (() => {
+            if (!anomalyLineNumbers || anomalyLineNumbers.length === 0) {
+                return [] as Array<{ start: number; end: number; startLine: number; endLine: number }>;
+            }
+
+            const sortedLines = Array.from(new Set(anomalyLineNumbers)).sort((a, b) => a - b);
+            if (sortedValid.length === 0) {
+                return [] as Array<{ start: number; end: number; startLine: number; endLine: number }>;
+            }
+
+            const presentLineNumbers = new Set(parsedLines.map((line) => line.lineNumber));
+            const isGapOnlyHiddenLines = (fromLineExclusive: number, toLineExclusive: number): boolean => {
+                for (let lineNo = fromLineExclusive + 1; lineNo < toLineExclusive; lineNo += 1) {
+                    if (presentLineNumbers.has(lineNo)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            const runs: Array<{ startLine: number; endLine: number }> = [];
+            for (const lineNumber of sortedLines) {
+                const last = runs[runs.length - 1];
+                if (!last) {
+                    runs.push({ startLine: lineNumber, endLine: lineNumber });
+                    continue;
+                }
+
+                const isDirectlyAdjacent = lineNumber <= (last.endLine + 1);
+                const canMergeThroughHiddenGap = !isDirectlyAdjacent
+                    && isGapOnlyHiddenLines(last.endLine, lineNumber);
+
+                if (isDirectlyAdjacent || canMergeThroughHiddenGap) {
+                    last.endLine = lineNumber;
+                } else {
+                    runs.push({ startLine: lineNumber, endLine: lineNumber });
+                }
+            }
+
+            return runs.flatMap((run) => {
+                // Build time bounds from all valid lines inside the run. This keeps
+                // overlays correct even when file line order is not chronological.
+                const rangeStartIndex = lowerBound(validLineNumbers, run.startLine);
+                const rangeEndExclusive = lowerBound(validLineNumbers, run.endLine + 1);
+
+                let minTs = Number.POSITIVE_INFINITY;
+                let maxTs = Number.NEGATIVE_INFINITY;
+                for (let i = rangeStartIndex; i < rangeEndExclusive; i += 1) {
+                    const ts = timestampByLine.get(validLineNumbers[i]);
+                    if (ts === undefined) {
+                        continue;
+                    }
+                    if (ts < minTs) {
+                        minTs = ts;
+                    }
+                    if (ts > maxTs) {
+                        maxTs = ts;
+                    }
+                }
+
+                const hasInternalTimestamps = Number.isFinite(minTs) && Number.isFinite(maxTs);
+                const startCandidate = hasInternalTimestamps ? minTs : resolveStartTimestamp(run.startLine, run.endLine);
+                const endCandidate = hasInternalTimestamps ? maxTs : resolveEndTimestamp(run.startLine, run.endLine);
+
+                if (startCandidate === null || endCandidate === null) {
+                    return [];
+                }
+
+                const rawStart = Math.min(startCandidate, endCandidate);
+                const rawEndBase = Math.max(startCandidate, endCandidate);
+                const rawEnd = rawEndBase === rawStart ? rawStart + 1 : rawEndBase;
+
+                const clampedStart = zoomLineMinX !== null ? Math.max(zoomLineMinX, rawStart) : rawStart;
+                const clampedEnd = zoomLineMaxX !== null ? Math.min(zoomLineMaxX, rawEnd) : rawEnd;
+
+                if (clampedEnd <= clampedStart) {
+                    return [];
+                }
+
+                return [{ start: clampedStart, end: clampedEnd, startLine: run.startLine, endLine: run.endLine }];
+            });
+        })();
+
+        const fromRegions = (() => {
+            return (anomalyRegions || []).flatMap((region) => {
+                // Strict mode: use exact timestamps of boundary lines.
+                const start = timestampByLine.get(region.start_line)
+                    ?? (region.start_timestamp ? parseTimestamp(region.start_timestamp)?.getTime() ?? null : null);
+                const end = timestampByLine.get(region.end_line)
+                    ?? (region.end_timestamp ? parseTimestamp(region.end_timestamp)?.getTime() ?? null : null);
+
+                if (start === null || end === null) {
+                    return [];
+                }
+
+                const rawStart = Math.min(start, end);
+                const rawEndBase = Math.max(start, end);
+                const rawEnd = rawEndBase === rawStart ? rawStart + 1 : rawEndBase;
+
+                const clampedStart = zoomLineMinX !== null ? Math.max(zoomLineMinX, rawStart) : rawStart;
+                const clampedEnd = zoomLineMaxX !== null ? Math.min(zoomLineMaxX, rawEnd) : rawEnd;
+
+                if (clampedEnd <= clampedStart) {
+                    return [];
+                }
+
+                return [{
+                    start: clampedStart,
+                    end: clampedEnd,
+                    startLine: region.start_line,
+                    endLine: region.end_line,
+                }];
+            });
+        })();
+
+        // Keep chart overlays aligned with table highlighting:
+        // table uses anomalyLineNumbers, so prefer them as the source of truth.
+        const ranges = fromLines.length > 0 ? fromLines : fromRegions;
+        return sanitizeRanges(ranges).map((range, index) => ({
+            ...range,
+            key: `${index}:${range.startLine}:${range.endLine}:${Math.round(range.start)}:${Math.round(range.end)}`,
+        }));
+    }, [anomalyLineNumbers, anomalyRegions, parsedLines, timeRange, validLines]);
+
+    const hoveredAnomalyRange = useMemo(() => (
+        resolvedAnomalyRanges.find((range) => range.key === hoveredAnomalyRangeKey) ?? null
+    ), [hoveredAnomalyRangeKey, resolvedAnomalyRanges]);
+
+    useEffect(() => {
+        if (resolvedAnomalyRanges.length === 0) {
+            setHoveredAnomalyRangeKey(null);
+            setHoveredAnomalyPointer(null);
+            return;
+        }
+
+        if (!hoveredAnomalyRangeKey) {
+            setHoveredAnomalyPointer(null);
+            return;
+        }
+
+        const stillExists = resolvedAnomalyRanges.some((range) => range.key === hoveredAnomalyRangeKey);
+        if (!stillExists) {
+            setHoveredAnomalyRangeKey(null);
+            setHoveredAnomalyPointer(null);
+        }
+    }, [hoveredAnomalyRangeKey, resolvedAnomalyRanges]);
+
+    const findAnomalyRangeByTime = useCallback((timestamp: number): ResolvedAnomalyRange | null => {
+        const matches = resolvedAnomalyRanges.filter((range) => timestamp >= range.start && timestamp <= range.end);
+        if (matches.length === 0) {
+            return null;
+        }
+        if (matches.length === 1) {
+            return matches[0];
+        }
+
+        let best = matches[0];
+        let minDistance = Number.POSITIVE_INFINITY;
+        for (const range of matches) {
+            const center = (range.start + range.end) / 2;
+            const distance = Math.abs(center - timestamp);
+            if (distance < minDistance) {
+                minDistance = distance;
+                best = range;
+            }
+        }
+
+        return best;
+    }, [resolvedAnomalyRanges]);
+
+    const resolveTimestampFromPixel = useCallback((offsetX: number, offsetY: number): number | null => {
+        const chart = zoomSliderRef.current?.getEchartsInstance();
+        if (!chart) {
+            return null;
+        }
+
+        const converted = chart.convertFromPixel({ xAxisIndex: 0 }, [offsetX, offsetY]);
+        if (Array.isArray(converted) && typeof converted[0] === 'number' && Number.isFinite(converted[0])) {
+            return converted[0];
+        }
+        if (typeof converted === 'number' && Number.isFinite(converted)) {
+            return converted;
+        }
+
+        if (timeRange) {
+            const chartWidth = chart.getWidth();
+            const axisLeft = zoomSliderGrid.left;
+            const axisRight = chartWidth - zoomSliderGrid.right;
+            const axisWidth = Math.max(1, axisRight - axisLeft);
+            const normalizedX = Math.max(0, Math.min(1, (offsetX - axisLeft) / axisWidth));
+            return timeRange.min + ((timeRange.max - timeRange.min) * normalizedX);
+        }
+
+        return null;
+    }, [timeRange]);
+
+    const handleAnomalyHover = useCallback((timestamp: number | null, pointer?: { x: number; y: number }) => {
+        if (timestamp === null) {
+            setHoveredAnomalyRangeKey(null);
+            setHoveredAnomalyPointer(null);
+            return;
+        }
+
+        const hovered = findAnomalyRangeByTime(timestamp);
+        setHoveredAnomalyRangeKey(hovered?.key ?? null);
+        if (hovered && pointer) {
+            setHoveredAnomalyPointer(pointer);
+        } else {
+            setHoveredAnomalyPointer(null);
+        }
+    }, [findAnomalyRangeByTime]);
+
+    const clearAnomalyHover = useCallback(() => {
+        setHoveredAnomalyRangeKey(null);
+        setHoveredAnomalyPointer(null);
+    }, []);
+
+    const handleAnomalyClick = useCallback((timestamp: number | null) => {
+        if (!onAnomalyRangeSelect) {
+            return;
+        }
+
+        const hovered = hoveredAnomalyRangeKey
+            ? resolvedAnomalyRanges.find((range) => range.key === hoveredAnomalyRangeKey) ?? null
+            : null;
+        if (hovered) {
+            onAnomalyRangeSelect(hovered.startLine, hovered.endLine);
+            return;
+        }
+
+        if (timestamp === null) {
+            return;
+        }
+
+        const range = findAnomalyRangeByTime(timestamp);
+        if (!range) {
+            return;
+        }
+
+        onAnomalyRangeSelect(range.startLine, range.endLine);
+    }, [findAnomalyRangeByTime, hoveredAnomalyRangeKey, onAnomalyRangeSelect, resolvedAnomalyRanges]);
+
+    useEffect(() => {
+        const chart = zoomSliderRef.current?.getEchartsInstance();
+        if (!chart) {
+            return;
+        }
+
+        const zr = chart.getZr();
+
+        const onMove = (event: { offsetX?: number; offsetY?: number }) => {
+            if (typeof event.offsetX !== 'number' || typeof event.offsetY !== 'number') {
+                handleAnomalyHover(null);
+                return;
+            }
+            handleAnomalyHover(
+                resolveTimestampFromPixel(event.offsetX, event.offsetY),
+                { x: event.offsetX, y: event.offsetY },
+            );
+        };
+
+        const onClick = (event: { offsetX?: number; offsetY?: number }) => {
+            if (typeof event.offsetX !== 'number' || typeof event.offsetY !== 'number') {
+                return;
+            }
+            handleAnomalyClick(resolveTimestampFromPixel(event.offsetX, event.offsetY));
+        };
+
+        const onOut = () => {
+            clearAnomalyHover();
+        };
+
+        zr.on('mousemove', onMove);
+        zr.on('click', onClick);
+        zr.on('globalout', onOut);
+
+        return () => {
+            zr.off('mousemove', onMove);
+            zr.off('click', onClick);
+            zr.off('globalout', onOut);
+        };
+    }, [
+        clearAnomalyHover,
+        handleAnomalyClick,
+        handleAnomalyHover,
+        resolveTimestampFromPixel,
+        sliderReadyVersion,
+        timeRange?.max,
+        timeRange?.min,
+    ]);
+
     const zoomChartOption = useMemo(() => {
         const zoomBucketMidOffset = Math.floor(zoomHistogram.bucketSize / 2);
+        const effectiveMarkAreaData = resolvedAnomalyRanges.map((range) => ([
+            {
+                xAxis: range.start,
+                itemStyle: {
+                    color: range.key === hoveredAnomalyRangeKey
+                        ? 'rgba(236, 64, 122, 0.5)'
+                        : 'rgba(255,182,193,0.35)',
+                },
+            },
+            {
+                xAxis: range.end,
+            },
+        ]));
+
         const totals = zoomHistogram.chartData.map(point =>
             zoomHistogram.logLevels.reduce((sum, level) => sum + (typeof point[level] === 'number' ? (point[level] as number) : 0), 0)
         );
@@ -657,6 +1060,8 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             grid: zoomChartGrid,
             xAxis: {
                 type: 'time',
+                min: timeRange?.min,
+                max: timeRange?.max,
                 axisLabel: { show: false },
                 axisTick: { show: false },
                 axisLine: { show: false },
@@ -676,10 +1081,16 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     smooth: true,
                     symbol: 'none',
                     lineStyle: { width: 1, color: '#90caf9' },
+                    markArea: effectiveMarkAreaData.length > 0
+                        ? {
+                            silent: false,
+                            data: effectiveMarkAreaData,
+                        }
+                        : undefined,
                 },
             ],
         };
-    }, [zoomHistogram]);
+    }, [hoveredAnomalyRangeKey, resolvedAnomalyRanges, timeRange, zoomHistogram]);
 
     const zoomSliderOption = useMemo(() => {
         if (!timeRange) {
@@ -849,11 +1260,37 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                             <ReactECharts
                                 option={zoomChartOption}
                                 style={{ height: 110 }}
+                                notMerge={true}
                             />
+                            {hoveredAnomalyRange && hoveredAnomalyPointer && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        left: `${hoveredAnomalyPointer.x}px`,
+                                        top: `${Math.max(16, hoveredAnomalyPointer.y - 8)}px`,
+                                        transform: 'translate(-50%, -100%)',
+                                        px: 1,
+                                        py: 0.25,
+                                        borderRadius: 1,
+                                        backgroundColor: 'rgba(236, 64, 122, 0.92)',
+                                        color: '#fff',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        pointerEvents: 'none',
+                                        zIndex: 30,
+                                        whiteSpace: 'nowrap',
+                                        boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                                    }}
+                                >
+                                    {hoveredAnomalyRange.startLine} - {hoveredAnomalyRange.endLine}
+                                </Box>
+                            )}
                             <Box sx={{ position: 'absolute', inset: 0 }}>
                                 <ReactECharts
+                                    ref={zoomSliderRef}
                                     option={zoomSliderOption}
                                     style={{ height: '100%' }}
+                                    onChartReady={() => setSliderReadyVersion((v) => v + 1)}
                                     onEvents={{ datazoom: handleZoom }}
                                 />
                             </Box>

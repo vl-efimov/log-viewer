@@ -5,19 +5,41 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import { RootState } from '../redux/store';
-import { updateLogContent, appendLogContent, setMonitoringState } from '../redux/slices/logFileSlice';
+import {
+    updateLogContent,
+    appendLogContent,
+    setAnomalyResults,
+    setAnomalyError,
+    setAnomalyRunning,
+    setAnomalyLastDurationSec,
+    updateAnomalyRowsPerSecond,
+    clearAnomalyResults,
+    setMonitoringState,
+} from '../redux/slices/logFileSlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
-import { parseLogFileForTable } from '../utils/logFormatExamples';
-import { getFormatFields, detectLogFormat, type LogFormatField } from '../utils/logFormatDetector';
+import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
 import { LogFiltersBar } from '../components/LogFiltersBar';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
 import { applyLogFilters, getFilteredCount } from '../utils/logFilters';
 import { FileSelectionView } from '../components/FileSelectionView';
 import { useFileLoader } from '../hooks/useFileLoader';
+import { useParsedRowsCache } from '../hooks/useParsedRowsCache';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
 import { sampleAndAnalyzeLargeFile } from '../utils/histogramSampling';
+import { isBglModelReady, predictBglAnomalies, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
+import {
+    ANOMALY_SETTINGS_DEFAULTS,
+    ANOMALY_STEP_SIZE_RANGE,
+    ANOMALY_THRESHOLD_RANGE,
+    ANOMALY_MIN_REGION_LINES_RANGE,
+    type AnomalySettings,
+    loadAnomalySettings,
+    loadSelectedAnomalyModelId,
+    saveAnomalySettings,
+    saveSelectedAnomalyModelId,
+} from '../utils/anomalySettings';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024; // 4 MB
 const LINE_INDEX_CHUNK_SIZE = 1_000_000; // Offsets per chunk
@@ -28,12 +50,18 @@ const MAX_RANGE_BYTES = 512 * 1024; // 512 KB
 const MAX_VIRTUAL_ROWS = 1_500_000;
 const WINDOW_REBASE_MARGIN = 200_000;
 const MAX_LARGE_FILE_VIEW_CACHE_ENTRIES = 3;
+const MAX_NORMAL_HISTOGRAM_SAMPLE_LINES = 50_000;
 
 type ViewParsedLine = {
     lineNumber: number;
-    parsed: import('../utils/logFormatDetector').ParsedLogLine | null;
+    parsed: ParsedLogLine | null;
     raw: string;
     error?: string;
+};
+
+type ViewRow = {
+    lineNumber: number;
+    raw: string;
 };
 
 type LineIndex = {
@@ -91,6 +119,63 @@ const popOffset = (index: LineIndex): number | null => {
     return value;
 };
 
+const buildRowsForView = (logContent: string): ViewRow[] => {
+    const lines = logContent.split(/\r?\n/);
+    const rows: ViewRow[] = [];
+
+    const isContinuationLine = (line: string): boolean => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            return false;
+        }
+
+        return (
+            /^\s+at\s+/.test(line)
+            || /^\s*\.\.\.\s+\d+\s+more$/.test(trimmed)
+            || /^\s*Caused by:/.test(trimmed)
+            || /^\s*Traceback\s+\(most recent call last\):/.test(trimmed)
+        );
+    };
+
+    for (let idx = 0; idx < lines.length; idx += 1) {
+        const raw = lines[idx];
+        const parsed = parseLogLineAuto(raw);
+        const previous = rows[rows.length - 1];
+        const canContinuePrevious = (
+            Boolean(previous)
+            && !parsed
+            && raw.trim().length > 0
+            && isContinuationLine(raw)
+        );
+
+        if (canContinuePrevious && previous) {
+            previous.raw = `${previous.raw}\n${raw}`;
+            continue;
+        }
+
+        rows.push({
+            lineNumber: idx + 1,
+            raw,
+        });
+    }
+
+    return rows;
+};
+
+const hasActiveFilters = (filters: LogFilters): boolean => {
+    for (const value of Object.values(filters)) {
+        if (!value) continue;
+        if (Array.isArray(value) && value.length > 0) return true;
+        if (typeof value === 'object' && 'value' in value) {
+            if (Boolean(value.value && value.value.trim().length > 0)) return true;
+        }
+        if (typeof value === 'object' && ('start' in value || 'end' in value)) {
+            if (Boolean(value.start || value.end)) return true;
+        }
+    }
+    return false;
+};
+
 const ViewLogsPage: React.FC = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
     const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -102,14 +187,20 @@ const ViewLogsPage: React.FC = () => {
     const {
         content,
         name: fileName,
+        format,
         isMonitoring,
         hasFileHandle,
         size: fileSize,
         isLargeFile,
         analyticsSessionId,
+        anomalyRegions,
+        anomalyLineNumbers,
+        hasAnomalyResults,
+        anomalyIsRunning,
+        anomalyRowsPerSecondByModel,
     } = useSelector((state: RootState) => state.logFile);
 
-    const [parsedLines, setParsedLines] = useState<ViewParsedLine[]>([]);
+    const [normalRows, setNormalRows] = useState<ViewRow[]>([]);
     const [filters, setFilters] = useState<LogFilters>({});
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -126,6 +217,12 @@ const ViewLogsPage: React.FC = () => {
     const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [histogramProgress, setHistogramProgress] = useState<number>(0);
     const [largeFileHistogramLines, setLargeFileHistogramLines] = useState<ViewParsedLine[]>([]);
+    const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
+    const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
+    const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
+    const [isModelReady, setIsModelReady] = useState<boolean>(false);
+    const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
+    const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
     const rebaseAnchorRef = useRef<number | null>(null);
     const rangeLoadStateRef = useRef<{ pending: { start: number; end: number } | null; isLoading: boolean }>({
         pending: null,
@@ -345,60 +442,72 @@ const ViewLogsPage: React.FC = () => {
     // Load initial content from Redux
     useEffect(() => {
         if (isLargeFile) {
-            setParsedLines([]);
+            setNormalRows([]);
+            clearParsedRowCache();
             previousLineCountRef.current = 0;
             lastSizeRef.current = fileSize;
             return;
         }
 
         const safeContent = content ?? "";
-        console.log('Content length in bytes:', safeContent.length);
-        console.log('Content lines count:', safeContent.split(/\r?\n/).length);
-
-        const parsed = parseLogFileForTable(safeContent);
-        console.log('Parsed lines count:', parsed.length);
-        if (parsed.length > 0) {
-            console.log('First line number:', parsed[0].lineNumber);
-            console.log('Last line number:', parsed[parsed.length - 1].lineNumber);
-        }
-
-        setParsedLines(parsed);
+        const rows = buildRowsForView(safeContent);
+        clearParsedRowCache();
+        setNormalRows(rows);
         setLastUpdate(new Date());
         // Track new lines added
-        if (previousLineCountRef.current > 0 && parsed.length - previousLineCountRef.current > 0) {
-            setNewLinesCount(parsed.length - previousLineCountRef.current);
+        if (previousLineCountRef.current > 0 && rows.length - previousLineCountRef.current > 0) {
+            setNewLinesCount(rows.length - previousLineCountRef.current);
             setTimeout(() => setNewLinesCount(0), 3000);
         }
-        previousLineCountRef.current = parsed.length;
+        previousLineCountRef.current = rows.length;
         lastSizeRef.current = fileSize;
-    }, [content, fileSize, isLargeFile]);
+    }, [clearParsedRowCache, content, fileSize, isLargeFile]);
 
-    // Apply filters to parsed lines
-    const filteredLines = useMemo(() => {
+    // Apply filters to lightweight rows using lazy parsing only when needed.
+    const filteredRows = useMemo(() => {
         if (isLargeFile) {
             return [];
         }
-        return applyLogFilters(parsedLines, filters);
-    }, [parsedLines, filters, isLargeFile]);
+
+        if (!hasActiveFilters(filters)) {
+            return normalRows;
+        }
+
+        const parsedRows = normalRows.map((row) => getParsedRow(row));
+        const filteredParsed = applyLogFilters(parsedRows, filters);
+        return filteredParsed.map((row) => ({ lineNumber: row.lineNumber, raw: row.raw }));
+    }, [filters, getParsedRow, isLargeFile, normalRows]);
+
+    const anomalyLineSet = useMemo(() => {
+        return new Set(anomalyLineNumbers);
+    }, [anomalyLineNumbers]);
 
     const displayLines = useMemo(() => {
         if (isLargeFile) {
             return [];
         }
 
-        const total = filteredLines.length;
         if (viewMode === 'live-tail') {
-            return filteredLines.slice().reverse().map((line, idx) => ({
-                raw: line.raw,
-                displayLineNumber: total - idx,
+            return filteredRows.slice().reverse().map((row) => ({
+                raw: row.raw,
+                // Preserve source numbering in reverse mode too (including skipped line gaps).
+                displayLineNumber: row.lineNumber,
+                sourceLineNumber: row.lineNumber,
+                anomalyStatus: hasAnomalyResults
+                    ? (anomalyLineSet.has(row.lineNumber) ? 'anomaly' as const : 'normal' as const)
+                    : undefined,
             }));
         }
 
-        return filteredLines.map((line) => ({
-            raw: line.raw,
-            displayLineNumber: line.lineNumber,
+        return filteredRows.map((row) => ({
+            raw: row.raw,
+            displayLineNumber: row.lineNumber,
+            sourceLineNumber: row.lineNumber,
+            anomalyStatus: hasAnomalyResults
+                ? (anomalyLineSet.has(row.lineNumber) ? 'anomaly' as const : 'normal' as const)
+                : undefined,
         }));
-    }, [filteredLines, viewMode, isLargeFile]);
+    }, [anomalyLineSet, filteredRows, hasAnomalyResults, viewMode, isLargeFile]);
 
     const getLineAtIndex = useCallback((displayIndex: number) => {
         if (!isLargeFile) {
@@ -421,8 +530,15 @@ const ViewLogsPage: React.FC = () => {
             ? lineCount - globalDisplayIndex
             : fileIndex + 1;
 
-        return { raw: rawEntry?.text ?? 'Loading...', displayLineNumber };
-    }, [displayLines, isLargeFile, lineCount, viewMode, lineCacheVersion, virtualWindowStart]);
+        return {
+            raw: rawEntry?.text ?? 'Loading...',
+            displayLineNumber,
+            sourceLineNumber: fileIndex + 1,
+            anomalyStatus: hasAnomalyResults
+                ? (anomalyLineSet.has(fileIndex + 1) ? 'anomaly' as const : 'normal' as const)
+                : undefined,
+        };
+    }, [anomalyLineSet, displayLines, hasAnomalyResults, isLargeFile, lineCount, viewMode, lineCacheVersion, virtualWindowStart]);
 
     const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
         if (!isLargeFile || lineCount === 0) return;
@@ -470,48 +586,399 @@ const ViewLogsPage: React.FC = () => {
     ]);
 
     const histogramSourceLines = useMemo(() => {
-        return isLargeFile ? largeFileHistogramLines : parsedLines;
-    }, [isLargeFile, largeFileHistogramLines, parsedLines]);
+        if (isLargeFile) {
+            return largeFileHistogramLines;
+        }
+
+        if (normalRows.length === 0) {
+            return [];
+        }
+
+        const step = Math.max(1, Math.ceil(normalRows.length / MAX_NORMAL_HISTOGRAM_SAMPLE_LINES));
+        const sampled: ViewParsedLine[] = [];
+        for (let i = 0; i < normalRows.length; i += step) {
+            sampled.push(getParsedRow(normalRows[i]));
+        }
+
+        return sampled;
+    }, [getParsedRow, isLargeFile, largeFileHistogramLines, normalRows]);
+
+    const handleAnomalyRangeSelect = useCallback((startLine: number, endLine: number) => {
+        const normalizedStart = Math.min(startLine, endLine);
+        const normalizedEnd = Math.max(startLine, endLine);
+        // In normal mode jump to range start; in live-tail jump to range end.
+        const targetSourceLine = viewMode === 'live-tail' ? normalizedEnd : normalizedStart;
+
+        if (targetSourceLine <= 0 || !Number.isFinite(targetSourceLine)) {
+            return;
+        }
+
+        if (isLargeFile) {
+            if (!virtuosoRef.current || lineCount <= 0) return;
+
+            const fileIndex = Math.max(0, Math.min(lineCount - 1, Math.floor(targetSourceLine) - 1));
+            const globalDisplayIndex = viewMode === 'live-tail'
+                ? Math.max(0, lineCount - 1 - fileIndex)
+                : fileIndex;
+
+            const currentVirtualCount = getVirtualWindowSize(virtualWindowStart, lineCount);
+            const localIndexInCurrentWindow = globalDisplayIndex - virtualWindowStart;
+            const isInsideCurrentWindow =
+                localIndexInCurrentWindow >= 0 && localIndexInCurrentWindow < currentVirtualCount;
+
+            if (isInsideCurrentWindow) {
+                rebaseAnchorRef.current = null;
+                setSelectedLine(Math.floor(targetSourceLine));
+                virtuosoRef.current.scrollToIndex({
+                    index: localIndexInCurrentWindow,
+                    align: 'center',
+                    behavior: 'auto',
+                });
+                return;
+            }
+
+            const targetIndex = setWindowAroundDisplayIndex(globalDisplayIndex);
+            rebaseAnchorRef.current = targetIndex;
+            setSelectedLine(Math.floor(targetSourceLine));
+            return;
+        }
+
+        if (!virtuosoRef.current || displayLines.length === 0) return;
+
+        let targetIndex = displayLines.findIndex((line) => line.sourceLineNumber === targetSourceLine);
+        if (targetIndex < 0) {
+            let bestIndex = -1;
+            let bestDistance = Number.POSITIVE_INFINITY;
+            let bestSource = Number.NaN;
+
+            for (let i = 0; i < displayLines.length; i += 1) {
+                const source = displayLines[i].sourceLineNumber ?? displayLines[i].displayLineNumber;
+                if (!Number.isFinite(source)) {
+                    continue;
+                }
+
+                const distance = Math.abs(source - targetSourceLine);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = i;
+                    bestSource = source;
+                    continue;
+                }
+
+                if (distance === bestDistance) {
+                    const preferCurrent = viewMode === 'live-tail'
+                        ? source > bestSource
+                        : source < bestSource;
+                    if (preferCurrent) {
+                        bestIndex = i;
+                        bestSource = source;
+                    }
+                }
+            }
+
+            targetIndex = bestIndex;
+        }
+
+        if (targetIndex < 0) {
+            return;
+        }
+
+        const targetLine = displayLines[targetIndex];
+        setSelectedLine(targetLine.displayLineNumber);
+        virtuosoRef.current.scrollToIndex({ index: targetIndex, align: 'center', behavior: 'auto' });
+    }, [
+        displayLines,
+        getVirtualWindowSize,
+        isLargeFile,
+        lineCount,
+        setWindowAroundDisplayIndex,
+        viewMode,
+        virtualWindowStart,
+    ]);
+
+    useEffect(() => {
+        if (!isMonitoring) {
+            dispatch(clearAnomalyResults());
+            dispatch(setAnomalyRunning({ running: false }));
+        }
+    }, [dispatch, isMonitoring]);
+
+    useEffect(() => {
+        if (!isMonitoring) {
+            setIsModelReady(false);
+            setIsModelReadyLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const checkModelReady = async () => {
+            setIsModelReadyLoading(true);
+            try {
+                const ready = await isBglModelReady(selectedModelId);
+                if (!cancelled) {
+                    setIsModelReady(ready);
+                }
+            } catch {
+                if (!cancelled) {
+                    setIsModelReady(false);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsModelReadyLoading(false);
+                }
+            }
+        };
+
+        void checkModelReady();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isMonitoring, selectedModelId]);
+
+    const handleSelectedModelChange = useCallback((modelId: 'bgl' | 'hdfs') => {
+        setSelectedModelId(modelId);
+        saveSelectedAnomalyModelId(modelId);
+        setIsAnomalySettingsPanelOpen(true);
+    }, []);
+
+    useEffect(() => {
+        setAnomalySettings(loadAnomalySettings(selectedModelId));
+    }, [selectedModelId]);
+
+    const updateAnomalySettings = useCallback((patch: Partial<AnomalySettings>) => {
+        setAnomalySettings((prev) => {
+            const next: AnomalySettings = {
+                ...prev,
+                ...patch,
+                modelId: selectedModelId,
+            };
+            saveAnomalySettings(next);
+            return next;
+        });
+    }, [selectedModelId]);
+
+    const applySensitivityProfile = useCallback((profileId: 'sensitive' | 'balanced' | 'strict') => {
+        const profiles: Record<'sensitive' | 'balanced' | 'strict', Pick<AnomalySettings, 'threshold' | 'stepSize' | 'minRegionLines'>> = {
+            sensitive: { threshold: 0.35, stepSize: 5, minRegionLines: 1 },
+            balanced: { threshold: 0.5, stepSize: 10, minRegionLines: 2 },
+            strict: { threshold: 0.7, stepSize: 20, minRegionLines: 3 },
+        };
+        updateAnomalySettings(profiles[profileId]);
+    }, [updateAnomalySettings]);
+
+    const resetAnomalySettings = useCallback(() => {
+        const reset: AnomalySettings = {
+            ...ANOMALY_SETTINGS_DEFAULTS,
+            modelId: selectedModelId,
+        };
+        setAnomalySettings(reset);
+        saveAnomalySettings(reset);
+    }, [selectedModelId]);
+
+    const runAnomalyAnalysis = useCallback(async () => {
+        if (!isModelReady) {
+            dispatch(setAnomalyError('Model is not prepared. Open Pretrained Models and click Prepare Model.'));
+            return;
+        }
+
+        if (!isLargeFile && normalRows.length === 0) {
+            dispatch(setAnomalyError('No parsed lines to analyze.'));
+            return;
+        }
+
+        const runStartedAt = Date.now();
+        dispatch(setAnomalyError(''));
+
+        try {
+            const settings = anomalySettings;
+            const useFilteredScope = !isLargeFile && settings.analysisScope === 'filtered';
+            const sourceRows = useFilteredScope ? filteredRows : normalRows;
+            const sourceLineNumbers = sourceRows.map((line) => line.lineNumber);
+
+            const rowsToAnalyze = isLargeFile
+                ? Math.max(0, lineCount)
+                : sourceRows.length;
+
+            const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
+            const expectedDurationSec = rowsPerSecond && rowsPerSecond > 0
+                ? Math.max(1, Math.round(rowsToAnalyze / rowsPerSecond))
+                : null;
+
+            dispatch(setAnomalyRunning({
+                running: true,
+                startedAt: runStartedAt,
+                expectedDurationSec,
+            }));
+
+            if (!isLargeFile && sourceRows.length === 0) {
+                dispatch(setAnomalyError('No lines in selected analysis scope.'));
+                dispatch(clearAnomalyResults());
+                return;
+            }
+
+            const result = isLargeFile
+                ? await (async () => {
+                    const activeFile = await getActiveFile();
+                    if (!activeFile) {
+                        throw new Error('Failed to access file for anomaly analysis.');
+                    }
+
+                    return predictBglAnomaliesFromFile(activeFile, {
+                        model_id: selectedModelId,
+                        text_column: 'message',
+                        timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
+                        threshold: settings.threshold,
+                        step_size: settings.stepSize,
+                        min_region_lines: settings.minRegionLines,
+                        include_rows: false,
+                        include_windows: false,
+                    });
+                })()
+                : await (async () => {
+                    const rows = sourceRows.map((line) => {
+                        const parsedLine = getParsedRow(line);
+                        const normalizedTimestamp = parsedLine.parsed?.fields.timestamp
+                            || parsedLine.parsed?.fields.datetime
+                            || (parsedLine.parsed?.fields.date && parsedLine.parsed?.fields.time
+                                ? `${parsedLine.parsed.fields.date} ${parsedLine.parsed.fields.time}`
+                                : null);
+
+                        const row: {
+                            message: string;
+                            timestamp?: string | null;
+                            datetime?: string | null;
+                            time?: string | null;
+                            date?: string | null;
+                            event_time?: string | null;
+                            created_at?: string | null;
+                        } = {
+                            message: line.raw,
+                            timestamp: normalizedTimestamp,
+                        };
+
+                        if (settings.timestampColumn !== 'auto') {
+                            row[settings.timestampColumn] = parsedLine.parsed?.fields[settings.timestampColumn] ?? null;
+                        }
+
+                        return row;
+                    });
+
+                    return predictBglAnomalies({
+                        model_id: selectedModelId,
+                        rows,
+                        text_column: 'message',
+                        timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
+                        threshold: settings.threshold,
+                        step_size: settings.stepSize,
+                        min_region_lines: settings.minRegionLines,
+                        include_rows: false,
+                        include_windows: false,
+                    });
+                })();
+
+            const mappedRegions = isLargeFile
+                ? result.anomaly_regions
+                : result.anomaly_regions.map((region) => {
+                    const mappedStart = sourceLineNumbers[region.start_line - 1];
+                    const mappedEnd = sourceLineNumbers[region.end_line - 1];
+                    return {
+                        ...region,
+                        start_line: Number.isFinite(mappedStart) ? mappedStart : region.start_line,
+                        end_line: Number.isFinite(mappedEnd) ? mappedEnd : region.end_line,
+                    };
+                });
+
+            const anomalyRowLines = Array.isArray(result.anomaly_lines)
+                ? result.anomaly_lines
+                : (result.rows ?? [])
+                    .filter((row) => row.is_anomaly)
+                    .map((row) => row.line);
+
+            const anomalyLineNumbers = isLargeFile
+                ? anomalyRowLines
+                    .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber))
+                : anomalyRowLines
+                    .map((line) => sourceLineNumbers[line - 1])
+                    .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber));
+
+            dispatch(setAnomalyResults({
+                regions: mappedRegions,
+                lineNumbers: anomalyLineNumbers,
+                rowsCount: result.meta.anomaly_rows,
+                analyzedAt: Date.now(),
+                modelId: selectedModelId,
+                params: {
+                    threshold: settings.threshold,
+                    stepSize: settings.stepSize,
+                    minRegionLines: settings.minRegionLines,
+                        analysisScope: useFilteredScope ? settings.analysisScope : 'all',
+                    timestampColumn: settings.timestampColumn,
+                },
+            }));
+        } catch (err) {
+            dispatch(clearAnomalyResults());
+            dispatch(setAnomalyError(err instanceof Error ? err.message : 'Anomaly analysis failed'));
+        } finally {
+            const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
+            dispatch(setAnomalyLastDurationSec(elapsedSec));
+
+            const settings = anomalySettings;
+            const useFilteredScope = !isLargeFile && settings.analysisScope === 'filtered';
+            const sourceRows = useFilteredScope ? filteredRows : normalRows;
+            const analyzedRows = isLargeFile ? Math.max(0, lineCount) : sourceRows.length;
+            if (analyzedRows > 0) {
+                const measuredRowsPerSecond = analyzedRows / elapsedSec;
+                dispatch(updateAnomalyRowsPerSecond({
+                    modelId: selectedModelId,
+                    rowsPerSecond: measuredRowsPerSecond,
+                }));
+            }
+
+            dispatch(setAnomalyRunning({ running: false }));
+        }
+    }, [anomalyRowsPerSecondByModel, anomalySettings, dispatch, filteredRows, getActiveFile, getParsedRow, isLargeFile, isModelReady, lineCount, normalRows, selectedModelId]);
+
+    const canRunAnomalyAnalysis = !isModelReadyLoading && isModelReady;
+    const anomalyDisabledReason = isModelReadyLoading
+            ? 'Checking model readiness...'
+            : isModelReady
+                ? undefined
+                : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
 
     // Get filter statistics
     const filterStats = useMemo(() => {
         if (isLargeFile) {
             return { total: lineCount, filtered: lineCount, parsedFiltered: 0 };
         }
-        return getFilteredCount(parsedLines, filters);
-    }, [parsedLines, filters, isLargeFile, lineCount]);
+
+        if (!hasActiveFilters(filters)) {
+            return { total: normalRows.length, filtered: normalRows.length, parsedFiltered: 0 };
+        }
+
+        const parsedRows = normalRows.map((row) => getParsedRow(row));
+        return getFilteredCount(parsedRows, filters);
+    }, [filters, getParsedRow, isLargeFile, lineCount, normalRows]);
 
     // Get field definitions from detected format for filter configuration
     const fieldDefinitions = useMemo((): LogFormatField[] => {
-        console.log('fieldDefinitions: Computing field definitions');
-        console.log('  - parsedLines.length:', parsedLines.length);
-        console.log('  - content:', content ? `${content.length} chars` : 'empty');
-        
-        // Try to get formatId from parsed lines first
-        if (parsedLines.length > 0) {
-            const firstParsed = parsedLines.find(line => line.parsed);
-            if (firstParsed?.parsed) {
-                console.log('  → Using formatId from parsedLines:', firstParsed.parsed.formatId);
-                const fields = getFormatFields(firstParsed.parsed.formatId);
-                console.log('  → Field definitions:', fields.length);
+        if (format) {
+            const fields = getFormatFields(format);
+            if (fields.length > 0) {
                 return fields;
             }
         }
-        
-        // For normal mode without parsed lines, detect from content
+
         if (content) {
             const formatId = detectLogFormat(content);
-            console.log('  → Detected formatId from content:', formatId);
             if (formatId) {
-                const fields = getFormatFields(formatId);
-                console.log('  → Field definitions:', fields.length);
-                return fields;
+                return getFormatFields(formatId);
             }
         }
-        
-        console.log('  → No field definitions found, returning empty array');
+
         return [];
-    }, [parsedLines, content]);
+    }, [content, format]);
 
     useEffect(() => {
         if (!isMonitoring || !isLargeFile) return;
@@ -874,11 +1341,26 @@ const ViewLogsPage: React.FC = () => {
                 onToggleAutoRefresh={handleToggleAutoRefresh}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
-                parsedLinesCount={isLargeFile ? lineCount : parsedLines.length}
+                parsedLinesCount={isLargeFile ? lineCount : normalRows.length}
                 filterStats={filterStats}
                 contentSize={content?.length || 0}
                 fileSize={fileSize}
                 newLinesCount={newLinesCount}
+                isAnomalyLoading={anomalyIsRunning}
+                canRunAnomalyAnalysis={canRunAnomalyAnalysis}
+                anomalyDisabledReason={anomalyDisabledReason}
+                selectedModelId={selectedModelId}
+                anomalySettings={anomalySettings}
+                thresholdRange={ANOMALY_THRESHOLD_RANGE}
+                stepSizeRange={ANOMALY_STEP_SIZE_RANGE}
+                minRegionLinesRange={ANOMALY_MIN_REGION_LINES_RANGE}
+                isAnomalySettingsPanelOpen={isAnomalySettingsPanelOpen}
+                onToggleAnomalySettingsPanel={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
+                onAnomalySettingsChange={updateAnomalySettings}
+                onSensitivityProfileApply={applySensitivityProfile}
+                onResetAnomalySettings={resetAnomalySettings}
+                onSelectedModelChange={handleSelectedModelChange}
+                onRunAnomalyAnalysis={runAnomalyAnalysis}
             />
 
             {/* Log Timeline Histogram */}
@@ -906,6 +1388,9 @@ const ViewLogsPage: React.FC = () => {
                     parsedLines={histogramSourceLines}
                     defaultCollapsed={false}
                     height={150}
+                    anomalyRegions={anomalyRegions}
+                    anomalyLineNumbers={anomalyLineNumbers}
+                    onAnomalyRangeSelect={handleAnomalyRangeSelect}
                 />
             )}
 

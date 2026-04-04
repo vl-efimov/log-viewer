@@ -25,6 +25,7 @@ import {
 
 const MAX_CATEGORY_VALUES = 8;
 const MAX_LARGE_FILE_CACHE_ENTRIES = 3;
+const MAX_NORMAL_DASHBOARD_CACHE_ENTRIES = 5;
 const PRIORITY_FIELDS = ['level', 'status', 'method', 'queue', 'type', 'component', 'host', 'user', 'class', 'ip'];
 const CORE_CHART_FIELDS = ['level', 'status', 'method'];
 
@@ -34,6 +35,7 @@ type LargeFileDashboardCacheEntry = {
 };
 
 const largeFileDashboardCache = new Map<string, LargeFileDashboardCacheEntry>();
+const normalDashboardCache = new Map<string, NormalDashboardSnapshot>();
 
 const getLargeFileDashboardCacheKey = (
     analyticsSessionId: string,
@@ -55,6 +57,17 @@ const setLargeFileDashboardCache = (key: string, value: LargeFileDashboardCacheE
     }
 };
 
+const setNormalDashboardCache = (key: string, value: NormalDashboardSnapshot) => {
+    normalDashboardCache.delete(key);
+    normalDashboardCache.set(key, value);
+
+    while (normalDashboardCache.size > MAX_NORMAL_DASHBOARD_CACHE_ENTRIES) {
+        const oldestKey = normalDashboardCache.keys().next().value as string | undefined;
+        if (!oldestKey) break;
+        normalDashboardCache.delete(oldestKey);
+    }
+};
+
 type ParsedRow = {
     lineNumber: number;
     parsed: ParsedLogLine | null;
@@ -63,8 +76,21 @@ type ParsedRow = {
 
 type Facet = {
     field: string;
-    title: string;
     values: Array<{ label: string; count: number }>;
+};
+
+type NormalDashboardSnapshot = {
+    totalLines: number;
+    analyzedLines: number;
+    nonEmptyLines: number;
+    parsedLines: number;
+    unparsedLines: number;
+    parseRate: number;
+    parsedRows: ParsedRow[];
+    levelValues: Array<{ label: string; count: number }>;
+    statusValues: Array<{ label: string; count: number }>;
+    methodValues: Array<{ label: string; count: number }>;
+    facets: Facet[];
 };
 
 const resolveLocale = (language: string): string => {
@@ -214,6 +240,9 @@ const DashboardPage: React.FC = () => {
     const largeFileCacheKey = useMemo(() => {
         return getLargeFileDashboardCacheKey(analyticsSessionId, fileName, fileSize, lastModified);
     }, [analyticsSessionId, fileName, fileSize, lastModified]);
+    const normalFileCacheKey = useMemo(() => {
+        return `${analyticsSessionId}|${fileName}|${fileSize}|${lastModified}`;
+    }, [analyticsSessionId, fileName, fileSize, lastModified]);
 
     const analytics = useMemo(() => {
         const toSortedValues = (counter?: Map<string, number>) => {
@@ -255,7 +284,6 @@ const DashboardPage: React.FC = () => {
                 const values = fieldValueCounters.get(field);
                 return {
                     field,
-                    title: getFieldTitle(field, t),
                     values: toSortedValues(values),
                 };
             });
@@ -297,6 +325,11 @@ const DashboardPage: React.FC = () => {
             };
         }
 
+        const cached = normalDashboardCache.get(normalFileCacheKey);
+        if (cached) {
+            return cached;
+        }
+
         const lines = (content ?? '').split(/\r?\n/);
         const parsedRows: ParsedRow[] = [];
         const fieldValueCounters = new Map<string, Map<string, number>>();
@@ -332,7 +365,7 @@ const DashboardPage: React.FC = () => {
             });
         }
 
-        return {
+        const snapshot: NormalDashboardSnapshot = {
             totalLines: lines.length,
             analyzedLines: lines.length,
             nonEmptyLines,
@@ -345,7 +378,9 @@ const DashboardPage: React.FC = () => {
             methodValues: toSortedValues(fieldValueCounters.get('method')),
             facets: buildFacets(fieldValueCounters),
         };
-    }, [content, isLargeFile, largeFileHistogramLines, largeFileStats, t]);
+        setNormalDashboardCache(normalFileCacheKey, snapshot);
+        return snapshot;
+    }, [content, isLargeFile, largeFileHistogramLines, largeFileStats, normalFileCacheKey]);
 
     useEffect(() => {
         if (!isMonitoring || !isLargeFile) {
@@ -416,7 +451,7 @@ const DashboardPage: React.FC = () => {
         );
     }
 
-    if (!content) {
+    if (!content && !isLargeFile) {
         return (
             <NoFileSelected
                 title={t('dashboard.title')}
@@ -581,7 +616,7 @@ const DashboardPage: React.FC = () => {
                                         {analytics.facets.map((facet) => (
                                             <Grid key={facet.field} size={{ xs: 12, md: 4 }}>
                                                 <ReactECharts
-                                                    option={toChartOption(facet.title, facet.values, locale)}
+                                                    option={toChartOption(getFieldTitle(facet.field, t), facet.values, locale)}
                                                     style={{ height: 260 }}
                                                 />
                                             </Grid>

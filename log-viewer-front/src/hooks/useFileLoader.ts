@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setLogFile, setMonitoringState, setFileHandle, setFileObject } from '../redux/slices/logFileSlice';
 import { detectLogFormat } from '../utils/logFormatDetector';
 
-const LARGE_FILE_BYTES = 1024 * 1024 * 1024; // 1 GB
+const LARGE_FILE_BYTES = 300 * 1024 * 1024; // 300 MB
 const FORMAT_PREVIEW_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export const useFileLoader = () => {
@@ -24,7 +24,7 @@ export const useFileLoader = () => {
             }
             setFileObject(file);
 
-            const content = isLargeFile ? previewText : await file.text();
+            const content = isLargeFile ? '' : await file.text();
 
             dispatch(setLogFile({
                 name: file.name,

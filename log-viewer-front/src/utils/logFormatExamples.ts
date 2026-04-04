@@ -185,19 +185,63 @@ export function parseLogFileForTable(logContent: string): Array<{
     error?: string;
 }> {
     const lines = logContent.split(/\r?\n/);
-    return lines.map((raw, idx) => {
+    const parsedRows: Array<{
+        lineNumber: number;
+        parsed: ParsedLogLine | null;
+        raw: string;
+        error?: string;
+    }> = [];
+
+    const isContinuationLine = (line: string): boolean => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            return false;
+        }
+
+        return (
+            /^\s+at\s+/.test(line)
+            || /^\s*\.\.\.\s+\d+\s+more$/.test(trimmed)
+            || /^\s*Caused by:/.test(trimmed)
+            || /^\s*Traceback\s+\(most recent call last\):/.test(trimmed)
+        );
+    };
+
+    for (let idx = 0; idx < lines.length; idx += 1) {
+        const raw = lines[idx];
         let parsed: ParsedLogLine | null = null;
         let error: string | undefined = undefined;
+
         try {
             parsed = parseLogLineAuto(raw);
         } catch (e) {
             error = String(e);
         }
-        return {
+
+        const previous = parsedRows[parsedRows.length - 1];
+        const canContinuePrevious = (
+            !parsed
+            && Boolean(previous)
+            && raw.trim().length > 0
+            && isContinuationLine(raw)
+        );
+
+        if (canContinuePrevious && previous) {
+            previous.raw = `${previous.raw}\n${raw}`;
+
+            if (previous.parsed?.fields.message !== undefined) {
+                previous.parsed.fields.message = `${previous.parsed.fields.message}\n${raw}`;
+            }
+
+            continue;
+        }
+
+        parsedRows.push({
             lineNumber: idx + 1,
             parsed,
             raw,
             ...(error ? { error } : {}),
-        };
-    });
+        });
+    }
+
+    return parsedRows;
 }
