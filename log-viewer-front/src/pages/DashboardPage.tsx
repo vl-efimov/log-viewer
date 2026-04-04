@@ -227,7 +227,6 @@ const DashboardPage: React.FC = () => {
         isMonitoring,
         content,
         name: fileName,
-        format,
         isLargeFile,
         analyticsSessionId,
         size: fileSize,

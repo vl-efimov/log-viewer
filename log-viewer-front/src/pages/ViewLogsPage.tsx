@@ -1288,30 +1288,6 @@ const ViewLogsPage: React.FC = () => {
                 overflow: 'hidden',
             }}
         >
-            <LogToolbar
-                onManualRefresh={handleManualRefresh}
-                autoRefresh={autoRefresh}
-                onToggleAutoRefresh={handleToggleAutoRefresh}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                newLinesCount={newLinesCount}
-                isAnomalyLoading={anomalyIsRunning}
-                canRunAnomalyAnalysis={canRunAnomalyAnalysis}
-                anomalyDisabledReason={anomalyDisabledReason}
-                selectedModelId={selectedModelId}
-                anomalySettings={anomalySettings}
-                thresholdRange={ANOMALY_THRESHOLD_RANGE}
-                stepSizeRange={ANOMALY_STEP_SIZE_RANGE}
-                minRegionLinesRange={ANOMALY_MIN_REGION_LINES_RANGE}
-                isAnomalySettingsPanelOpen={isAnomalySettingsPanelOpen}
-                onToggleAnomalySettingsPanel={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
-                onAnomalySettingsChange={updateAnomalySettings}
-                onSensitivityProfileApply={applySensitivityProfile}
-                onResetAnomalySettings={resetAnomalySettings}
-                onSelectedModelChange={handleSelectedModelChange}
-                onRunAnomalyAnalysis={runAnomalyAnalysis}
-            />
-
             {/* Log Timeline Histogram */}
             {isLargeFile && isHistogramLoading && (
                 <Box
@@ -1343,12 +1319,36 @@ const ViewLogsPage: React.FC = () => {
                 />
             )}
 
+            <LogToolbar
+                onManualRefresh={handleManualRefresh}
+                autoRefresh={autoRefresh}
+                onToggleAutoRefresh={handleToggleAutoRefresh}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                newLinesCount={newLinesCount}
+                isAnomalyLoading={anomalyIsRunning}
+                canRunAnomalyAnalysis={canRunAnomalyAnalysis}
+                anomalyDisabledReason={anomalyDisabledReason}
+                selectedModelId={selectedModelId}
+                anomalySettings={anomalySettings}
+                thresholdRange={ANOMALY_THRESHOLD_RANGE}
+                stepSizeRange={ANOMALY_STEP_SIZE_RANGE}
+                minRegionLinesRange={ANOMALY_MIN_REGION_LINES_RANGE}
+                isAnomalySettingsPanelOpen={isAnomalySettingsPanelOpen}
+                onToggleAnomalySettingsPanel={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
+                onAnomalySettingsChange={updateAnomalySettings}
+                onSensitivityProfileApply={applySensitivityProfile}
+                onResetAnomalySettings={resetAnomalySettings}
+                onSelectedModelChange={handleSelectedModelChange}
+                onRunAnomalyAnalysis={runAnomalyAnalysis}
+            />
+
             {/* Filters Bar */}
-            <LogFiltersBar
+            {/* <LogFiltersBar
                 filters={filters}
                 onFiltersChange={setFilters}
                 fieldDefinitions={fieldDefinitions}
-            />
+            /> */}
 
             <Box 
                 sx={{ 
