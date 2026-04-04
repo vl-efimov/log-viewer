@@ -1,0 +1,3 @@
+# Python virtual environment
+backend/.venv
+backend/bgl_anomaly_service/__pycache__
