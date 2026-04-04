@@ -34,6 +34,33 @@ export const getCustomTheme = (
                 'sans-serif',
             ].join(','),
         },
+        components: {
+            MuiTooltip: {
+                styleOverrides: {
+                    tooltip: {
+                        fontSize: '1rem',
+                        background: '#23272f',
+                    },
+                    arrow: {
+                        color: '#23272f',
+                    },
+                },
+                defaultProps: {
+                    slotProps: {
+                        popper: {
+                            modifiers: [
+                                {
+                                    name: 'offset',
+                                    options: {
+                                        offset: [0, -6],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+            },
+        },
         custom: {
             headerBg: isLight ? '#334155' : undefined,
             sidebarBg: isLight ? '#e2e8f0' : undefined,

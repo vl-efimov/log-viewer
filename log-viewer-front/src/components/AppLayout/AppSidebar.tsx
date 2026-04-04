@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { RouteDashboard, RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../../routes/routePaths';
 import { RouteAbout } from '../../routes/routePaths';
 import { baseUrl } from '../../constants/BaseUrl';
-import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constants/sidebar';
+import { APP_LAYOUT_TOKENS } from '../../design-tokens';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -64,11 +64,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
         <Drawer
             variant="permanent"
             sx={{
-                width: isSidebarOpen ? EXPANDED_SIDEBAR_WIDTH : COLLAPSED_SIDEBAR_WIDTH,
+                width: isSidebarOpen
+                    ? APP_LAYOUT_TOKENS.sidebar.expandedWidth
+                    : APP_LAYOUT_TOKENS.sidebar.collapsedWidth,
                 flexShrink: 0,
                 transition: 'width 0.3s ease',
                 '& .MuiDrawer-paper': {
-                    width: isSidebarOpen ? EXPANDED_SIDEBAR_WIDTH : COLLAPSED_SIDEBAR_WIDTH,
+                    width: isSidebarOpen
+                        ? APP_LAYOUT_TOKENS.sidebar.expandedWidth
+                        : APP_LAYOUT_TOKENS.sidebar.collapsedWidth,
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'width 0.3s ease',

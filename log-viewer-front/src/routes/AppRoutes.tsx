@@ -1,6 +1,6 @@
 import { Navigate, RouteObject } from 'react-router-dom';
 
-import MainLayout from '../layouts/MainLayout';
+import MainLayout from '../components/AppLayout/AppLayout';
 import DashboardPage from '../pages/DashboardPage';
 import LogFormatsPage from '../pages/LogFormatsPage';
 import PretrainedModelsPage from '../pages/PretrainedModelsPage';

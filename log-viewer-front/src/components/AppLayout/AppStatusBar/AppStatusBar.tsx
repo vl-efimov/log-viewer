@@ -6,17 +6,25 @@ import Divider from '@mui/material/Divider';
 import CloseIcon from '@mui/icons-material/Close';
 import DescriptionIcon from '@mui/icons-material/Description';
 import StorageIcon from '@mui/icons-material/Storage';
-import CategoryIcon from '@mui/icons-material/Category';
-import { useEffect, useState } from 'react';
+import DataObjectIcon from '@mui/icons-material/DataObject';
+import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
-import { RootState } from '../../redux/store';
-import { clearLogFile, setFileHandle } from '../../redux/slices/logFileSlice';
-import { baseUrl } from '../../constants/BaseUrl';
-import { RouteViewLogs } from '../../routes/routePaths';
-
-const VSCODE_BLUE = '#007acc';
-const VSCODE_TEXT = '#fff';
+import { RootState } from '../../../redux/store';
+import { clearLogFile, setFileHandle } from '../../../redux/slices/logFileSlice';
+import { baseUrl } from '../../../constants/BaseUrl';
+import { RouteViewLogs } from '../../../routes/routePaths';
+import AppStatusBarItem from '../AppStatusBarItem';
+import {
+    anomalyTextSx,
+    closeButtonSx,
+    statusBarDividerSx,
+    iconRaisedSx,
+    statusBarIconSx,
+    statusBarLeftGroupSx,
+    statusBarSx,
+    textSx,
+} from './styles';
 
 const AppStatusBar: React.FC = () => {
     const dispatch = useDispatch();
@@ -117,80 +125,47 @@ const AppStatusBar: React.FC = () => {
     })();
 
     return (
-        <Box
-            sx={{
-                width: '100%',
-                height: 32,
-                flexShrink: 0,
-                bgcolor: VSCODE_BLUE,
-                color: VSCODE_TEXT,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                px: 2,
-                fontSize: 14,
-                letterSpacing: 0.1,
-            }}
-        >
+        <Box sx={statusBarSx}>
             <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    height: '100%',
-                }}
+                sx={statusBarLeftGroupSx}
             >
-                <Typography sx={{ color: VSCODE_TEXT }}>Log Viewer</Typography>
-                
                 {loaded && (
                     <>
-                        <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255, 255, 255, 0.3)', height: 20, alignSelf: 'center' }} />
-                        
-                        {/* File Name */}
-                        <Tooltip 
-                            title="Current log file name" 
-                            arrow
-                            placement="top"
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <DescriptionIcon sx={{ fontSize: 16 }} />
-                                <Typography sx={{ color: VSCODE_TEXT, fontWeight: 500 }}>
-                                    {name}
-                                </Typography>
-                            </Box>
-                        </Tooltip>
+                        <AppStatusBarItem title="Current log file name">
+                            <DescriptionIcon sx={iconRaisedSx} />
+                            <Typography sx={textSx}>
+                                {name}
+                            </Typography>
+                        </AppStatusBarItem>
 
-                        {/* File Size */}
-                        <Tooltip 
-                            title="Total file size on disk" 
-                            arrow
-                            placement="top"
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <StorageIcon sx={{ fontSize: 16 }} />
-                                <Typography sx={{ color: VSCODE_TEXT }}>
-                                    {formatFileSize(size)}
-                                </Typography>
-                            </Box>
-                        </Tooltip>
+                        <Divider 
+                            orientation="vertical"
+                            flexItem
+                            sx={statusBarDividerSx}
+                        />
 
-                        {/* File Format */}
+                        <AppStatusBarItem title="Total file size on disk">
+                            <StorageIcon sx={iconRaisedSx} />
+                            <Typography sx={textSx}>
+                                {formatFileSize(size)}
+                            </Typography>
+                        </AppStatusBarItem>
+
+                        <Divider 
+                            orientation="vertical"
+                            flexItem
+                            sx={statusBarDividerSx}
+                        />
+
                         {format && (
-                            <Tooltip 
-                                title="Detected log format type" 
-                                arrow
-                                placement="top"
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <CategoryIcon sx={{ fontSize: 16 }} />
-                                    <Typography sx={{ color: VSCODE_TEXT }}>
-                                        {format}
-                                    </Typography>
-                                </Box>
-                            </Tooltip>
+                            <AppStatusBarItem title="Detected log format type">
+                                <DataObjectIcon sx={statusBarIconSx} />
+                                <Typography sx={textSx}>
+                                    {format}
+                                </Typography>
+                            </AppStatusBarItem>
                         )}
 
-                        {/* Clear File Button */}
                         <Tooltip 
                             title="Close current file and stop monitoring" 
                             arrow
@@ -198,16 +173,9 @@ const AppStatusBar: React.FC = () => {
                         >
                             <IconButton
                                 onClick={handleClearFile}
-                                size="small"
-                                sx={{
-                                    color: VSCODE_TEXT,
-                                    padding: 0.5,
-                                    '&:hover': {
-                                        bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                    },
-                                }}
+                                sx={closeButtonSx}
                             >
-                                <CloseIcon sx={{ fontSize: 16 }} />
+                                <CloseIcon sx={statusBarIconSx} />
                             </IconButton>
                         </Tooltip>
                     </>
@@ -222,14 +190,11 @@ const AppStatusBar: React.FC = () => {
             >
                 {anomalyStatus && (
                     <Tooltip title={anomalyStatus.full} arrow placement="top">
-                        <Typography sx={{ color: VSCODE_TEXT, maxWidth: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Typography sx={anomalyTextSx}>
                             {anomalyStatus.compact}
                         </Typography>
                     </Tooltip>
                 )}
-                <Typography sx={{ color: VSCODE_TEXT }}>
-                    {loaded ? 'Monitoring' : 'Ready'}
-                </Typography>
             </Box>
         </Box>
     );
