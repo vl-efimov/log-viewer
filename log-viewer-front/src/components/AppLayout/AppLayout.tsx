@@ -78,7 +78,7 @@ export default function MainLayout () {
                         sx={{
                             p: 2,
                             width: '100%',
-                            overflow: 'hidden',
+                            overflow: 'auto',
                         }}
                     >
                         <Outlet />

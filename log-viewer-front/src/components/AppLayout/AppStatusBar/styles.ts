@@ -21,6 +21,7 @@ export const statusBarSx: SxProps<Theme> = {
     display: 'flex',
     justifyContent: 'space-between',
     px: STATUS_BAR_PADDING_X,
+    flexShrink: 0,
 };
 
 export const statusBarLeftGroupSx: SxProps<Theme> = {

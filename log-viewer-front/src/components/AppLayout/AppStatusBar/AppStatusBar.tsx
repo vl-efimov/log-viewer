@@ -116,9 +116,7 @@ const AppStatusBar: React.FC = () => {
 
     return (
         <Box sx={statusBarSx}>
-            <Box
-                sx={statusBarLeftGroupSx}
-            >
+            <Box sx={statusBarLeftGroupSx}>
                 {loaded && (
                     <>
                         <AppStatusBarItem title="Current log file name">

@@ -116,7 +116,7 @@ const LogFormatsPage: React.FC = () => {
 
     if (loading) {
         return (
-            <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
                 <CircularProgress />
             </Box>
         );
@@ -124,7 +124,7 @@ const LogFormatsPage: React.FC = () => {
 
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
                     Custom Formats

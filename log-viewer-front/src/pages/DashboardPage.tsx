@@ -462,17 +462,11 @@ const DashboardPage: React.FC = () => {
     }
 
     return (
-        <Box sx={{ height: '100%', overflow: 'auto', p: 1 }}>
+        <Box>
             <Stack spacing={2}>
                 <Box>
-                    <Typography variant="h5" sx={{ mb: 0.5 }}>
+                    <Typography variant="h5">
                         {t('dashboard.title')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        {t('dashboard.fileAndFormat', {
-                            fileName: fileName || t('common.unknown'),
-                            format: format || t('common.unknown'),
-                        })}
                     </Typography>
                 </Box>
 
