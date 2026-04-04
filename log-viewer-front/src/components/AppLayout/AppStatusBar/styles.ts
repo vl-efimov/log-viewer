@@ -30,7 +30,7 @@ export const statusBarLeftGroupSx: SxProps<Theme> = {
 };
 
 export const statusBarDividerSx: SxProps<Theme> = {
-    bgcolor: STATUS_BAR_TEXT,
+    borderColor: STATUS_BAR_TEXT,
     height: DIVIDER_HEIGHT,
     alignSelf: 'center',
 };

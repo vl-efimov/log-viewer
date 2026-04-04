@@ -128,7 +128,7 @@ const AppStatusBar: React.FC = () => {
                             </Typography>
                         </AppStatusBarItem>
 
-                        <Divider 
+                        <Divider
                             orientation="vertical"
                             flexItem
                             sx={statusBarDividerSx}
@@ -141,7 +141,7 @@ const AppStatusBar: React.FC = () => {
                             </Typography>
                         </AppStatusBarItem>
 
-                        <Divider 
+                        <Divider
                             orientation="vertical"
                             flexItem
                             sx={statusBarDividerSx}
@@ -155,6 +155,12 @@ const AppStatusBar: React.FC = () => {
                                 </Typography>
                             </AppStatusBarItem>
                         )}
+
+                        {/* {lastUpdate && (
+                            <Typography variant="caption" color="text.secondary">
+                                Last updated: {lastUpdate.toLocaleTimeString()}
+                            </Typography>
+                        )} */}
                     </>
                 )}
             </Box>

@@ -2,6 +2,7 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import PaletteIcon from '@mui/icons-material/Palette';
@@ -16,7 +17,8 @@ import Box from '@mui/material/Box';
 import { ColorModeEnum } from '../../../constants/ColorModeEnum';
 import { RootState } from '../../../redux/store';
 import { useDispatch, useSelector } from 'react-redux';
-import { APP_LAYOUT_TOKENS } from '../../../design-tokens';
+import Tooltip from '@mui/material/Tooltip';
+import { clearLogFile, setFileHandle } from '../../../redux/slices/logFileSlice';
 
 import {
     appBarSx,
@@ -26,9 +28,13 @@ import {
     titleSx,
     rightGroupSx,
     langBoxSx,
+    headerLeftSx,
+    titleRowSx,
+    fileBadgeWrapSx,
+    fileBadgeSx,
+    fileClearButtonSx,
+    fileBadgeSpacerSx,
 } from './styles';
-import Tooltip from '@mui/material/Tooltip';
-import { clearLogFile, setFileHandle } from '../../../redux/slices/logFileSlice';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -45,11 +51,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
     const textColor = mode === ColorModeEnum.Light ? '#fff' : undefined;
 
-    const {
-        name: fileName,
-    } = useSelector((state: RootState) => state.logFile);
-
-    const [lastUpdate] = useState<Date | null>(null);
+    const { name: fileName } = useSelector((state: RootState) => state.logFile);
 
     const handleClearFile = () => {
         dispatch(clearLogFile());
@@ -59,17 +61,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     return (
         <AppBar sx={appBarSx}>
             <Toolbar sx={toolbarSx}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        width: isSidebarOpen
-                            ? APP_LAYOUT_TOKENS.sidebar.expandedWidth
-                            : APP_LAYOUT_TOKENS.sidebar.collapsedWidth,
-                        transition: 'width 0.3s ease',
-                        overflow: 'hidden',
-                    }}
-                >
+                <Box sx={headerLeftSx(isSidebarOpen)}>
                     <Box sx={menuBoxSx}>
                         <IconButton
                             sx={iconButtonSx(textColor)}
@@ -80,13 +72,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                         </IconButton>
                     </Box>
 
-                    <Box 
-                        sx={{
-                            display: 'flex',
-                            justifyContent:'space-between',
-                            width: '100%',
-                        }}
-                    >
+                    <Box sx={titleRowSx}>
                         <Typography
                             sx={titleSx(textColor)}
                             variant="h6"
@@ -96,29 +82,12 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     </Box>
                 </Box>
 
-                {fileName && (
-                    <>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                flexGrow: 1,
-                                gap: 2,
-                            }}
-                        >
-                            <Typography
-                                sx={titleSx(textColor)}
-                                variant="h6"
-                            >
+                {fileName ? (
+                    <Box sx={fileBadgeWrapSx}>
+                        <Paper sx={fileBadgeSx}>
+                            <Typography sx={{...titleSx(textColor)}}>
                                 {fileName}
                             </Typography>
-
-                            {lastUpdate && (
-                                <Typography variant="caption" color="text.secondary">
-                                    Last updated: {lastUpdate.toLocaleTimeString()}
-                                </Typography>
-                            )}
-
                             <Tooltip
                                 title="Close current file and stop monitoring"
                                 arrow
@@ -126,14 +95,15 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                             >
                                 <IconButton
                                     onClick={handleClearFile}
-                                    sx={iconButtonSx(textColor)}
+                                    size="small"
+                                    sx={fileClearButtonSx(textColor)}
                                 >
-                                    <CloseIcon />
+                                    <CloseIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
-                        </Box>
-                    </>
-                )}
+                        </Paper>
+                    </Box>
+                ) : (<Box sx={fileBadgeSpacerSx}></Box>)}
 
                 <Box sx={rightGroupSx}>
                     <ThemeToggleButton
