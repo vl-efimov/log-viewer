@@ -3,6 +3,7 @@ import Badge from '@mui/material/Badge';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
+import Popover from '@mui/material/Popover';
 import Tooltip from '@mui/material/Tooltip';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -11,6 +12,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import StreamIcon from '@mui/icons-material/Stream';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -37,6 +39,9 @@ import {
 } from '../utils/anomalySettings';
 import type { ParsedLogLine } from '../utils/logFormatDetector';
 import AnomalySettingsDialog from './AnomalySettingsDialog';
+import { LogFiltersBar } from './LogFiltersBar';
+import type { LogFilters } from '../types/filters';
+import type { LogFormatField } from '../utils/logFormatDetector';
 
 type AnomalySourceRow = {
     lineNumber: number;
@@ -56,6 +61,9 @@ interface LogToolbarProps {
     viewMode: 'live-tail' | 'normal';
     onViewModeChange: (mode: 'live-tail' | 'normal') => void;
     newLinesCount: number;
+    filters: LogFilters;
+    onFiltersChange: (filters: LogFilters) => void;
+    fieldDefinitions: LogFormatField[];
     isLargeFile: boolean;
     lineCount: number;
     normalRows: AnomalySourceRow[];
@@ -71,6 +79,9 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     viewMode,
     onViewModeChange,
     newLinesCount,
+    filters,
+    onFiltersChange,
+    fieldDefinitions,
     isLargeFile,
     lineCount,
     normalRows,
@@ -79,18 +90,32 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     getParsedRow,
 }) => {
     const dispatch = useDispatch();
-    const { isMonitoring, anomalyIsRunning, anomalyRowsPerSecondByModel } = useSelector((state: RootState) => state.logFile);
+    const { isMonitoring, anomalyIsRunning, anomalyRowsPerSecondByModel } = useSelector<RootState, RootState['logFile']>((state) => state.logFile);
     const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
     const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
+    const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
 
     const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, value: 'live-tail' | 'normal' | null) => {
         if (value) {
             onViewModeChange(value);
         }
     };
+
+    const activeFiltersCount = Object.keys(filters).filter((key) => {
+        const value = filters[key];
+        if (!value) return false;
+        if (Array.isArray(value)) return value.length > 0;
+        if (typeof value === 'object' && 'value' in value) return Boolean(value.value);
+        if (typeof value === 'object' && ('start' in value || 'end' in value)) {
+            return Boolean(value.start || value.end);
+        }
+        return false;
+    }).length;
+
+    const isFiltersOpen = Boolean(filtersAnchorEl);
 
     useEffect(() => {
         if (!isMonitoring) {
@@ -441,7 +466,49 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         </Tooltip>
                     )}
                 </Box>
+
+                <Box 
+                    sx={{
+                        ml: 'auto',
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}
+                >
+                    <Tooltip
+                        title="Filters"
+                        arrow
+                    >
+                        <IconButton
+                            size="small"
+                            aria-label="filters"
+                            onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
+                            color={activeFiltersCount > 0 ? 'primary' : 'default'}
+                        >
+                            <Badge
+                                color="primary"
+                                badgeContent={activeFiltersCount}
+                                invisible={activeFiltersCount === 0}
+                            >
+                                <FilterListIcon fontSize="small" />
+                            </Badge>
+                        </IconButton>
+                    </Tooltip>
+                </Box>
             </Paper>
+
+            <Popover
+                open={isFiltersOpen}
+                anchorEl={filtersAnchorEl}
+                onClose={() => setFiltersAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <LogFiltersBar
+                    filters={filters}
+                    onFiltersChange={onFiltersChange}
+                    fieldDefinitions={fieldDefinitions}
+                />
+            </Popover>
 
             <AnomalySettingsDialog
                 open={isAnomalySettingsPanelOpen}

@@ -7,13 +7,9 @@ import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Typography from '@mui/material/Typography';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { LogFilters, DateRangeFilter, TextFilter } from '../types/filters';
 import type { LogFormatField } from '../utils/logFormatDetector';
 
@@ -39,7 +35,11 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     onFiltersChange,
     fieldDefinitions,
 }) => {
-    const [expanded, setExpanded] = useState(false);
+    const [pendingFilters, setPendingFilters] = useState<LogFilters>(filters);
+
+    useEffect(() => {
+        setPendingFilters(filters);
+    }, [filters]);
 
     // Get current year
     const currentYear = new Date().getFullYear();
@@ -60,10 +60,10 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
     const handleTimestampStartChange = (field: string, value: string) => {
         const filterKey = field as keyof LogFilters;
-        onFiltersChange({
-            ...filters,
+        setPendingFilters({
+            ...pendingFilters,
             [filterKey]: {
-                ...(filters[filterKey] as DateRangeFilter),
+                ...(pendingFilters[filterKey] as DateRangeFilter),
                 start: value ? new Date(value) : null,
             },
         });
@@ -71,10 +71,10 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
     const handleTimestampEndChange = (field: string, value: string) => {
         const filterKey = field as keyof LogFilters;
-        onFiltersChange({
-            ...filters,
+        setPendingFilters({
+            ...pendingFilters,
             [filterKey]: {
-                ...(filters[filterKey] as DateRangeFilter),
+                ...(pendingFilters[filterKey] as DateRangeFilter),
                 end: value ? new Date(value) : null,
             },
         });
@@ -82,26 +82,30 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
     const handleEnumChange = (field: string, values: string[]) => {
         const filterKey = field as keyof LogFilters;
-        onFiltersChange({
-            ...filters,
+        setPendingFilters({
+            ...pendingFilters,
             [filterKey]: values.length > 0 ? values : undefined,
         });
     };
 
     const handleTextFilterChange = (field: string, value: string) => {
-        onFiltersChange({
-            ...filters,
+        setPendingFilters({
+            ...pendingFilters,
             [field]: value ? { value } : undefined,
         });
     };
 
     const handleClearFilters = () => {
-        onFiltersChange({});
+        setPendingFilters({});
+    };
+
+    const handleApplyFilters = () => {
+        onFiltersChange(pendingFilters);
     };
 
     const hasActiveFilters = () => {
-        return Object.keys(filters).some(key => {
-            const value = filters[key];
+        return Object.keys(pendingFilters).some(key => {
+            const value = pendingFilters[key];
             if (!value) return false;
             
             if (Array.isArray(value)) return value.length > 0;
@@ -114,8 +118,8 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     };
 
     const getActiveFiltersCount = () => {
-        return Object.keys(filters).filter(key => {
-            const value = filters[key];
+        return Object.keys(pendingFilters).filter(key => {
+            const value = pendingFilters[key];
             if (!value) return false;
             
             if (Array.isArray(value)) return value.length > 0;
@@ -146,7 +150,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
         // Date/Time range filter
         if (isDateTimeField(field)) {
-            const filterValue = filters[fieldName as keyof LogFilters] as DateRangeFilter | undefined;
+            const filterValue = pendingFilters[fieldName as keyof LogFilters] as DateRangeFilter | undefined;
             return (
                 <div key={fieldName} style={{ display: 'contents' }}>
                     <TextField
@@ -176,7 +180,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         // Enum filter (multi-select) - for any field with enum values
         if (isLevelField(field)) {
             const enumOptions = field.enum || LOG_LEVEL_OPTIONS;
-            const filterValue = filters[fieldName as keyof LogFilters] as string[] | undefined;
+            const filterValue = pendingFilters[fieldName as keyof LogFilters] as string[] | undefined;
             
             return (
                 <FormControl key={fieldName} size="small" sx={{ minWidth: 200 }}>
@@ -205,7 +209,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         }
 
         // Text filter (for all other fields)
-        const filterValue = filters[fieldName as keyof LogFilters] as TextFilter | undefined;
+        const filterValue = pendingFilters[fieldName as keyof LogFilters] as TextFilter | undefined;
         return (
             <TextField
                 key={fieldName}
@@ -219,61 +223,72 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         );
     };
 
+    const header = (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+            <FilterListIcon />
+            <Typography>Filters</Typography>
+            {hasActiveFilters() && (
+                <Chip
+                    label={getActiveFiltersCount()}
+                    size="small"
+                    color="primary"
+                />
+            )}
+            {hasActiveFilters() && (
+                <Box
+                    component="span"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearFilters();
+                    }}
+                    sx={{
+                        ml: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        cursor: 'pointer',
+                        color: 'primary.main',
+                        fontSize: '0.875rem',
+                        '&:hover': {
+                            textDecoration: 'underline'
+                        }
+                    }}
+                >
+                    <ClearIcon fontSize="small" />
+                    <Typography variant="body2">Clear All</Typography>
+                </Box>
+            )}
+        </Box>
+    );
+
+    const content = (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            {/* Render filters in format field order */}
+            {fieldDefinitions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                    No filters available. Format detection in progress...
+                </Typography>
+            ) : (
+                fieldDefinitions.map(field => renderFieldFilter(field))
+            )}
+            <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
+                <Chip
+                    label="Apply"
+                    color="primary"
+                    onClick={handleApplyFilters}
+                    clickable
+                    sx={{ height: 32 }}
+                />
+            </Box>
+        </Box>
+    );
+
     return (
-        <Accordion 
-            expanded={expanded} 
-            onChange={() => setExpanded(!expanded)}
-            sx={{ mb: 2 }}
-        >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                    <FilterListIcon />
-                    <Typography>Filters</Typography>
-                    {hasActiveFilters() && (
-                        <Chip 
-                            label={getActiveFiltersCount()} 
-                            size="small" 
-                            color="primary" 
-                        />
-                    )}
-                    {hasActiveFilters() && (
-                        <Box
-                            component="span"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleClearFilters();
-                            }}
-                            sx={{ 
-                                ml: 'auto',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                cursor: 'pointer',
-                                color: 'primary.main',
-                                fontSize: '0.875rem',
-                                '&:hover': {
-                                    textDecoration: 'underline'
-                                }
-                            }}
-                        >
-                            <ClearIcon fontSize="small" />
-                            <Typography variant="body2">Clear All</Typography>
-                        </Box>
-                    )}
-                </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    {/* Render filters in format field order */}
-                    {fieldDefinitions.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                            No filters available. Format detection in progress...
-                        </Typography>
-                    ) : (
-                        fieldDefinitions.map(field => renderFieldFilter(field))
-                    )}
-                </Box>
-            </AccordionDetails>
-        </Accordion>
+        <Box sx={{ p: 1.5, maxWidth: 720 }}>
+            {header}
+            <Box sx={{ mt: 1.5 }}>
+                {content}
+            </Box>
+        </Box>
     );
 };

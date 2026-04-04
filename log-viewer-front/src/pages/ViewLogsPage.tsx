@@ -11,7 +11,6 @@ import {
 } from '../redux/slices/logFileSlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
 import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
-import { LogFiltersBar } from '../components/LogFiltersBar';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
 import { applyLogFilters } from '../utils/logFilters';
@@ -177,7 +176,7 @@ const ViewLogsPage: React.FC = () => {
         anomalyRegions,
         anomalyLineNumbers,
         hasAnomalyResults,
-    } = useSelector((state: RootState) => state.logFile);
+    } = useSelector<RootState, RootState['logFile']>((state) => state.logFile);
 
     const [normalRows, setNormalRows] = useState<ViewRow[]>([]);
     const [filters, setFilters] = useState<LogFilters>({});
@@ -1050,6 +1049,9 @@ const ViewLogsPage: React.FC = () => {
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 newLinesCount={newLinesCount}
+                filters={filters}
+                onFiltersChange={setFilters}
+                fieldDefinitions={fieldDefinitions}
                 isLargeFile={isLargeFile}
                 lineCount={lineCount}
                 normalRows={normalRows}
@@ -1057,13 +1059,6 @@ const ViewLogsPage: React.FC = () => {
                 getParsedRow={getParsedRow}
                 getActiveFile={getActiveFile}
             />
-
-            {/* Filters Bar */}
-            {/* <LogFiltersBar
-                filters={filters}
-                onFiltersChange={setFilters}
-                fieldDefinitions={fieldDefinitions}
-            /> */}
 
             <Box 
                 sx={{ 
