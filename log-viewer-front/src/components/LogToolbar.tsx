@@ -12,8 +12,42 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import StreamIcon from '@mui/icons-material/Stream';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import type { AnomalySettings } from '../utils/anomalySettings';
+import { useCallback, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState } from '../redux/store';
+import {
+    clearAnomalyResults,
+    setAnomalyError,
+    setAnomalyLastDurationSec,
+    setAnomalyResults,
+    setAnomalyRunning,
+    updateAnomalyRowsPerSecond,
+} from '../redux/slices/logFileSlice';
+import { isBglModelReady, predictBglAnomalies, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
+import {
+    ANOMALY_MIN_REGION_LINES_RANGE,
+    ANOMALY_SETTINGS_DEFAULTS,
+    ANOMALY_STEP_SIZE_RANGE,
+    ANOMALY_THRESHOLD_RANGE,
+    type AnomalySettings,
+    loadAnomalySettings,
+    loadSelectedAnomalyModelId,
+    saveAnomalySettings,
+    saveSelectedAnomalyModelId,
+} from '../utils/anomalySettings';
+import type { ParsedLogLine } from '../utils/logFormatDetector';
 import AnomalySettingsDialog from './AnomalySettingsDialog';
+
+type AnomalySourceRow = {
+    lineNumber: number;
+    raw: string;
+};
+
+type ParsedRow = {
+    lineNumber: number;
+    parsed: ParsedLogLine | null;
+    raw: string;
+};
 
 interface LogToolbarProps {
     onManualRefresh: () => void;
@@ -22,21 +56,12 @@ interface LogToolbarProps {
     viewMode: 'live-tail' | 'normal';
     onViewModeChange: (mode: 'live-tail' | 'normal') => void;
     newLinesCount: number;
-    isAnomalyLoading: boolean;
-    canRunAnomalyAnalysis: boolean;
-    anomalyDisabledReason?: string;
-    selectedModelId: 'bgl' | 'hdfs';
-    anomalySettings: AnomalySettings;
-    thresholdRange: { min: number; max: number; step: number };
-    stepSizeRange: { min: number; max: number; step: number };
-    minRegionLinesRange: { min: number; max: number; step: number };
-    isAnomalySettingsPanelOpen: boolean;
-    onToggleAnomalySettingsPanel: () => void;
-    onAnomalySettingsChange: (patch: Partial<AnomalySettings>) => void;
-    onSensitivityProfileApply: (profileId: 'sensitive' | 'balanced' | 'strict') => void;
-    onResetAnomalySettings: () => void;
-    onSelectedModelChange: (value: 'bgl' | 'hdfs') => void;
-    onRunAnomalyAnalysis: () => void;
+    isLargeFile: boolean;
+    lineCount: number;
+    normalRows: AnomalySourceRow[];
+    filteredRows: AnomalySourceRow[];
+    getActiveFile: () => Promise<File | null>;
+    getParsedRow: (row: AnomalySourceRow) => ParsedRow;
 }
 
 const LogToolbar: React.FC<LogToolbarProps> = ({
@@ -46,27 +71,289 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     viewMode,
     onViewModeChange,
     newLinesCount,
-    isAnomalyLoading,
-    canRunAnomalyAnalysis,
-    anomalyDisabledReason,
-    selectedModelId,
-    anomalySettings,
-    thresholdRange,
-    stepSizeRange,
-    minRegionLinesRange,
-    isAnomalySettingsPanelOpen,
-    onToggleAnomalySettingsPanel,
-    onAnomalySettingsChange,
-    onSensitivityProfileApply,
-    onResetAnomalySettings,
-    onSelectedModelChange,
-    onRunAnomalyAnalysis,
+    isLargeFile,
+    lineCount,
+    normalRows,
+    filteredRows,
+    getActiveFile,
+    getParsedRow,
 }) => {
+    const dispatch = useDispatch();
+    const { isMonitoring, anomalyIsRunning, anomalyRowsPerSecondByModel } = useSelector((state: RootState) => state.logFile);
+    const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
+    const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
+    const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
+    const [isModelReady, setIsModelReady] = useState<boolean>(false);
+    const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
+
     const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, value: 'live-tail' | 'normal' | null) => {
         if (value) {
             onViewModeChange(value);
         }
     };
+
+    useEffect(() => {
+        if (!isMonitoring) {
+            dispatch(clearAnomalyResults());
+            dispatch(setAnomalyRunning({ running: false }));
+        }
+    }, [dispatch, isMonitoring]);
+
+    useEffect(() => {
+        if (!isMonitoring) {
+            setIsModelReady(false);
+            setIsModelReadyLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const checkModelReady = async () => {
+            setIsModelReadyLoading(true);
+            try {
+                const ready = await isBglModelReady(selectedModelId);
+                if (!cancelled) {
+                    setIsModelReady(ready);
+                }
+            } catch {
+                if (!cancelled) {
+                    setIsModelReady(false);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsModelReadyLoading(false);
+                }
+            }
+        };
+
+        void checkModelReady();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isMonitoring, selectedModelId]);
+
+    const handleSelectedModelChange = useCallback((modelId: 'bgl' | 'hdfs') => {
+        setSelectedModelId(modelId);
+        saveSelectedAnomalyModelId(modelId);
+        setIsAnomalySettingsPanelOpen(true);
+    }, []);
+
+    useEffect(() => {
+        setAnomalySettings(loadAnomalySettings(selectedModelId));
+    }, [selectedModelId]);
+
+    const updateAnomalySettings = useCallback((patch: Partial<AnomalySettings>) => {
+        setAnomalySettings((prev) => {
+            const next: AnomalySettings = {
+                ...prev,
+                ...patch,
+                modelId: selectedModelId,
+            };
+            saveAnomalySettings(next);
+            return next;
+        });
+    }, [selectedModelId]);
+
+    const applySensitivityProfile = useCallback((profileId: 'sensitive' | 'balanced' | 'strict') => {
+        const profiles: Record<'sensitive' | 'balanced' | 'strict', Pick<AnomalySettings, 'threshold' | 'stepSize' | 'minRegionLines'>> = {
+            sensitive: { threshold: 0.35, stepSize: 5, minRegionLines: 1 },
+            balanced: { threshold: 0.5, stepSize: 10, minRegionLines: 2 },
+            strict: { threshold: 0.7, stepSize: 20, minRegionLines: 3 },
+        };
+        updateAnomalySettings(profiles[profileId]);
+    }, [updateAnomalySettings]);
+
+    const resetAnomalySettings = useCallback(() => {
+        const reset: AnomalySettings = {
+            ...ANOMALY_SETTINGS_DEFAULTS,
+            modelId: selectedModelId,
+        };
+        setAnomalySettings(reset);
+        saveAnomalySettings(reset);
+    }, [selectedModelId]);
+
+    const runAnomalyAnalysis = useCallback(async () => {
+        if (!isModelReady) {
+            dispatch(setAnomalyError('Model is not prepared. Open Pretrained Models and click Prepare Model.'));
+            return;
+        }
+
+        if (!isLargeFile && normalRows.length === 0) {
+            dispatch(setAnomalyError('No parsed lines to analyze.'));
+            return;
+        }
+
+        const runStartedAt = Date.now();
+        dispatch(setAnomalyError(''));
+
+        try {
+            const settings = anomalySettings;
+            const useFilteredScope = !isLargeFile && settings.analysisScope === 'filtered';
+            const sourceRows = useFilteredScope ? filteredRows : normalRows;
+            const sourceLineNumbers = sourceRows.map((line) => line.lineNumber);
+
+            const rowsToAnalyze = isLargeFile
+                ? Math.max(0, lineCount)
+                : sourceRows.length;
+
+            const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
+            const expectedDurationSec = rowsPerSecond && rowsPerSecond > 0
+                ? Math.max(1, Math.round(rowsToAnalyze / rowsPerSecond))
+                : null;
+
+            dispatch(setAnomalyRunning({
+                running: true,
+                startedAt: runStartedAt,
+                expectedDurationSec,
+            }));
+
+            if (!isLargeFile && sourceRows.length === 0) {
+                dispatch(setAnomalyError('No lines in selected analysis scope.'));
+                dispatch(clearAnomalyResults());
+                return;
+            }
+
+            const result = isLargeFile
+                ? await (async () => {
+                    const activeFile = await getActiveFile();
+                    if (!activeFile) {
+                        throw new Error('Failed to access file for anomaly analysis.');
+                    }
+
+                    return predictBglAnomaliesFromFile(activeFile, {
+                        model_id: selectedModelId,
+                        text_column: 'message',
+                        timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
+                        threshold: settings.threshold,
+                        step_size: settings.stepSize,
+                        min_region_lines: settings.minRegionLines,
+                        include_rows: false,
+                        include_windows: false,
+                    });
+                })()
+                : await (async () => {
+                    const rows = sourceRows.map((line) => {
+                        const parsedLine = getParsedRow(line);
+                        const normalizedTimestamp = parsedLine.parsed?.fields.timestamp
+                            || parsedLine.parsed?.fields.datetime
+                            || (parsedLine.parsed?.fields.date && parsedLine.parsed?.fields.time
+                                ? `${parsedLine.parsed.fields.date} ${parsedLine.parsed.fields.time}`
+                                : null);
+
+                        const row: {
+                            message: string;
+                            timestamp?: string | null;
+                            datetime?: string | null;
+                            time?: string | null;
+                            date?: string | null;
+                            event_time?: string | null;
+                            created_at?: string | null;
+                        } = {
+                            message: line.raw,
+                            timestamp: normalizedTimestamp,
+                        };
+
+                        if (settings.timestampColumn !== 'auto') {
+                            row[settings.timestampColumn] = parsedLine.parsed?.fields[settings.timestampColumn] ?? null;
+                        }
+
+                        return row;
+                    });
+
+                    return predictBglAnomalies({
+                        model_id: selectedModelId,
+                        rows,
+                        text_column: 'message',
+                        timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
+                        threshold: settings.threshold,
+                        step_size: settings.stepSize,
+                        min_region_lines: settings.minRegionLines,
+                        include_rows: false,
+                        include_windows: false,
+                    });
+                })();
+
+            const mappedRegions = isLargeFile
+                ? result.anomaly_regions
+                : result.anomaly_regions.map((region) => {
+                    const mappedStart = sourceLineNumbers[region.start_line - 1];
+                    const mappedEnd = sourceLineNumbers[region.end_line - 1];
+                    return {
+                        ...region,
+                        start_line: Number.isFinite(mappedStart) ? mappedStart : region.start_line,
+                        end_line: Number.isFinite(mappedEnd) ? mappedEnd : region.end_line,
+                    };
+                });
+
+            const anomalyRowLines = Array.isArray(result.anomaly_lines)
+                ? result.anomaly_lines
+                : (result.rows ?? [])
+                    .filter((row) => row.is_anomaly)
+                    .map((row) => row.line);
+
+            const anomalyLineNumbers = isLargeFile
+                ? anomalyRowLines
+                    .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber))
+                : anomalyRowLines
+                    .map((line) => sourceLineNumbers[line - 1])
+                    .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber));
+
+            dispatch(setAnomalyResults({
+                regions: mappedRegions,
+                lineNumbers: anomalyLineNumbers,
+                rowsCount: result.meta.anomaly_rows,
+                analyzedAt: Date.now(),
+                modelId: selectedModelId,
+                params: {
+                    threshold: settings.threshold,
+                    stepSize: settings.stepSize,
+                    minRegionLines: settings.minRegionLines,
+                    analysisScope: useFilteredScope ? settings.analysisScope : 'all',
+                    timestampColumn: settings.timestampColumn,
+                },
+            }));
+        } catch (err) {
+            dispatch(clearAnomalyResults());
+            dispatch(setAnomalyError(err instanceof Error ? err.message : 'Anomaly analysis failed'));
+        } finally {
+            const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
+            dispatch(setAnomalyLastDurationSec(elapsedSec));
+
+            const settings = anomalySettings;
+            const useFilteredScope = !isLargeFile && settings.analysisScope === 'filtered';
+            const sourceRows = useFilteredScope ? filteredRows : normalRows;
+            const analyzedRows = isLargeFile ? Math.max(0, lineCount) : sourceRows.length;
+            if (analyzedRows > 0) {
+                const measuredRowsPerSecond = analyzedRows / elapsedSec;
+                dispatch(updateAnomalyRowsPerSecond({
+                    modelId: selectedModelId,
+                    rowsPerSecond: measuredRowsPerSecond,
+                }));
+            }
+
+            dispatch(setAnomalyRunning({ running: false }));
+        }
+    }, [
+        anomalyRowsPerSecondByModel,
+        anomalySettings,
+        dispatch,
+        filteredRows,
+        getActiveFile,
+        getParsedRow,
+        isLargeFile,
+        isModelReady,
+        lineCount,
+        normalRows,
+        selectedModelId,
+    ]);
+
+    const canRunAnomalyAnalysis = !isModelReadyLoading && isModelReady;
+    const anomalyDisabledReason = isModelReadyLoading
+        ? 'Checking model readiness...'
+        : isModelReady
+            ? undefined
+            : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
 
     return (
         <>
@@ -112,7 +399,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         <IconButton
                             size="small"
                             color={isAnomalySettingsPanelOpen ? 'primary' : 'default'}
-                            onClick={onToggleAnomalySettingsPanel}
+                            onClick={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
                             aria-label="anomaly settings"
                         >
                             <AutoAwesomeIcon fontSize="small" />
@@ -158,20 +445,20 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
 
             <AnomalySettingsDialog
                 open={isAnomalySettingsPanelOpen}
-                onClose={onToggleAnomalySettingsPanel}
+                onClose={() => setIsAnomalySettingsPanelOpen(false)}
                 selectedModelId={selectedModelId}
                 anomalySettings={anomalySettings}
-                thresholdRange={thresholdRange}
-                stepSizeRange={stepSizeRange}
-                minRegionLinesRange={minRegionLinesRange}
-                isAnomalyLoading={isAnomalyLoading}
+                thresholdRange={ANOMALY_THRESHOLD_RANGE}
+                stepSizeRange={ANOMALY_STEP_SIZE_RANGE}
+                minRegionLinesRange={ANOMALY_MIN_REGION_LINES_RANGE}
+                isAnomalyLoading={anomalyIsRunning}
                 canRunAnomalyAnalysis={canRunAnomalyAnalysis}
                 anomalyDisabledReason={anomalyDisabledReason}
-                onAnomalySettingsChange={onAnomalySettingsChange}
-                onSensitivityProfileApply={onSensitivityProfileApply}
-                onResetAnomalySettings={onResetAnomalySettings}
-                onSelectedModelChange={onSelectedModelChange}
-                onRunAnomalyAnalysis={onRunAnomalyAnalysis}
+                onAnomalySettingsChange={updateAnomalySettings}
+                onSensitivityProfileApply={applySensitivityProfile}
+                onResetAnomalySettings={resetAnomalySettings}
+                onSelectedModelChange={handleSelectedModelChange}
+                onRunAnomalyAnalysis={runAnomalyAnalysis}
             />
         </>
     );
