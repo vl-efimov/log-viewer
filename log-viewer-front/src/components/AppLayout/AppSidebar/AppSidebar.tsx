@@ -15,10 +15,10 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RouteDashboard, RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../../routes/routePaths';
-import { RouteAbout } from '../../routes/routePaths';
-import { baseUrl } from '../../constants/BaseUrl';
-import { APP_LAYOUT_TOKENS } from '../../design-tokens';
+import { RouteDashboard, RouteViewLogs, RouteLogFormats, RoutePretrainedModels, RouteSettings } from '../../../routes/routePaths';
+import { RouteAbout } from '../../../routes/routePaths';
+import { baseUrl } from '../../../constants/BaseUrl';
+import { APP_LAYOUT_TOKENS } from '../../../design-tokens';
 
 interface SidebarProps {
     isSidebarOpen: boolean;

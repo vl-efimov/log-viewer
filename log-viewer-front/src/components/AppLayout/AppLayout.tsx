@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import Header from './AppHeader/AppHeader';
-import Sidebar from './AppSidebar';
+import Sidebar from './AppSidebar/AppSidebar';
 import AppStatusBar from './AppStatusBar/AppStatusBar';
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';

@@ -1,6 +1,9 @@
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import React from 'react';
+import { APP_LAYOUT_TOKENS } from '../../design-tokens';
+
+const { hoverBg: HOVER_BG } = APP_LAYOUT_TOKENS.statusBar;
 
 type AppStatusBarItemProps = {
     title: string;
@@ -23,7 +26,7 @@ const AppStatusBarItem: React.FC<AppStatusBarItemProps> = ({ title, children }) 
                 transition: 'background 0.15s',
                 cursor: 'default',
                 '&:hover': {
-                    background: 'rgba(255,255,255,0.1)',
+                    background: HOVER_BG,
                 },
             }}
         >
