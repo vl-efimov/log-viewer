@@ -1,23 +1,19 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
-import IconButton from '@mui/material/IconButton';
 import Divider from '@mui/material/Divider';
-import CloseIcon from '@mui/icons-material/Close';
 import DescriptionIcon from '@mui/icons-material/Description';
 import StorageIcon from '@mui/icons-material/Storage';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import React, { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RootState } from '../../../redux/store';
-import { clearLogFile, setFileHandle } from '../../../redux/slices/logFileSlice';
 import { baseUrl } from '../../../constants/BaseUrl';
 import { RouteViewLogs } from '../../../routes/routePaths';
 import AppStatusBarItem from '../AppStatusBarItem';
 import {
     anomalyTextSx,
-    closeButtonSx,
     statusBarDividerSx,
     iconRaisedSx,
     statusBarIconSx,
@@ -27,7 +23,6 @@ import {
 } from './styles';
 
 const AppStatusBar: React.FC = () => {
-    const dispatch = useDispatch();
     const location = useLocation();
     const {
         name,
@@ -51,11 +46,6 @@ const AppStatusBar: React.FC = () => {
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-    };
-
-    const handleClearFile = () => {
-        dispatch(clearLogFile());
-        setFileHandle(null);
     };
 
     const currentPath = location.pathname.replace(/\/+$/, '');
@@ -165,19 +155,6 @@ const AppStatusBar: React.FC = () => {
                                 </Typography>
                             </AppStatusBarItem>
                         )}
-
-                        <Tooltip 
-                            title="Close current file and stop monitoring" 
-                            arrow
-                            placement="top"
-                        >
-                            <IconButton
-                                onClick={handleClearFile}
-                                sx={closeButtonSx}
-                            >
-                                <CloseIcon sx={statusBarIconSx} />
-                            </IconButton>
-                        </Tooltip>
                     </>
                 )}
             </Box>

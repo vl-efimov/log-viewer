@@ -14,14 +14,13 @@ import {
     setAnomalyLastDurationSec,
     updateAnomalyRowsPerSecond,
     clearAnomalyResults,
-    setMonitoringState,
 } from '../redux/slices/logFileSlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
 import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
 import { LogFiltersBar } from '../components/LogFiltersBar';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
-import { applyLogFilters, getFilteredCount } from '../utils/logFilters';
+import { applyLogFilters } from '../utils/logFilters';
 import { FileSelectionView } from '../components/FileSelectionView';
 import { useFileLoader } from '../hooks/useFileLoader';
 import { useParsedRowsCache } from '../hooks/useParsedRowsCache';
@@ -415,29 +414,6 @@ const ViewLogsPage: React.FC = () => {
         setVirtualWindowStart(desiredStart);
         return virtualIndex;
     }, [clampWindowStart, isLargeFile, lineCount]);
-
-    const scrollToBottom = () => {
-        if (virtuosoRef.current) {
-            const totalDisplayCount = isLargeFile
-                ? getVirtualWindowSize(virtualWindowStart, lineCount)
-                : displayLines.length;
-            if (totalDisplayCount > 0) {
-                let targetIndex = viewMode === 'live-tail' ? 0 : totalDisplayCount - 1;
-
-                if (isLargeFile) {
-                    const globalTarget = viewMode === 'live-tail' ? 0 : Math.max(0, lineCount - 1);
-                    targetIndex = setWindowAroundDisplayIndex(globalTarget);
-                    rebaseAnchorRef.current = targetIndex;
-                }
-
-                virtuosoRef.current.scrollToIndex({
-                    index: targetIndex,
-                    align: viewMode === 'live-tail' ? 'start' : 'end',
-                    behavior: 'auto'
-                });
-            }
-        }
-    };
 
     // Load initial content from Redux
     useEffect(() => {
@@ -913,7 +889,7 @@ const ViewLogsPage: React.FC = () => {
                     threshold: settings.threshold,
                     stepSize: settings.stepSize,
                     minRegionLines: settings.minRegionLines,
-                        analysisScope: useFilteredScope ? settings.analysisScope : 'all',
+                    analysisScope: useFilteredScope ? settings.analysisScope : 'all',
                     timestampColumn: settings.timestampColumn,
                 },
             }));
@@ -942,24 +918,10 @@ const ViewLogsPage: React.FC = () => {
 
     const canRunAnomalyAnalysis = !isModelReadyLoading && isModelReady;
     const anomalyDisabledReason = isModelReadyLoading
-            ? 'Checking model readiness...'
-            : isModelReady
-                ? undefined
-                : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
-
-    // Get filter statistics
-    const filterStats = useMemo(() => {
-        if (isLargeFile) {
-            return { total: lineCount, filtered: lineCount, parsedFiltered: 0 };
-        }
-
-        if (!hasActiveFilters(filters)) {
-            return { total: normalRows.length, filtered: normalRows.length, parsedFiltered: 0 };
-        }
-
-        const parsedRows = normalRows.map((row) => getParsedRow(row));
-        return getFilteredCount(parsedRows, filters);
-    }, [filters, getParsedRow, isLargeFile, lineCount, normalRows]);
+        ? 'Checking model readiness...'
+        : isModelReady
+            ? undefined
+            : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
 
     // Get field definitions from detected format for filter configuration
     const fieldDefinitions = useMemo((): LogFormatField[] => {
@@ -1306,11 +1268,6 @@ const ViewLogsPage: React.FC = () => {
         }
     };
 
-    const handleReloadFile = () => {
-        // Stop current monitoring and navigate back to home to select a new file
-        dispatch(setMonitoringState(false));
-    };
-
     if (!isMonitoring) {
         return(         
             <FileSelectionView
@@ -1332,19 +1289,11 @@ const ViewLogsPage: React.FC = () => {
             }}
         >
             <LogToolbar
-                fileName={fileName}
-                lastUpdate={lastUpdate}
-                onReloadFile={handleReloadFile}
                 onManualRefresh={handleManualRefresh}
-                onScrollToBottom={scrollToBottom}
                 autoRefresh={autoRefresh}
                 onToggleAutoRefresh={handleToggleAutoRefresh}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
-                parsedLinesCount={isLargeFile ? lineCount : normalRows.length}
-                filterStats={filterStats}
-                contentSize={content?.length || 0}
-                fileSize={fileSize}
                 newLinesCount={newLinesCount}
                 isAnomalyLoading={anomalyIsRunning}
                 canRunAnomalyAnalysis={canRunAnomalyAnalysis}

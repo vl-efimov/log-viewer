@@ -18,19 +18,11 @@ import { useRef } from 'react';
 import type { AnomalySettings } from '../utils/anomalySettings';
 
 interface LogToolbarProps {
-    fileName: string;
-    lastUpdate: Date | null;
-    onReloadFile: () => void;
     onManualRefresh: () => void;
-    onScrollToBottom: () => void;
     autoRefresh: boolean;
     onToggleAutoRefresh: () => void;
     viewMode: 'live-tail' | 'normal';
     onViewModeChange: (mode: 'live-tail' | 'normal') => void;
-    parsedLinesCount: number;
-    filterStats: { filtered: number; total: number; parsedFiltered: number };
-    contentSize: number;
-    fileSize: number;
     newLinesCount: number;
     isAnomalyLoading: boolean;
     canRunAnomalyAnalysis: boolean;
@@ -50,19 +42,11 @@ interface LogToolbarProps {
 }
 
 const LogToolbar: React.FC<LogToolbarProps> = ({
-    fileName,
-    lastUpdate,
-    onReloadFile,
     onManualRefresh,
-    onScrollToBottom,
     autoRefresh,
     onToggleAutoRefresh,
     viewMode,
     onViewModeChange,
-    parsedLinesCount,
-    filterStats,
-    contentSize,
-    fileSize,
     newLinesCount,
     isAnomalyLoading,
     canRunAnomalyAnalysis,
@@ -104,32 +88,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
 
     return (
         <>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Box>
-                    <Typography variant="h6">
-                        {fileName}
-                    </Typography>
-                    {lastUpdate && (
-                        <Typography variant="caption" color="text.secondary">
-                            Last updated: {lastUpdate.toLocaleTimeString()}
-                        </Typography>
-                    )}
-                </Box>
-            </Box>
-
             <Box sx={{ display: 'flex', gap: 2, mb: 1, alignItems: 'center' }}>
-                <Typography
-                    variant="button"
-                    sx={{
-                        cursor: 'pointer',
-                        color: 'primary.main',
-                        textDecoration: 'underline',
-                        '&:hover': { opacity: 0.8 }
-                    }}
-                    onClick={onReloadFile}
-                >
-                    Change File
-                </Typography>
                 <Typography
                     variant="button"
                     sx={{
@@ -141,18 +100,6 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     onClick={onManualRefresh}
                 >
                     Refresh Now
-                </Typography>
-                <Typography
-                    variant="button"
-                    sx={{
-                        cursor: 'pointer',
-                        color: 'primary.main',
-                        textDecoration: 'underline',
-                        '&:hover': { opacity: 0.8 }
-                    }}
-                    onClick={onScrollToBottom}
-                >
-                    Jump to End
                 </Typography>
                 <Typography
                     variant="button"
@@ -213,13 +160,6 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         Normal
                     </ToggleButton>
                 </ToggleButtonGroup>
-                <Typography variant="caption" color="text.secondary">
-                    Total lines: {parsedLinesCount}
-                    {filterStats.filtered !== filterStats.total && (
-                        <> | Showing: {filterStats.filtered} ({filterStats.parsedFiltered} parsed + stacktraces)</>
-                    )}
-                    {' | '}Content size: {contentSize.toLocaleString()} bytes | File size: {fileSize.toLocaleString()} bytes
-                </Typography>
                 {newLinesCount > 0 && (
                     <Chip
                         label={`+${newLinesCount} new`}

@@ -25,7 +25,6 @@ export const iconButtonSx = (color: string | undefined): SxProps<Theme> => ({
 });
 
 export const titleSx = (color: string | undefined): SxProps<Theme> => ({
-    flexGrow: 1,
     color,
 });
 
