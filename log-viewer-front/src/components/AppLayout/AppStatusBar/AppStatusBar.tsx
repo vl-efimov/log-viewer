@@ -29,15 +29,17 @@ const AppStatusBar: React.FC = () => {
         size,
         format,
         loaded,
-        anomalyRowsCount,
-        anomalyError,
-        anomalyLastAnalyzedAt,
-        anomalyLastModelId,
-        anomalyIsRunning,
-        anomalyRunStartedAt,
-        anomalyExpectedDurationSec,
-        anomalyLastRunParams,
     } = useSelector((state: RootState) => state.logFile);
+    const {
+        rowsCount: anomalyRowsCount,
+        error: anomalyError,
+        lastAnalyzedAt: anomalyLastAnalyzedAt,
+        lastModelId: anomalyLastModelId,
+        isRunning: anomalyIsRunning,
+        runStartedAt: anomalyRunStartedAt,
+        expectedDurationSec: anomalyExpectedDurationSec,
+        lastRunParams: anomalyLastRunParams,
+    } = useSelector((state: RootState) => state.anomaly);
     const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
     const formatFileSize = (bytes: number): string => {

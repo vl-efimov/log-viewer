@@ -173,10 +173,13 @@ const ViewLogsPage: React.FC = () => {
         size: fileSize,
         isLargeFile,
         analyticsSessionId,
-        anomalyRegions,
-        anomalyLineNumbers,
-        hasAnomalyResults,
-    } = useSelector<RootState, RootState['logFile']>((state) => state.logFile);
+    } = useSelector((state: RootState) => state.logFile);
+
+    const {
+        regions: anomalyRegions,
+        lineNumbers: anomalyLineNumbers,
+        hasResults: hasAnomalyResults,
+    } = useSelector((state: RootState) => state.anomaly);
 
     const [normalRows, setNormalRows] = useState<ViewRow[]>([]);
     const [filters, setFilters] = useState<LogFilters>({});

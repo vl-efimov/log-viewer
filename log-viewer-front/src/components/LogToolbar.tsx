@@ -24,7 +24,7 @@ import {
     setAnomalyResults,
     setAnomalyRunning,
     updateAnomalyRowsPerSecond,
-} from '../redux/slices/logFileSlice';
+} from '../redux/slices/anomalySlice';
 import { isBglModelReady, predictBglAnomalies, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
 import {
     ANOMALY_MIN_REGION_LINES_RANGE,
@@ -90,7 +90,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     getParsedRow,
 }) => {
     const dispatch = useDispatch();
-    const { isMonitoring, anomalyIsRunning, anomalyRowsPerSecondByModel } = useSelector<RootState, RootState['logFile']>((state) => state.logFile);
+    const { isMonitoring } = useSelector((state: RootState) => state.logFile);
+    const {
+        isRunning: anomalyIsRunning,
+        rowsPerSecondByModel: anomalyRowsPerSecondByModel,
+    } = useSelector((state: RootState) => state.anomaly);
     const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
     const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
