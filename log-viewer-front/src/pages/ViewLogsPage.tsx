@@ -18,7 +18,6 @@ import { useFileLoader } from '../hooks/useFileLoader';
 import { useParsedRowsCache } from '../hooks/useParsedRowsCache';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
-import { sampleAndAnalyzeLargeFile } from '../utils/histogramSampling';
 import { getDashboardSnapshot, queryFilteredLines } from '../utils/logIndexedDb';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -30,7 +29,6 @@ const MAX_RANGE_BYTES = 512 * 1024; // 512 KB
 const MAX_VIRTUAL_ROWS = 1_500_000;
 const WINDOW_REBASE_MARGIN = 200_000;
 const MAX_LARGE_FILE_VIEW_CACHE_ENTRIES = 3;
-const MAX_NORMAL_HISTOGRAM_SAMPLE_LINES = 50_000;
 const MAX_INDEXED_FILTER_ROWS = 200_000;
 const PREVIEW_BYTES = 2 * 1024 * 1024;
 
@@ -55,7 +53,6 @@ type LineIndex = {
 type LargeFileViewCacheEntry = {
     lineOffsets: LineIndex;
     lineCount: number;
-    histogramLines: ViewParsedLine[];
 };
 
 const largeFileViewCache = new Map<string, LargeFileViewCacheEntry>();
@@ -149,10 +146,10 @@ const hasActiveFilters = (filters: LogFilters): boolean => {
         if (!value) continue;
         if (Array.isArray(value) && value.length > 0) return true;
         if (typeof value === 'object' && 'value' in value) {
-            if (Boolean(value.value && value.value.trim().length > 0)) return true;
+            if (value.value && value.value.trim().length > 0) return true;
         }
         if (typeof value === 'object' && ('start' in value || 'end' in value)) {
-            if (Boolean(value.start || value.end)) return true;
+            if (value.start || value.end) return true;
         }
     }
     return false;
@@ -176,6 +173,7 @@ const ViewLogsPage: React.FC = () => {
         isLargeFile,
         analyticsSessionId,
         loaded,
+        isIndexing,
     } = useSelector((state: RootState) => state.logFile);
 
     const {
@@ -188,8 +186,8 @@ const ViewLogsPage: React.FC = () => {
     const [indexedFilteredRows, setIndexedFilteredRows] = useState<ViewRow[]>([]);
     const [isFilterLoading, setIsFilterLoading] = useState<boolean>(false);
     const [indexedHistogramLines, setIndexedHistogramLines] = useState<ViewParsedLine[]>([]);
+    const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [filters, setFilters] = useState<LogFilters>({});
-    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [newLinesCount, setNewLinesCount] = useState<number>(0);
     const lastModifiedRef = useRef<number>(0);
@@ -201,9 +199,6 @@ const ViewLogsPage: React.FC = () => {
     const [lineCount, setLineCount] = useState<number>(0);
     const [lineCacheVersion, setLineCacheVersion] = useState<number>(0);
     const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
-    const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
-    const [histogramProgress, setHistogramProgress] = useState<number>(0);
-    const [largeFileHistogramLines, setLargeFileHistogramLines] = useState<ViewParsedLine[]>([]);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
     const rebaseAnchorRef = useRef<number | null>(null);
     const rangeLoadStateRef = useRef<{ pending: { start: number; end: number } | null; isLoading: boolean }>({
@@ -412,7 +407,6 @@ const ViewLogsPage: React.FC = () => {
         const rows = buildRowsForView(safeContent);
         clearParsedRowCache();
         setNormalRows(rows);
-        setLastUpdate(new Date());
         // Track new lines added
         if (previousLineCountRef.current > 0 && rows.length - previousLineCountRef.current > 0) {
             setNewLinesCount(rows.length - previousLineCountRef.current);
@@ -584,12 +578,14 @@ const ViewLogsPage: React.FC = () => {
     ]);
 
     useEffect(() => {
-        if (isLargeFile || !analyticsSessionId) {
+        if (isLargeFile || !analyticsSessionId || isIndexing) {
             setIndexedHistogramLines([]);
+            setIsHistogramLoading(false);
             return;
         }
 
         let cancelled = false;
+        setIsHistogramLoading(true);
 
         const loadHistogramSample = async () => {
             const snapshot = await getDashboardSnapshot(analyticsSessionId);
@@ -597,34 +593,24 @@ const ViewLogsPage: React.FC = () => {
             setIndexedHistogramLines(snapshot?.sampledLines ?? []);
         };
 
-        void loadHistogramSample();
+        void loadHistogramSample().finally(() => {
+            if (!cancelled) {
+                setIsHistogramLoading(false);
+            }
+        });
 
         return () => {
             cancelled = true;
         };
-    }, [analyticsSessionId, isLargeFile]);
+    }, [analyticsSessionId, isIndexing, isLargeFile]);
 
     const histogramSourceLines = useMemo(() => {
         if (isLargeFile) {
-            return largeFileHistogramLines;
-        }
-
-        if (indexedHistogramLines.length > 0) {
-            return indexedHistogramLines;
-        }
-
-        if (normalRows.length === 0) {
             return [];
         }
 
-        const step = Math.max(1, Math.ceil(normalRows.length / MAX_NORMAL_HISTOGRAM_SAMPLE_LINES));
-        const sampled: ViewParsedLine[] = [];
-        for (let i = 0; i < normalRows.length; i += step) {
-            sampled.push(getParsedRow(normalRows[i]));
-        }
-
-        return sampled;
-    }, [getParsedRow, indexedHistogramLines, isLargeFile, largeFileHistogramLines, normalRows]);
+        return indexedHistogramLines;
+    }, [indexedHistogramLines, isLargeFile]);
 
     const handleAnomalyRangeSelect = useCallback((startLine: number, endLine: number) => {
         const normalizedStart = Math.min(startLine, endLine);
@@ -745,9 +731,6 @@ const ViewLogsPage: React.FC = () => {
         if (cached) {
             lineOffsetsRef.current = cached.lineOffsets;
             setLineCount(cached.lineCount);
-            setLargeFileHistogramLines(cached.histogramLines);
-            setIsHistogramLoading(false);
-            setHistogramProgress(0);
 
             lineCacheRef.current = new Map();
             cacheBytesRef.current = 0;
@@ -782,11 +765,9 @@ const ViewLogsPage: React.FC = () => {
 
             lineOffsetsRef.current = offsets;
             setLineCount(offsets.length);
-            const existingCache = largeFileViewCache.get(largeFileCacheKey);
             setLargeFileViewCache(largeFileCacheKey, {
                 lineOffsets: offsets,
                 lineCount: offsets.length,
-                histogramLines: existingCache?.histogramLines ?? [],
             });
 
             if (offsets.length > 0) {
@@ -816,57 +797,6 @@ const ViewLogsPage: React.FC = () => {
             requestRangeLoad(0, Math.min(RANGE_LOAD_PADDING, lineCount - 1));
         }
     }, [viewMode, isLargeFile, lineCount, requestRangeLoad]);
-
-    useEffect(() => {
-        if (!isLargeFile || !isMonitoring || lineCount === 0) {
-            setIsHistogramLoading(false);
-            setHistogramProgress(0);
-            setLargeFileHistogramLines([]);
-            return;
-        }
-
-        const cached = largeFileViewCache.get(largeFileCacheKey);
-        if (cached && cached.histogramLines.length > 0) {
-            setLargeFileHistogramLines(cached.histogramLines);
-            setIsHistogramLoading(false);
-            setHistogramProgress(0);
-            return;
-        }
-
-        let cancelled = false;
-
-        const scanFileForHistogram = async () => {
-            const file = await getActiveFile();
-            if (!file || cancelled) return;
-
-            setIsHistogramLoading(true);
-            setHistogramProgress(0);
-
-            const { sampledLines } = await sampleAndAnalyzeLargeFile(file, lineCount, {
-                onProgress: (progress) => setHistogramProgress(progress),
-                isCancelled: () => cancelled,
-            });
-
-            if (cancelled) {
-                return;
-            }
-
-            setLargeFileHistogramLines(sampledLines);
-            const existingCache = largeFileViewCache.get(largeFileCacheKey);
-            setLargeFileViewCache(largeFileCacheKey, {
-                lineOffsets: existingCache?.lineOffsets ?? lineOffsetsRef.current,
-                lineCount: existingCache?.lineCount ?? lineCount,
-                histogramLines: sampledLines,
-            });
-            setIsHistogramLoading(false);
-        };
-
-        void scanFileForHistogram();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [getActiveFile, isLargeFile, isMonitoring, lineCount, largeFileCacheKey]);
 
     useEffect(() => {
         if (!isLargeFile) {
@@ -926,7 +856,6 @@ const ViewLogsPage: React.FC = () => {
                                     setLineCacheVersion((version) => version + 1);
                                     setLineCount(offsets.length);
                                     lastSizeRef.current = currentSize;
-                                    setLastUpdate(new Date());
                                 } else if (currentSize > lastSizeRef.current) {
                                     console.log(`File grew from ${lastSizeRef.current} to ${currentSize} bytes, indexing increment`);
 
@@ -948,7 +877,6 @@ const ViewLogsPage: React.FC = () => {
 
                                     setLineCount(offsets.length);
                                     lastSizeRef.current = currentSize;
-                                    setLastUpdate(new Date());
 
                                     if (viewMode === 'live-tail' && offsets.length > 0) {
                                         const start = Math.max(0, offsets.length - 1 - RANGE_LOAD_PADDING);
@@ -969,7 +897,6 @@ const ViewLogsPage: React.FC = () => {
                             }));
 
                             lastSizeRef.current = currentSize;
-                            setLastUpdate(new Date());
                         }
                     } catch (error) {
                         console.error('Error reading file:', error);
@@ -1011,7 +938,6 @@ const ViewLogsPage: React.FC = () => {
                 cacheBytesRef.current = 0;
                 setLineCacheVersion((version) => version + 1);
                 setLineCount(offsets.length);
-                setLastUpdate(new Date());
                 if (offsets.length > 0) {
                     if (viewMode === 'live-tail') {
                         const start = Math.max(0, offsets.length - 1 - RANGE_LOAD_PADDING);
@@ -1035,7 +961,6 @@ const ViewLogsPage: React.FC = () => {
                 size: file.size,
             }));
 
-            setLastUpdate(new Date());
         } catch (error) {
             console.error('Error refreshing file:', error);
         }
@@ -1062,26 +987,27 @@ const ViewLogsPage: React.FC = () => {
             }}
         >
             {/* Log Timeline Histogram */}
-            {isLargeFile && isHistogramLoading && (
+            {(isIndexing || isHistogramLoading) && !isLargeFile && (
                 <Box
                     sx={{
                         height: 150,
                         borderRadius: 1,
                         border: (theme) => `1px solid ${theme.palette.divider}`,
+                        backgroundColor: (theme) => theme.palette.background.paper,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 2,
-                        backgroundColor: (theme) => theme.palette.background.paper,
+                        px: 2,
                     }}
                 >
                     <CircularProgress size={24} />
                     <Typography variant="body2" color="text.secondary">
-                        Building full-file histogram in background... {histogramProgress}%
+                        Индексация завершится — появится график.
                     </Typography>
                 </Box>
             )}
-            {(!isLargeFile || !isHistogramLoading) && histogramSourceLines.length > 0 && (
+            {!isIndexing && !isHistogramLoading && histogramSourceLines.length > 0 && (
                 <LogHistogram
                     parsedLines={histogramSourceLines}
                     defaultCollapsed={false}
