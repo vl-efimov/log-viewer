@@ -920,12 +920,22 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             return null;
         }
 
-        const converted = chart.convertFromPixel({ xAxisIndex: 0 }, [offsetX, offsetY]);
-        if (Array.isArray(converted) && typeof converted[0] === 'number' && Number.isFinite(converted[0])) {
-            return converted[0];
-        }
-        if (typeof converted === 'number' && Number.isFinite(converted)) {
-            return converted;
+        const hasModel = typeof (chart as unknown as { getModel?: () => unknown }).getModel === 'function'
+            ? (chart as unknown as { getModel: () => unknown }).getModel() !== null
+            : false;
+
+        if (hasModel) {
+            try {
+                const converted = chart.convertFromPixel({ xAxisIndex: 0 }, [offsetX, offsetY]);
+                if (Array.isArray(converted) && typeof converted[0] === 'number' && Number.isFinite(converted[0])) {
+                    return converted[0];
+                }
+                if (typeof converted === 'number' && Number.isFinite(converted)) {
+                    return converted;
+                }
+            } catch {
+                // Fall back to proportional mapping while chart finishes init.
+            }
         }
 
         if (timeRange) {
