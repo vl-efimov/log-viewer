@@ -16,6 +16,7 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../redux/store';
+import { ViewModeEnum } from '../constants/ViewModeEnum';
 import {
     clearAnomalyResults,
     setAnomalyError,
@@ -57,8 +58,8 @@ interface LogToolbarProps {
     onManualRefresh: () => void;
     autoRefresh: boolean;
     onToggleAutoRefresh: () => void;
-    viewMode: 'live-tail' | 'normal';
-    onViewModeChange: (mode: 'live-tail' | 'normal') => void;
+    viewMode: ViewModeEnum;
+    onViewModeChange: (mode: ViewModeEnum) => void;
     newLinesCount: number;
     filters: LogFilters;
     onFiltersChange: (filters: LogFilters) => void;
@@ -422,12 +423,16 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         >
                             <IconButton
                                 size="small"
-                                onClick={() => onViewModeChange('normal')}
-                                color={viewMode === 'normal' ? 'primary' : 'default'}
+                                onClick={() => onViewModeChange(ViewModeEnum.FromStart)}
+                                color={viewMode === ViewModeEnum.FromStart ? 'primary' : 'default'}
                                 sx={(theme) => ({
                                     border: '1px solid',
-                                    borderColor: viewMode === 'normal' ? theme.palette.primary.main : theme.palette.divider,
-                                    bgcolor: viewMode === 'normal' ? theme.palette.action.selected : 'transparent',
+                                    borderColor: viewMode === ViewModeEnum.FromStart
+                                        ? theme.palette.primary.main
+                                        : theme.palette.divider,
+                                    bgcolor: viewMode === ViewModeEnum.FromStart
+                                        ? theme.palette.action.selected
+                                        : 'transparent',
                                     borderRadius: 1,
                                 })}
                             >
@@ -441,12 +446,16 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         >
                             <IconButton
                                 size="small"
-                                onClick={() => onViewModeChange('live-tail')}
-                                color={viewMode === 'live-tail' ? 'primary' : 'default'}
+                                onClick={() => onViewModeChange(ViewModeEnum.FromEnd)}
+                                color={viewMode === ViewModeEnum.FromEnd ? 'primary' : 'default'}
                                 sx={(theme) => ({
                                     border: '1px solid',
-                                    borderColor: viewMode === 'live-tail' ? theme.palette.primary.main : theme.palette.divider,
-                                    bgcolor: viewMode === 'live-tail' ? theme.palette.action.selected : 'transparent',
+                                    borderColor: viewMode === ViewModeEnum.FromEnd
+                                        ? theme.palette.primary.main
+                                        : theme.palette.divider,
+                                    bgcolor: viewMode === ViewModeEnum.FromEnd
+                                        ? theme.palette.action.selected
+                                        : 'transparent',
                                     borderRadius: 1,
                                 })}
                             >

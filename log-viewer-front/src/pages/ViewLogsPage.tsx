@@ -5,6 +5,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import { RootState } from '../redux/store';
+import { ViewModeEnum } from '../constants/ViewModeEnum';
 import {
     updateLogContent,
     clearLogContent,
@@ -166,7 +167,7 @@ const hasActiveFilters = (filters: LogFilters): boolean => {
 const ViewLogsPage: React.FC = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
     const virtuosoRef = useRef<VirtuosoHandle>(null);
-    const [viewMode, setViewMode] = useState<'live-tail' | 'normal'>('live-tail');
+    const [viewMode, setViewMode] = useState<ViewModeEnum>(ViewModeEnum.FromEnd);
 
     const dispatch = useDispatch();
     
@@ -575,7 +576,7 @@ const ViewLogsPage: React.FC = () => {
             return [];
         }
 
-        if (viewMode === 'live-tail') {
+        if (viewMode === ViewModeEnum.FromEnd) {
             return filteredRows.slice().reverse().map((row) => ({
                 raw: row.raw,
                 // Preserve source numbering in reverse mode too (including skipped line gaps).
@@ -671,7 +672,7 @@ const ViewLogsPage: React.FC = () => {
     const getDbLineAtIndex = useCallback((displayIndex: number) => {
         if (!useDbView || dbLineCount === 0) return null;
 
-        const fileIndex = viewMode === 'live-tail'
+        const fileIndex = viewMode === ViewModeEnum.FromEnd
             ? dbLineCount - 1 - displayIndex
             : displayIndex;
 
@@ -679,7 +680,7 @@ const ViewLogsPage: React.FC = () => {
 
         const rawEntry = dbLineCacheRef.current.get(fileIndex);
 
-        const displayLineNumber = viewMode === 'live-tail'
+        const displayLineNumber = viewMode === ViewModeEnum.FromEnd
             ? dbLineCount - displayIndex
             : fileIndex + 1;
 
@@ -705,7 +706,7 @@ const ViewLogsPage: React.FC = () => {
 
         const globalDisplayIndex = virtualWindowStart + displayIndex;
 
-        const fileIndex = viewMode === 'live-tail'
+        const fileIndex = viewMode === ViewModeEnum.FromEnd
             ? lineCount - 1 - globalDisplayIndex
             : globalDisplayIndex;
 
@@ -713,7 +714,7 @@ const ViewLogsPage: React.FC = () => {
 
         const rawEntry = lineCacheRef.current.get(fileIndex);
 
-        const displayLineNumber = viewMode === 'live-tail'
+        const displayLineNumber = viewMode === ViewModeEnum.FromEnd
             ? lineCount - globalDisplayIndex
             : fileIndex + 1;
 
@@ -736,10 +737,10 @@ const ViewLogsPage: React.FC = () => {
         const globalStart = virtualWindowStart + safeStart;
         const globalEnd = virtualWindowStart + safeEnd;
 
-        const mappedStart = viewMode === 'live-tail'
+        const mappedStart = viewMode === ViewModeEnum.FromEnd
             ? lineCount - 1 - globalEnd
             : globalStart;
-        const mappedEnd = viewMode === 'live-tail'
+        const mappedEnd = viewMode === ViewModeEnum.FromEnd
             ? lineCount - 1 - globalStart
             : globalEnd;
 
@@ -776,7 +777,7 @@ const ViewLogsPage: React.FC = () => {
         if (!useDbView || hasActiveFilters(filters) || dbLineCount === 0) return;
         const safeStart = Math.max(0, startIndex);
         const safeEnd = Math.max(0, Math.min(endIndex, Math.max(0, dbLineCount - 1)));
-        if (viewMode === 'live-tail') {
+        if (viewMode === ViewModeEnum.FromEnd) {
             const mappedStart = dbLineCount - 1 - safeEnd;
             const mappedEnd = dbLineCount - 1 - safeStart;
             requestDbRangeLoad(mappedStart, mappedEnd);
@@ -823,8 +824,8 @@ const ViewLogsPage: React.FC = () => {
     const handleAnomalyRangeSelect = useCallback((startLine: number, endLine: number) => {
         const normalizedStart = Math.min(startLine, endLine);
         const normalizedEnd = Math.max(startLine, endLine);
-        // In normal mode jump to range start; in live-tail jump to range end.
-        const targetSourceLine = viewMode === 'live-tail' ? normalizedEnd : normalizedStart;
+        // In start mode jump to range start; in end mode jump to range end.
+        const targetSourceLine = viewMode === ViewModeEnum.FromEnd ? normalizedEnd : normalizedStart;
 
         if (targetSourceLine <= 0 || !Number.isFinite(targetSourceLine)) {
             return;
@@ -834,7 +835,7 @@ const ViewLogsPage: React.FC = () => {
             if (!virtuosoRef.current || lineCount <= 0) return;
 
             const fileIndex = Math.max(0, Math.min(lineCount - 1, Math.floor(targetSourceLine) - 1));
-            const globalDisplayIndex = viewMode === 'live-tail'
+            const globalDisplayIndex = viewMode === ViewModeEnum.FromEnd
                 ? Math.max(0, lineCount - 1 - fileIndex)
                 : fileIndex;
 
@@ -883,7 +884,7 @@ const ViewLogsPage: React.FC = () => {
                 }
 
                 if (distance === bestDistance) {
-                    const preferCurrent = viewMode === 'live-tail'
+                    const preferCurrent = viewMode === ViewModeEnum.FromEnd
                         ? source > bestSource
                         : source < bestSource;
                     if (preferCurrent) {
@@ -945,7 +946,7 @@ const ViewLogsPage: React.FC = () => {
             setLineCacheVersion((version) => version + 1);
 
             if (cached.lineCount > 0) {
-                if (viewMode === 'live-tail') {
+                if (viewMode === ViewModeEnum.FromEnd) {
                     const start = Math.max(0, cached.lineCount - 1 - RANGE_LOAD_PADDING);
                     requestRangeLoad(start, cached.lineCount - 1);
                 } else {
@@ -979,7 +980,7 @@ const ViewLogsPage: React.FC = () => {
             });
 
             if (offsets.length > 0) {
-                if (viewMode === 'live-tail') {
+                if (viewMode === ViewModeEnum.FromEnd) {
                     const start = Math.max(0, offsets.length - 1 - RANGE_LOAD_PADDING);
                     requestRangeLoad(start, offsets.length - 1);
                 } else {
@@ -998,7 +999,7 @@ const ViewLogsPage: React.FC = () => {
     useEffect(() => {
         if (!isLargeFile || lineCount === 0) return;
 
-        if (viewMode === 'live-tail') {
+        if (viewMode === ViewModeEnum.FromEnd) {
             const start = Math.max(0, lineCount - 1 - RANGE_LOAD_PADDING);
             requestRangeLoad(start, lineCount - 1);
         } else {
@@ -1086,7 +1087,7 @@ const ViewLogsPage: React.FC = () => {
                                     setLineCount(offsets.length);
                                     lastSizeRef.current = currentSize;
 
-                                    if (viewMode === 'live-tail' && offsets.length > 0) {
+                                    if (viewMode === ViewModeEnum.FromEnd && offsets.length > 0) {
                                         const start = Math.max(0, offsets.length - 1 - RANGE_LOAD_PADDING);
                                         requestRangeLoad(start, offsets.length - 1);
                                     }
@@ -1147,7 +1148,7 @@ const ViewLogsPage: React.FC = () => {
                 setLineCacheVersion((version) => version + 1);
                 setLineCount(offsets.length);
                 if (offsets.length > 0) {
-                    if (viewMode === 'live-tail') {
+                    if (viewMode === ViewModeEnum.FromEnd) {
                         const start = Math.max(0, offsets.length - 1 - RANGE_LOAD_PADDING);
                         requestRangeLoad(start, offsets.length - 1);
                     } else {
