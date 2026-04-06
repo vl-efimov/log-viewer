@@ -105,6 +105,9 @@ const logFileSlice = createSlice({
                 state.indexingProgress = 0;
             }
         },
+        clearLogContent: (state) => {
+            state.content = '';
+        },
         clearLogFile: (state) => {
             state.name = '';
             state.size = 0;
@@ -128,6 +131,7 @@ export const {
     appendLogContent,
     setMonitoringState,
     setIndexingState,
+    clearLogContent,
     clearLogFile,
 } = logFileSlice.actions;
 

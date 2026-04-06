@@ -138,6 +138,11 @@ export const getSession = async (sessionId: string): Promise<LogSessionRecord | 
     return result ?? null;
 };
 
+export const getSessionLineCount = async (sessionId: string): Promise<number> => {
+    const session = await getSession(sessionId);
+    return session?.lineCount ?? 0;
+};
+
 export const touchSession = async (sessionId: string): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_SESSIONS, 'readwrite');
@@ -219,6 +224,37 @@ export const putLineBatch = async (lines: LogLineRecord[]): Promise<void> => {
     }
 
     await transactionDone(tx);
+};
+
+export const getLinesRange = async (
+    sessionId: string,
+    startLine: number,
+    endLine: number
+): Promise<LogLineRecord[]> => {
+    if (endLine < startLine) return [];
+
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_LINES, 'readonly');
+    const store = tx.objectStore(STORE_LINES);
+    const range = IDBKeyRange.bound([sessionId, startLine], [sessionId, endLine]);
+
+    const records: LogLineRecord[] = [];
+    await new Promise<void>((resolve, reject) => {
+        const request = store.openCursor(range);
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) {
+                resolve();
+                return;
+            }
+            records.push(cursor.value as LogLineRecord);
+            cursor.continue();
+        };
+        request.onerror = () => reject(request.error);
+    });
+
+    await transactionDone(tx);
+    return records;
 };
 
 export const saveDashboardSnapshot = async (sessionId: string, snapshot: LogStatsRecord): Promise<void> => {

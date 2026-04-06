@@ -7,6 +7,7 @@ import type { VirtuosoHandle } from 'react-virtuoso';
 import { RootState } from '../redux/store';
 import {
     updateLogContent,
+    clearLogContent,
 } from '../redux/slices/logFileSlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
 import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
@@ -18,7 +19,7 @@ import { useFileLoader } from '../hooks/useFileLoader';
 import { useParsedRowsCache } from '../hooks/useParsedRowsCache';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
-import { getDashboardSnapshot, queryFilteredLines } from '../utils/logIndexedDb';
+import { getDashboardSnapshot, getLinesRange, getSessionLineCount, queryFilteredLines } from '../utils/logIndexedDb';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024; // 4 MB
 const LINE_INDEX_CHUNK_SIZE = 1_000_000; // Offsets per chunk
@@ -31,6 +32,7 @@ const WINDOW_REBASE_MARGIN = 200_000;
 const MAX_LARGE_FILE_VIEW_CACHE_ENTRIES = 3;
 const MAX_INDEXED_FILTER_ROWS = 200_000;
 const PREVIEW_BYTES = 2 * 1024 * 1024;
+const DB_RANGE_LOAD_PADDING = 120;
 
 type ViewParsedLine = {
     lineNumber: number;
@@ -53,6 +55,11 @@ type LineIndex = {
 type LargeFileViewCacheEntry = {
     lineOffsets: LineIndex;
     lineCount: number;
+};
+
+type DbLineCacheEntry = {
+    text: string;
+    size: number;
 };
 
 const largeFileViewCache = new Map<string, LargeFileViewCacheEntry>();
@@ -198,10 +205,18 @@ const ViewLogsPage: React.FC = () => {
     const cacheBytesRef = useRef<number>(0);
     const [lineCount, setLineCount] = useState<number>(0);
     const [lineCacheVersion, setLineCacheVersion] = useState<number>(0);
+    const dbLineCacheRef = useRef<Map<number, DbLineCacheEntry>>(new Map());
+    const dbCacheBytesRef = useRef<number>(0);
+    const [dbLineCount, setDbLineCount] = useState<number>(0);
+    const [dbLineCacheVersion, setDbLineCacheVersion] = useState<number>(0);
     const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
     const rebaseAnchorRef = useRef<number | null>(null);
     const rangeLoadStateRef = useRef<{ pending: { start: number; end: number } | null; isLoading: boolean }>({
+        pending: null,
+        isLoading: false,
+    });
+    const dbRangeLoadStateRef = useRef<{ pending: { start: number; end: number } | null; isLoading: boolean }>({
         pending: null,
         isLoading: false,
     });
@@ -213,6 +228,10 @@ const ViewLogsPage: React.FC = () => {
     const largeFileCacheKey = useMemo(() => {
         return analyticsSessionId || `${fileName}|${fileSize}`;
     }, [analyticsSessionId, fileName, fileSize]);
+
+    const useDbView = useMemo(() => {
+        return !isLargeFile && Boolean(analyticsSessionId) && !isIndexing;
+    }, [analyticsSessionId, isIndexing, isLargeFile]);
 
     const getActiveFile = useCallback(async (): Promise<File | null> => {
         const handle = getFileHandle();
@@ -417,6 +436,35 @@ const ViewLogsPage: React.FC = () => {
     }, [clearParsedRowCache, content, fileSize, isLargeFile]);
 
     useEffect(() => {
+        if (!useDbView || !analyticsSessionId) {
+            setDbLineCount(0);
+            dbLineCacheRef.current = new Map();
+            dbCacheBytesRef.current = 0;
+            setDbLineCacheVersion((version) => version + 1);
+            return;
+        }
+
+        dispatch(clearLogContent());
+
+        let cancelled = false;
+
+        const loadDbLineCount = async () => {
+            const count = await getSessionLineCount(analyticsSessionId);
+            if (cancelled) return;
+            setDbLineCount(count);
+            dbLineCacheRef.current = new Map();
+            dbCacheBytesRef.current = 0;
+            setDbLineCacheVersion((version) => version + 1);
+        };
+
+        void loadDbLineCount();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [analyticsSessionId, useDbView]);
+
+    useEffect(() => {
         if (isLargeFile || !analyticsSessionId || !hasActiveFilters(filters)) {
             setIndexedFilteredRows([]);
             setIsFilterLoading(false);
@@ -455,6 +503,9 @@ const ViewLogsPage: React.FC = () => {
         }
 
         if (!hasActiveFilters(filters)) {
+            if (useDbView) {
+                return [];
+            }
             return normalRows;
         }
 
@@ -468,7 +519,7 @@ const ViewLogsPage: React.FC = () => {
         const parsedRows = normalRows.map((row) => getParsedRow(row));
         const filteredParsed = applyLogFilters(parsedRows, filters);
         return filteredParsed.map((row) => ({ lineNumber: row.lineNumber, raw: row.raw }));
-    }, [analyticsSessionId, filters, getParsedRow, indexedFilteredRows, isFilterLoading, isLargeFile, normalRows]);
+    }, [analyticsSessionId, filters, getParsedRow, indexedFilteredRows, isFilterLoading, isLargeFile, normalRows, useDbView]);
 
     const anomalyLineSet = useMemo(() => {
         return new Set(anomalyLineNumbers);
@@ -476,6 +527,10 @@ const ViewLogsPage: React.FC = () => {
 
     const displayLines = useMemo(() => {
         if (isLargeFile) {
+            return [];
+        }
+
+        if (useDbView && !hasActiveFilters(filters)) {
             return [];
         }
 
@@ -499,10 +554,109 @@ const ViewLogsPage: React.FC = () => {
                 ? (anomalyLineSet.has(row.lineNumber) ? 'anomaly' as const : 'normal' as const)
                 : undefined,
         }));
-    }, [anomalyLineSet, filteredRows, hasAnomalyResults, viewMode, isLargeFile]);
+    }, [anomalyLineSet, filteredRows, hasAnomalyResults, viewMode, isLargeFile, filters, useDbView]);
+
+    const loadDbLinesForRange = useCallback(async (startIndex: number, endIndex: number) => {
+        if (!analyticsSessionId) return;
+        if (dbLineCount === 0) return;
+
+        const start = Math.max(0, startIndex);
+        const end = Math.min(endIndex, dbLineCount - 1);
+        if (end < start) return;
+
+        const cache = dbLineCacheRef.current;
+        let hasMissing = false;
+        for (let i = start; i <= end; i += 1) {
+            if (!cache.has(i)) {
+                hasMissing = true;
+                break;
+            }
+        }
+        if (!hasMissing) return;
+
+        const records = await getLinesRange(analyticsSessionId, start + 1, end + 1);
+
+        const touchCacheEntry = (index: number, value: string) => {
+            const size = value.length * 2;
+            const existing = cache.get(index);
+            if (existing) {
+                cache.delete(index);
+                dbCacheBytesRef.current -= existing.size;
+            }
+            cache.set(index, { text: value, size });
+            dbCacheBytesRef.current += size;
+        };
+
+        for (const record of records) {
+            touchCacheEntry(record.lineNumber - 1, record.raw);
+        }
+
+        while (cache.size > MAX_CACHE_LINES || dbCacheBytesRef.current > MAX_CACHE_BYTES) {
+            const oldestKey = cache.keys().next().value as number | undefined;
+            if (oldestKey === undefined) break;
+            const removed = cache.get(oldestKey);
+            cache.delete(oldestKey);
+            if (removed) {
+                dbCacheBytesRef.current -= removed.size;
+            }
+        }
+
+        setDbLineCacheVersion((version) => version + 1);
+    }, [analyticsSessionId, dbLineCount]);
+
+    const requestDbRangeLoad = useCallback((startIndex: number, endIndex: number) => {
+        const state = dbRangeLoadStateRef.current;
+        const nextStart = Math.max(0, startIndex - DB_RANGE_LOAD_PADDING);
+        const nextEnd = Math.min(endIndex + DB_RANGE_LOAD_PADDING, dbLineCount - 1);
+
+        if (nextEnd < 0) return;
+
+        state.pending = { start: nextStart, end: nextEnd };
+        if (state.isLoading) return;
+
+        const run = async () => {
+            state.isLoading = true;
+            while (state.pending) {
+                const { start, end } = state.pending;
+                state.pending = null;
+                await loadDbLinesForRange(start, end);
+            }
+            state.isLoading = false;
+        };
+
+        void run();
+    }, [dbLineCount, loadDbLinesForRange]);
+
+    const getDbLineAtIndex = useCallback((displayIndex: number) => {
+        if (!useDbView || dbLineCount === 0) return null;
+
+        const fileIndex = viewMode === 'live-tail'
+            ? dbLineCount - 1 - displayIndex
+            : displayIndex;
+
+        if (fileIndex < 0 || fileIndex >= dbLineCount) return null;
+
+        const rawEntry = dbLineCacheRef.current.get(fileIndex);
+
+        const displayLineNumber = viewMode === 'live-tail'
+            ? dbLineCount - displayIndex
+            : fileIndex + 1;
+
+        return {
+            raw: rawEntry?.text ?? 'Loading... ',
+            displayLineNumber,
+            sourceLineNumber: fileIndex + 1,
+            anomalyStatus: hasAnomalyResults
+                ? (anomalyLineSet.has(fileIndex + 1) ? 'anomaly' as const : 'normal' as const)
+                : undefined,
+        };
+    }, [anomalyLineSet, dbLineCount, hasAnomalyResults, useDbView, viewMode, dbLineCacheVersion]);
 
     const getLineAtIndex = useCallback((displayIndex: number) => {
         if (!isLargeFile) {
+            if (useDbView && !hasActiveFilters(filters)) {
+                return getDbLineAtIndex(displayIndex);
+            }
             return displayLines[displayIndex] ?? null;
         }
 
@@ -576,6 +730,19 @@ const ViewLogsPage: React.FC = () => {
         viewMode,
         virtualWindowStart,
     ]);
+
+    const handleDbRangeChange = useCallback((startIndex: number, endIndex: number) => {
+        if (!useDbView || hasActiveFilters(filters) || dbLineCount === 0) return;
+        const safeStart = Math.max(0, startIndex);
+        const safeEnd = Math.max(0, Math.min(endIndex, Math.max(0, dbLineCount - 1)));
+        if (viewMode === 'live-tail') {
+            const mappedStart = dbLineCount - 1 - safeEnd;
+            const mappedEnd = dbLineCount - 1 - safeStart;
+            requestDbRangeLoad(mappedStart, mappedEnd);
+        } else {
+            requestDbRangeLoad(safeStart, safeEnd);
+        }
+    }, [dbLineCount, filters, requestDbRangeLoad, useDbView, viewMode]);
 
     useEffect(() => {
         if (isLargeFile || !analyticsSessionId || isIndexing) {
@@ -1048,9 +1215,12 @@ const ViewLogsPage: React.FC = () => {
             >
                 <LogLinesList
                     displayLines={displayLines}
-                    totalCount={isLargeFile ? getVirtualWindowSize(virtualWindowStart, lineCount) : displayLines.length}
+                    totalCount={isLargeFile
+                        ? getVirtualWindowSize(virtualWindowStart, lineCount)
+                        : (useDbView && !hasActiveFilters(filters) ? dbLineCount : displayLines.length)
+                    }
                     getLineAtIndex={getLineAtIndex}
-                    onRangeChange={isLargeFile ? handleRangeChange : undefined}
+                    onRangeChange={isLargeFile ? handleRangeChange : (useDbView ? handleDbRangeChange : undefined)}
                     selectedLine={selectedLine}
                     onSelectLine={setSelectedLine}
                     virtuosoRef={virtuosoRef}
