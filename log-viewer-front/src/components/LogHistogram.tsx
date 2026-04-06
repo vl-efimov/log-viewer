@@ -28,7 +28,7 @@ const LOG_LEVEL_COLORS: Record<string, string> = {
     'err': '#e64a19',
     'SEVERE': '#f4511e',
     'severe': '#f4511e',
-    
+
     // Warning levels
     'WARN': '#ff9800',
     'warn': '#ff9800',
@@ -40,13 +40,13 @@ const LOG_LEVEL_COLORS: Record<string, string> = {
     'kernel': '#ef6c00',
     'APP': '#3949ab',
     'app': '#3949ab',
-    
+
     // Info levels
     'INFO': '#2196f3',
     'info': '#2196f3',
     'INFORMATION': '#2196f3',
     'information': '#2196f3',
-    
+
     // Debug levels
     'DEBUG': '#9c27b0',
     'debug': '#9c27b0',
@@ -58,7 +58,7 @@ const LOG_LEVEL_COLORS: Record<string, string> = {
     'finer': '#7b1fa2',
     'FINEST': '#673ab7',
     'finest': '#673ab7',
-    
+
     // Unknown/default
     'UNKNOWN': '#9e9e9e',
     'unknown': '#9e9e9e',
@@ -169,13 +169,13 @@ function resolveLocale(language: string): string {
  */
 function parseTimestamp(timestamp: string): Date | null {
     if (!timestamp) return null;
-    
+
     // Try direct Date parsing first
     const directParse = new Date(timestamp);
     if (!isNaN(directParse.getTime())) {
         return directParse;
     }
-    
+
     // Try common formats
     // Format: YYYY-MM-DD HH:MM:SS,mmm (HDFS style)
     const hdfsMatch = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})[,.](\d{3})?/);
@@ -191,7 +191,7 @@ function parseTimestamp(timestamp: string): Date | null {
             parseInt(ms || '0')
         );
     }
-    
+
     // Format: Mon Oct 30 12:34:56 2025 (Apache style)
     const apacheMatch = timestamp.match(/^\w{3}\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+(\d{4})/);
     if (apacheMatch) {
@@ -201,7 +201,7 @@ function parseTimestamp(timestamp: string): Date | null {
             return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(min), parseInt(sec));
         }
     }
-    
+
     // Format: DD/Mon/YYYY:HH:MM:SS (Apache access log style)
     const accessMatch = timestamp.match(/^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
     if (accessMatch) {
@@ -227,7 +227,7 @@ function parseTimestamp(timestamp: string): Date | null {
             ms
         );
     }
-    
+
     return null;
 }
 
@@ -346,7 +346,7 @@ function getCategoryColor(category: string, categoryField: string | null): strin
 function calculateBucketSize(minTime: number, maxTime: number, targetBuckets: number = 50): number {
     const rangeMs = maxTime - minTime;
     if (rangeMs <= 0) return 60000; // 1 minute default
-    
+
     const bucketSizes = [
         1000,           // 1 second
         5000,           // 5 seconds
@@ -363,14 +363,14 @@ function calculateBucketSize(minTime: number, maxTime: number, targetBuckets: nu
         86400000,       // 1 day
         604800000,      // 1 week
     ];
-    
+
     // Find the smallest bucket size that gives us <= targetBuckets
     for (const size of bucketSizes) {
         if (rangeMs / size <= targetBuckets) {
             return size;
         }
     }
-    
+
     return bucketSizes[bucketSizes.length - 1];
 }
 
@@ -389,7 +389,7 @@ function formatBucketSize(ms: number): string {
  */
 function formatTimeLabel(timestamp: number, bucketSize: number, locale: string): string {
     const date = new Date(timestamp);
-    
+
     if (bucketSize >= 86400000) {
         // Day or larger: show date
         return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
@@ -488,7 +488,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     const [hoveredAnomalyPointer, setHoveredAnomalyPointer] = useState<{ x: number; y: number } | null>(null);
     const [sliderReadyVersion, setSliderReadyVersion] = useState(0);
     const zoomSliderRef = useRef<ReactECharts | null>(null);
-    
+
     const { validLines, timeRange } = useMemo(() => {
         // Extract lines with valid timestamps from any known time fields.
         const validLines: TimedParsedLine[] = parsedLines.flatMap((line) => {
@@ -508,11 +508,11 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 timestampMs,
             }];
         });
-        
+
         if (validLines.length === 0) {
             return { validLines: [], timeRange: null };
         }
-        
+
         // Use an iterative scan to avoid stack overflow on very large arrays.
         let minTime = validLines[0].timestampMs;
         let maxTime = validLines[0].timestampMs;
@@ -623,7 +623,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         if (!timeRange) return;
         setZoomShade({ leftPercent: 0, rightPercent: 0 });
     }, [timeRange?.min, timeRange?.max]);
-    
+
     const chartOption = useMemo(() => {
         const bucketMidOffset = Math.floor(mainHistogram.bucketSize / 2);
         const series = mainHistogram.logLevels.map(level => ({
@@ -1216,18 +1216,18 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             onTimeRangeChange(startTime, endTime);
         }
     }, [onTimeRangeChange, timeRange, zoomHistogram]);
-    
+
     // Don't render if no valid data
     if (fullHistogram.chartData.length === 0) {
         return null;
     }
-    
+
     return (
         <Box sx={{ mb: 1 }}>
-            <Box 
-                sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     cursor: 'pointer',
                     userSelect: 'none',
                 }}
@@ -1261,14 +1261,16 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     </IconButton>
                 </Tooltip>
             </Box>
-            
+
             <Collapse in={!isCollapsed}>
-                <Box 
-                    sx={{ 
+                <Box
+                    sx={{
                         backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
                         borderRadius: 1,
                         p: 1,
                         mt: 0.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
                     }}
                 >
                     <ReactECharts

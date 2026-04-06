@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Badge from '@mui/material/Badge';
+import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Popover from '@mui/material/Popover';
 import Tooltip from '@mui/material/Tooltip';
@@ -11,7 +11,7 @@ import VerticalAlignBottomIcon from '@mui/icons-material/VerticalAlignBottom';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -101,6 +101,19 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
+
+    const compactButtonSx = {
+        minWidth: 0,
+        px: 0.75,
+        py: 0.25,
+        textTransform: 'none' as const,
+        fontSize: '0.75rem',
+        lineHeight: 1,
+        '& .MuiButton-startIcon': {
+            marginRight: 0.5,
+            marginLeft: 0,
+        },
+    };
 
     const activeFiltersCount = Object.keys(filters).filter((key) => {
         const value = filters[key];
@@ -386,7 +399,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     alignItems: 'center',
                     gap: 1.5,
                     mb: 1,
-                    px: 1,
+                    px: 1.5,
                     py: 0.5,
                     borderRadius: 2,
                     border: '1px solid',
@@ -394,8 +407,8 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 }}
                 elevation={0}
             >
-                <Box 
-                    sx={{ 
+                <Box
+                    sx={{
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -421,46 +434,30 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                             title="С начала"
                             arrow
                         >
-                            <IconButton
+                            <Button
                                 size="small"
+                                variant={viewMode === ViewModeEnum.FromStart ? 'contained' : 'outlined'}
                                 onClick={() => onViewModeChange(ViewModeEnum.FromStart)}
-                                color={viewMode === ViewModeEnum.FromStart ? 'primary' : 'default'}
-                                sx={(theme) => ({
-                                    border: '1px solid',
-                                    borderColor: viewMode === ViewModeEnum.FromStart
-                                        ? theme.palette.primary.main
-                                        : theme.palette.divider,
-                                    bgcolor: viewMode === ViewModeEnum.FromStart
-                                        ? theme.palette.action.selected
-                                        : 'transparent',
-                                    borderRadius: 1,
-                                })}
+                                startIcon={<VerticalAlignBottomIcon fontSize="small" />}
+                                sx={compactButtonSx}
                             >
-                                <VerticalAlignBottomIcon fontSize="small" />
-                            </IconButton>
+                                С начала
+                            </Button>
                         </Tooltip>
 
-                        <Tooltip 
+                        <Tooltip
                             title="С конца"
                             arrow
                         >
-                            <IconButton
+                            <Button
                                 size="small"
+                                variant={viewMode === ViewModeEnum.FromEnd ? 'contained' : 'outlined'}
                                 onClick={() => onViewModeChange(ViewModeEnum.FromEnd)}
-                                color={viewMode === ViewModeEnum.FromEnd ? 'primary' : 'default'}
-                                sx={(theme) => ({
-                                    border: '1px solid',
-                                    borderColor: viewMode === ViewModeEnum.FromEnd
-                                        ? theme.palette.primary.main
-                                        : theme.palette.divider,
-                                    bgcolor: viewMode === ViewModeEnum.FromEnd
-                                        ? theme.palette.action.selected
-                                        : 'transparent',
-                                    borderRadius: 1,
-                                })}
+                                startIcon={<VerticalAlignTopIcon fontSize="small" />}
+                                sx={compactButtonSx}
                             >
-                                <VerticalAlignTopIcon fontSize="small" />
-                            </IconButton>
+                                С конца
+                            </Button>
                         </Tooltip>
                     </Box>
                 </Box>
@@ -495,31 +492,37 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                             title="Refresh now"
                             arrow
                         >
-                            <IconButton
+                            <Button
                                 size="small"
+                                variant="outlined"
                                 onClick={onManualRefresh}
+                                startIcon={<RefreshIcon fontSize="small" />}
+                                sx={compactButtonSx}
                             >
-                                <RefreshIcon fontSize="small" />
-                            </IconButton>
+                                Обновить
+                            </Button>
                         </Tooltip>
 
-                        <Tooltip 
-                            title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'} 
+                        <Tooltip
+                            title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'}
                             arrow
                         >
-                            <IconButton
+                            <Button
                                 size="small"
+                                variant={autoRefresh ? 'contained' : 'outlined'}
+                                color={autoRefresh ? 'success' : 'inherit'}
                                 onClick={onToggleAutoRefresh}
-                                color={autoRefresh ? 'success' : 'default'}
+                                startIcon={<AutorenewIcon fontSize="small" />}
+                                sx={compactButtonSx}
                             >
-                                <AutorenewIcon fontSize="small" />
-                            </IconButton>
+                                Авто
+                            </Button>
                         </Tooltip>
                     </Box>
                 </Box>
 
                 <Divider
-                    orientation="vertical" 
+                    orientation="vertical"
                     flexItem
                 />
 
@@ -535,13 +538,15 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                             title="Anomaly settings"
                             arrow
                         >
-                            <IconButton
+                            <Button
                                 size="small"
-                                color={isAnomalySettingsPanelOpen ? 'primary' : 'default'}
+                                variant={isAnomalySettingsPanelOpen ? 'contained' : 'outlined'}
                                 onClick={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
+                                startIcon={<AutoAwesomeIcon fontSize="small" />}
+                                sx={compactButtonSx}
                             >
-                                <AutoAwesomeIcon fontSize="small" />
-                            </IconButton>
+                                Настройки
+                            </Button>
                         </Tooltip>
                     </Box>
                 </Box>
@@ -564,19 +569,24 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                             arrow
                         >
                             <span>
-                                <IconButton
+                                <Button
                                     size="small"
+                                    variant="outlined"
                                     disabled={newLinesCount === 0}
+                                    startIcon={(
+                                        <Badge
+                                            badgeContent={newLinesCount}
+                                            color="success"
+                                            max={999}
+                                            invisible={newLinesCount === 0}
+                                        >
+                                            <NotificationsIcon fontSize="small" />
+                                        </Badge>
+                                    )}
+                                    sx={compactButtonSx}
                                 >
-                                    <Badge
-                                        badgeContent={newLinesCount}
-                                        color="success"
-                                        max={999}
-                                        invisible={newLinesCount === 0}
-                                    >
-                                        <NotificationsIcon fontSize="small" />
-                                    </Badge>
-                                </IconButton>
+                                    Новые
+                                </Button>
                             </span>
                         </Tooltip>
                     </Box>
@@ -590,33 +600,32 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     }}
                 >
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                        <Typography
-                            variant="caption"
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            Фильтры
-                        </Typography>
                         <Tooltip
                             title="Filters"
                             arrow
                         >
-                            <IconButton
-                                size="small"
-                                onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
-                                color={activeFiltersCount > 0 ? 'primary' : 'default'}
+                            <Badge
+                                color="secondary"
+                                badgeContent={activeFiltersCount}
+                                invisible={activeFiltersCount === 0}
                             >
-                                <Badge
-                                    color="primary"
-                                    badgeContent={activeFiltersCount}
-                                    invisible={activeFiltersCount === 0}
+                                <Button
+                                    size="small"
+                                    variant='outlined'
+                                    onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
+                                    startIcon={(
+                                        <FilterAltIcon fontSize="small" />
+                                    )}
+                                    sx={compactButtonSx}
                                 >
-                                    <FilterListIcon fontSize="small" />
-                                </Badge>
-                            </IconButton>
+                                    Фильтры
+                                </Button>
+                            </Badge>
+
                         </Tooltip>
                     </Box>
                 </Box>
-            </Paper>
+            </Paper >
 
             <Popover
                 open={isFiltersOpen}
