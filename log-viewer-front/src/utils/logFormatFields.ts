@@ -32,7 +32,7 @@ export function getLogFieldsForFormat(format: string): string[] {
 }
 
 // Generic parser for a log line by format
-export function parseLogLine(line: string, format: string): Record<string, any> {
+export function parseLogLine(line: string, format: string): Record<string, string> {
     switch (format) {
         case 'Apache': {
             // First try Apache error log

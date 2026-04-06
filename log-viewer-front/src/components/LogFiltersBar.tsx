@@ -152,7 +152,10 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         if (isDateTimeField(field)) {
             const filterValue = pendingFilters[fieldName as keyof LogFilters] as DateRangeFilter | undefined;
             return (
-                <div key={fieldName} style={{ display: 'contents' }}>
+                <div
+                    key={fieldName}
+                    style={{ display: 'contents' }}
+                >
                     <TextField
                         label={`${getFieldLabel(field)} (Start)`}
                         type="datetime-local"
@@ -183,7 +186,11 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
             const filterValue = pendingFilters[fieldName as keyof LogFilters] as string[] | undefined;
             
             return (
-                <FormControl key={fieldName} size="small" sx={{ minWidth: 200 }}>
+                <FormControl
+                    key={fieldName}
+                    size="small"
+                    sx={{ minWidth: 200 }}
+                >
                     <InputLabel>{getFieldLabel(field)}</InputLabel>
                     <Select
                         multiple
@@ -193,13 +200,20 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                         renderValue={(selected) => (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                 {selected.map((value) => (
-                                    <Chip key={value} label={value} size="small" />
+                                    <Chip
+                                        key={value}
+                                        label={value}
+                                        size="small"
+                                    />
                                 ))}
                             </Box>
                         )}
                     >
                         {enumOptions.map((option) => (
-                            <MenuItem key={option} value={option}>
+                            <MenuItem
+                                key={option}
+                                value={option}
+                            >
                                 {option}
                             </MenuItem>
                         ))}
@@ -265,7 +279,10 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
             {/* Render filters in format field order */}
             {fieldDefinitions.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                >
                     No filters available. Format detection in progress...
                 </Typography>
             ) : (

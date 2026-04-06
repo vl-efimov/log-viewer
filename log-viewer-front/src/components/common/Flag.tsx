@@ -18,7 +18,14 @@ const Flag: React.FC<FlagProps> = (props: FlagProps) => {
     const code = props.language === Languages.EN ? 'gb' : props.language;
     const src = FLAG_MAP[code];
     if (!src) return null;
-    return <img src={src} alt={`${props.language} flag`} {...props} />;
+
+    return (
+        <img
+            src={src}
+            alt={`${props.language} flag`}
+            {...props}
+        />
+    );
 };
 
 export default Flag;

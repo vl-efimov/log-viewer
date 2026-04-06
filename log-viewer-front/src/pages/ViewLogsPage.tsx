@@ -1210,7 +1210,10 @@ const ViewLogsPage: React.FC = () => {
                     }}
                 >
                     <CircularProgress size={24} />
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
                         Индексация завершится — появится график.
                     </Typography>
                 </Box>

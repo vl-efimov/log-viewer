@@ -590,7 +590,10 @@ const DashboardPage: React.FC = () => {
                                 }}
                             >
                                 <CircularProgress size={24} />
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
                                     {t('dashboard.histogramBuilding', { progress: histogramProgress })}
                                 </Typography>
                             </Box>
@@ -599,11 +602,18 @@ const DashboardPage: React.FC = () => {
                 )}
 
                 {!isLargeScanPending && (
-                    <Grid container spacing={2}>
+                    <Grid
+                        container
+                        spacing={2}
+                    >
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Card>
                                 <CardContent>
-                                    <Typography variant="body2" color="text.secondary">{t('dashboard.metrics.totalLines')}</Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >{t('dashboard.metrics.totalLines')}
+                                    </Typography>
                                     <Typography variant="h4">{analytics.totalLines.toLocaleString(locale)}</Typography>
                                 </CardContent>
                             </Card>
@@ -611,7 +621,11 @@ const DashboardPage: React.FC = () => {
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Card>
                                 <CardContent>
-                                    <Typography variant="body2" color="text.secondary">{t('dashboard.metrics.parsedLines')}</Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >{t('dashboard.metrics.parsedLines')}
+                                    </Typography>
                                     <Typography variant="h4">{analytics.parsedLines.toLocaleString(locale)}</Typography>
                                 </CardContent>
                             </Card>
@@ -619,7 +633,11 @@ const DashboardPage: React.FC = () => {
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Card>
                                 <CardContent>
-                                    <Typography variant="body2" color="text.secondary">{t('dashboard.metrics.unparsedLines')}</Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >{t('dashboard.metrics.unparsedLines')}
+                                    </Typography>
                                     <Typography variant="h4">{analytics.unparsedLines.toLocaleString(locale)}</Typography>
                                 </CardContent>
                             </Card>
@@ -627,7 +645,11 @@ const DashboardPage: React.FC = () => {
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Card>
                                 <CardContent>
-                                    <Typography variant="body2" color="text.secondary">{t('dashboard.metrics.parseRate')}</Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >{t('dashboard.metrics.parseRate')}
+                                    </Typography>
                                     <Typography variant="h4">{analytics.parseRate}%</Typography>
                                 </CardContent>
                             </Card>
@@ -659,7 +681,10 @@ const DashboardPage: React.FC = () => {
                                         }}
                                     >
                                         <CircularProgress size={24} />
-                                        <Typography variant="body2" color="text.secondary">
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >
                                             {t('dashboard.histogramBuilding', { progress: histogramProgress })}
                                         </Typography>
                                     </Box>
@@ -669,12 +694,18 @@ const DashboardPage: React.FC = () => {
                             </CardContent>
                         </Card>
 
-                        <Grid container spacing={2}>
+                        <Grid
+                            container
+                            spacing={2}
+                        >
                             {analytics.levelValues.length > 0 && (
                                 <Grid size={{ xs: 12, md: 4 }}>
                                     <Card>
                                         <CardContent>
-                                            <ReactECharts option={toChartOption(t('dashboard.charts.levels'), analytics.levelValues, locale)} style={{ height: 260 }} />
+                                            <ReactECharts
+                                                option={toChartOption(t('dashboard.charts.levels'), analytics.levelValues, locale)}
+                                                style={{ height: 260 }}
+                                            />
                                         </CardContent>
                                     </Card>
                                 </Grid>
@@ -683,7 +714,10 @@ const DashboardPage: React.FC = () => {
                                 <Grid size={{ xs: 12, md: 4 }}>
                                     <Card>
                                         <CardContent>
-                                            <ReactECharts option={toChartOption(t('dashboard.charts.httpStatus'), analytics.statusValues, locale)} style={{ height: 260 }} />
+                                            <ReactECharts
+                                                option={toChartOption(t('dashboard.charts.httpStatus'), analytics.statusValues, locale)}
+                                                style={{ height: 260 }}
+                                            />
                                         </CardContent>
                                     </Card>
                                 </Grid>
@@ -692,7 +726,10 @@ const DashboardPage: React.FC = () => {
                                 <Grid size={{ xs: 12, md: 4 }}>
                                     <Card>
                                         <CardContent>
-                                            <ReactECharts option={toChartOption(t('dashboard.charts.httpMethods'), analytics.methodValues, locale)} style={{ height: 260 }} />
+                                            <ReactECharts
+                                                option={toChartOption(t('dashboard.charts.httpMethods'), analytics.methodValues, locale)}
+                                                style={{ height: 260 }}
+                                            />
                                         </CardContent>
                                     </Card>
                                 </Grid>
@@ -703,13 +740,22 @@ const DashboardPage: React.FC = () => {
                             <Card>
                                 <CardContent>
                                     <Typography variant="subtitle1">{t('dashboard.topFieldsTitle')}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                    >
                                         {t('dashboard.topFieldsDescription')}
                                     </Typography>
                                     <Divider sx={{ my: 1.5 }} />
-                                    <Grid container spacing={2}>
+                                    <Grid
+                                        container
+                                        spacing={2}
+                                    >
                                         {analytics.facets.map((facet) => (
-                                            <Grid key={facet.field} size={{ xs: 12, md: 4 }}>
+                                            <Grid
+                                                key={facet.field}
+                                                size={{ xs: 12, md: 4 }}
+                                            >
                                                 <ReactECharts
                                                     option={toChartOption(getFieldTitle(facet.field, t), facet.values, locale)}
                                                     style={{ height: 260 }}

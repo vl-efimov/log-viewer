@@ -51,7 +51,12 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({ open, onClose, 
     }
 
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            maxWidth="sm"
+            fullWidth
+        >
             <DialogTitle>Add Custom Log Format</DialogTitle>
             <DialogContent>
                 <TextField
@@ -80,11 +85,28 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({ open, onClose, 
                     sx={{ mb: 2 }}
                     placeholder={"e.g. ^(?<date>\\d{4}-\\d{2}-\\d{2}) (?<level>\\w+) (?<msg>.+)$"}
                 />
-                {error && <Typography color="error" variant="body2" sx={{ mt: 1 }}>{error}</Typography>}
+                {error && 
+                    <Typography
+                        color="error"
+                        variant="body2"
+                        sx={{ mt: 1 }}
+                    >
+                        {error}
+                    </Typography>
+                }
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleClose} color="secondary">Cancel</Button>
-                <Button onClick={handleAdd} color="primary" variant="contained">Add</Button>
+                <Button
+                    onClick={handleClose}
+                    color="secondary"
+                >Cancel
+                </Button>
+                <Button
+                    onClick={handleAdd}
+                    color="primary"
+                    variant="contained"
+                >Add
+                </Button>
             </DialogActions>
         </Dialog>
     );

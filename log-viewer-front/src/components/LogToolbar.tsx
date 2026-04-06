@@ -5,13 +5,12 @@ import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Popover from '@mui/material/Popover';
 import Tooltip from '@mui/material/Tooltip';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Typography from '@mui/material/Typography';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import VerticalAlignBottomIcon from '@mui/icons-material/VerticalAlignBottom';
+import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import StreamIcon from '@mui/icons-material/Stream';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useCallback, useEffect, useState } from 'react';
@@ -101,12 +100,6 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
-
-    const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, value: 'live-tail' | 'normal' | null) => {
-        if (value) {
-            onViewModeChange(value);
-        }
-    };
 
     const activeFiltersCount = Object.keys(filters).filter((key) => {
         const value = filters[key];
@@ -392,111 +385,227 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     alignItems: 'center',
                     gap: 1.5,
                     mb: 1,
-                    px: 1.5,
-                    py: 1,
+                    px: 1,
+                    py: 0.5,
                     borderRadius: 2,
                     border: '1px solid',
                     borderColor: 'divider',
-                    bgcolor: 'background.paper',
-                    flexWrap: 'wrap',
                 }}
                 elevation={0}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Tooltip title="Refresh now" arrow>
-                        <IconButton size="small" onClick={onManualRefresh} aria-label="refresh now">
-                            <RefreshIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'} arrow>
-                        <IconButton
-                            size="small"
-                            onClick={onToggleAutoRefresh}
-                            color={autoRefresh ? 'success' : 'default'}
-                            aria-label="toggle auto refresh"
-                        >
-                            <AutorenewIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-
-                <Divider orientation="vertical" flexItem />
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Tooltip title="Anomaly settings" arrow>
-                        <IconButton
-                            size="small"
-                            color={isAnomalySettingsPanelOpen ? 'primary' : 'default'}
-                            onClick={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
-                            aria-label="anomaly settings"
-                        >
-                            <AutoAwesomeIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-
-                <Divider orientation="vertical" flexItem />
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ToggleButtonGroup
-                        size="small"
-                        value={viewMode}
-                        exclusive
-                        onChange={handleViewModeChange}
-                        aria-label="log view mode"
+                <Box 
+                    sx={{ 
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 0.25
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary' }}
                     >
-                        <Tooltip title="Live tail" arrow>
-                            <ToggleButton value="live-tail" aria-label="live tail">
-                                <StreamIcon fontSize="small" />
-                            </ToggleButton>
+                        Порядок
+                    </Typography>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            px: 0.5,
+                            py: 0.25,
+                        }}
+                    >
+                        <Tooltip
+                            title="С начала"
+                            arrow
+                        >
+                            <IconButton
+                                size="small"
+                                onClick={() => onViewModeChange('normal')}
+                                color={viewMode === 'normal' ? 'primary' : 'default'}
+                                sx={(theme) => ({
+                                    border: '1px solid',
+                                    borderColor: viewMode === 'normal' ? theme.palette.primary.main : theme.palette.divider,
+                                    bgcolor: viewMode === 'normal' ? theme.palette.action.selected : 'transparent',
+                                    borderRadius: 1,
+                                })}
+                            >
+                                <VerticalAlignBottomIcon fontSize="small" />
+                            </IconButton>
                         </Tooltip>
-                        <Tooltip title="Normal view" arrow>
-                            <ToggleButton value="normal" aria-label="normal view">
-                                <FormatListBulletedIcon fontSize="small" />
-                            </ToggleButton>
-                        </Tooltip>
-                    </ToggleButtonGroup>
 
-                    {newLinesCount > 0 && (
-                        <Tooltip title={`${newLinesCount} new lines`} arrow>
+                        <Tooltip 
+                            title="С конца"
+                            arrow
+                        >
+                            <IconButton
+                                size="small"
+                                onClick={() => onViewModeChange('live-tail')}
+                                color={viewMode === 'live-tail' ? 'primary' : 'default'}
+                                sx={(theme) => ({
+                                    border: '1px solid',
+                                    borderColor: viewMode === 'live-tail' ? theme.palette.primary.main : theme.palette.divider,
+                                    bgcolor: viewMode === 'live-tail' ? theme.palette.action.selected : 'transparent',
+                                    borderRadius: 1,
+                                })}
+                            >
+                                <VerticalAlignTopIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+
+                <Divider
+                    orientation="vertical"
+                    flexItem
+                />
+
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 0.25
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary' }}
+                    >
+                        Обновление
+                    </Typography>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                        }}
+                    >
+                        <Tooltip
+                            title="Refresh now"
+                            arrow
+                        >
+                            <IconButton
+                                size="small"
+                                onClick={onManualRefresh}
+                            >
+                                <RefreshIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip 
+                            title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'} 
+                            arrow
+                        >
+                            <IconButton
+                                size="small"
+                                onClick={onToggleAutoRefresh}
+                                color={autoRefresh ? 'success' : 'default'}
+                            >
+                                <AutorenewIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+
+                <Divider
+                    orientation="vertical" 
+                    flexItem
+                />
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                    <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary' }}
+                    >
+                        Аномалии
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Tooltip
+                            title="Anomaly settings"
+                            arrow
+                        >
+                            <IconButton
+                                size="small"
+                                color={isAnomalySettingsPanelOpen ? 'primary' : 'default'}
+                                onClick={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
+                            >
+                                <AutoAwesomeIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+
+                <Divider
+                    orientation="vertical"
+                    flexItem
+                />
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                    <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary' }}
+                    >
+                        Уведомления
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Tooltip
+                            title={`${newLinesCount} new lines`}
+                            arrow
+                        >
                             <span>
-                                <IconButton size="small" aria-label="new lines" disabled>
-                                    <Badge badgeContent={newLinesCount} color="success" max={999}>
+                                <IconButton
+                                    size="small"
+                                    disabled={newLinesCount === 0}
+                                >
+                                    <Badge
+                                        badgeContent={newLinesCount}
+                                        color="success"
+                                        max={999}
+                                        invisible={newLinesCount === 0}
+                                    >
                                         <NotificationsIcon fontSize="small" />
                                     </Badge>
                                 </IconButton>
                             </span>
                         </Tooltip>
-                    )}
+                    </Box>
                 </Box>
 
-                <Box 
+                <Box
                     sx={{
                         ml: 'auto',
                         display: 'flex',
                         alignItems: 'center'
                     }}
                 >
-                    <Tooltip
-                        title="Filters"
-                        arrow
-                    >
-                        <IconButton
-                            size="small"
-                            aria-label="filters"
-                            onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
-                            color={activeFiltersCount > 0 ? 'primary' : 'default'}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                        <Typography
+                            variant="caption"
+                            sx={{ color: 'text.secondary' }}
                         >
-                            <Badge
-                                color="primary"
-                                badgeContent={activeFiltersCount}
-                                invisible={activeFiltersCount === 0}
+                            Фильтры
+                        </Typography>
+                        <Tooltip
+                            title="Filters"
+                            arrow
+                        >
+                            <IconButton
+                                size="small"
+                                onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
+                                color={activeFiltersCount > 0 ? 'primary' : 'default'}
                             >
-                                <FilterListIcon fontSize="small" />
-                            </Badge>
-                        </IconButton>
-                    </Tooltip>
+                                <Badge
+                                    color="primary"
+                                    badgeContent={activeFiltersCount}
+                                    invisible={activeFiltersCount === 0}
+                                >
+                                    <FilterListIcon fontSize="small" />
+                                </Badge>
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
                 </Box>
             </Paper>
 

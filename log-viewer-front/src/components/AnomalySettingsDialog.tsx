@@ -87,7 +87,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
             <DialogTitle>Anomaly Analysis</DialogTitle>
             <DialogContent sx={{ pt: 1 }}>
                 <Stack spacing={1.5}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                    <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1}
+                        alignItems={{ sm: 'center' }}
+                    >
                         <ToggleButtonGroup
                             size="small"
                             value={selectedModelId}
@@ -95,19 +99,34 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             onChange={handleModelChange}
                             aria-label="model"
                         >
-                            <ToggleButton value="bgl" aria-label="model bgl">
-                                <Tooltip title="Model: BGL" arrow>
+                            <ToggleButton
+                                value="bgl"
+                                aria-label="model bgl"
+                            >
+                                <Tooltip
+                                    title="Model: BGL"
+                                    arrow
+                                >
                                     <MemoryIcon fontSize="small" />
                                 </Tooltip>
                             </ToggleButton>
-                            <ToggleButton value="hdfs" aria-label="model hdfs">
-                                <Tooltip title="Model: HDFS" arrow>
+                            <ToggleButton
+                                value="hdfs"
+                                aria-label="model hdfs"
+                            >
+                                <Tooltip
+                                    title="Model: HDFS"
+                                    arrow
+                                >
                                     <StorageIcon fontSize="small" />
                                 </Tooltip>
                             </ToggleButton>
                         </ToggleButtonGroup>
 
-                        <Tooltip title={analyzeTooltip} arrow>
+                        <Tooltip
+                            title={analyzeTooltip}
+                            arrow
+                        >
                             <span>
                                 <Button
                                     size="small"
@@ -123,13 +142,20 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     </Stack>
 
                     {!isAnomalyLoading && !canRunAnomalyAnalysis && anomalyDisabledReason && (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                        >
                             {anomalyDisabledReason}
                         </Typography>
                     )}
 
                     <Stack spacing={0.5}>
-                        <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Stack
+                            direction="row"
+                            spacing={0.5}
+                            alignItems="center"
+                        >
                             <Typography variant="subtitle2">Model Analysis Settings</Typography>
                             <Tooltip
                                 title="These parameters are applied to anomaly calculation for the selected model."
@@ -138,16 +164,31 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 <InfoOutlinedIcon fontSize="inherit" />
                             </Tooltip>
                         </Stack>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                        >
                             {selectedModelId.toUpperCase()} parameters used for anomaly calculation.
                         </Typography>
                     </Stack>
 
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { md: 'flex-start' } }}>
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={1}
+                        sx={{ alignItems: { md: 'flex-start' } }}
+                    >
                         <Box sx={{ minWidth: 150 }}>
-                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                                sx={{ mb: 0.5 }}
+                            >
                                 <Typography variant="caption">Threshold</Typography>
-                                <Tooltip title="Lower value finds more anomalies, higher value is stricter." arrow>
+                                <Tooltip
+                                    title="Lower value finds more anomalies, higher value is stricter."
+                                    arrow
+                                >
                                     <InfoOutlinedIcon fontSize="inherit" />
                                 </Tooltip>
                             </Stack>
@@ -167,9 +208,17 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             />
                         </Box>
                         <Box sx={{ minWidth: 130 }}>
-                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                                sx={{ mb: 0.5 }}
+                            >
                                 <Typography variant="caption">Step Size</Typography>
-                                <Tooltip title="Window shift between checks. Smaller is more detailed but slower." arrow>
+                                <Tooltip
+                                    title="Window shift between checks. Smaller is more detailed but slower."
+                                    arrow
+                                >
                                     <InfoOutlinedIcon fontSize="inherit" />
                                 </Tooltip>
                             </Stack>
@@ -189,9 +238,17 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             />
                         </Box>
                         <Box sx={{ minWidth: 130 }}>
-                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                                sx={{ mb: 0.5 }}
+                            >
                                 <Typography variant="caption">Min Region</Typography>
-                                <Tooltip title="Minimum continuous anomaly block length to reduce noise." arrow>
+                                <Tooltip
+                                    title="Minimum continuous anomaly block length to reduce noise."
+                                    arrow
+                                >
                                     <InfoOutlinedIcon fontSize="inherit" />
                                 </Tooltip>
                             </Stack>
@@ -212,8 +269,14 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                         </Box>
                     </Stack>
 
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-                        <Tooltip title="High sensitivity: catches more anomalies, may include noise." arrow>
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={1}
+                    >
+                        <Tooltip
+                            title="High sensitivity: catches more anomalies, may include noise."
+                            arrow
+                        >
                             <Button
                                 size="small"
                                 variant={selectedSensitivityProfile === 'sensitive' ? 'contained' : 'outlined'}
@@ -222,7 +285,10 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 Sensitive
                             </Button>
                         </Tooltip>
-                        <Tooltip title="Balanced mode: recommended default tradeoff." arrow>
+                        <Tooltip
+                            title="Balanced mode: recommended default tradeoff."
+                            arrow
+                        >
                             <Button
                                 size="small"
                                 variant={selectedSensitivityProfile === 'balanced' ? 'contained' : 'outlined'}
@@ -231,7 +297,10 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 Balanced
                             </Button>
                         </Tooltip>
-                        <Tooltip title="Strict mode: fewer false positives, stronger anomaly signal only." arrow>
+                        <Tooltip
+                            title="Strict mode: fewer false positives, stronger anomaly signal only."
+                            arrow
+                        >
                             <Button
                                 size="small"
                                 variant={selectedSensitivityProfile === 'strict' ? 'contained' : 'outlined'}
@@ -244,8 +313,17 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 </Stack>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button size="small" variant="text" onClick={onResetAnomalySettings}>Reset</Button>
-                <Button size="small" onClick={onClose}>Close</Button>
+                <Button
+                    size="small"
+                    variant="text"
+                    onClick={onResetAnomalySettings}
+                >Reset
+                </Button>
+                <Button
+                    size="small"
+                    onClick={onClose}
+                >Close
+                </Button>
             </DialogActions>
         </Dialog>
     );

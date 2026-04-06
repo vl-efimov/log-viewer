@@ -1233,13 +1233,24 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 }}
                 onClick={() => setIsCollapsed(!isCollapsed)}
             >
-                <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+                <Typography
+                    variant="subtitle2"
+                    sx={{ flexGrow: 1 }}
+                >
                     Log Timeline
-                    <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                    <Typography
+                        component="span"
+                        variant="caption"
+                        sx={{ ml: 1, color: 'text.secondary' }}
+                    >
                         ({mainHistogram.chartData.length} intervals, {formatBucketSize(mainHistogram.bucketSize)} each)
                     </Typography>
                     {categoryField && (
-                        <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                        <Typography
+                            component="span"
+                            variant="caption"
+                            sx={{ ml: 1, color: 'text.secondary' }}
+                        >
                             grouped by {categoryField}
                         </Typography>
                     )}
@@ -1269,7 +1280,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         <Box sx={{ position: 'relative' }}>
                             <ReactECharts
                                 option={zoomChartOption}
-                                style={{ height: 110 }}
+                                style={{ height: 80 }}
                                 notMerge={true}
                             />
                             {hoveredAnomalyRange && hoveredAnomalyPointer && (

@@ -27,7 +27,10 @@ export const MonitoringActiveView: React.FC<MonitoringActiveViewProps> = ({
             }}
         >
             <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main' }} />
-            <Typography variant="h4" gutterBottom>
+            <Typography
+                variant="h4"
+                gutterBottom
+            >
                 Monitoring Active
             </Typography>
             <Typography

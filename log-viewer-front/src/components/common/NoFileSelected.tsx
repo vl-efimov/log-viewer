@@ -33,10 +33,17 @@ const NoFileSelected: React.FC<NoFileSelectedProps> = ({
                 p: 3,
             }}
         >
-            <Typography variant="h5" gutterBottom>
+            <Typography
+                variant="h5"
+                gutterBottom
+            >
                 {title}
             </Typography>
-            <Typography variant="body1" color="text.secondary" textAlign="center">
+            <Typography
+                variant="body1"
+                color="text.secondary"
+                textAlign="center"
+            >
                 {description}
             </Typography>
             {showButton && (

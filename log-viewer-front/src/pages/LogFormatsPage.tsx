@@ -126,14 +126,25 @@ const LogFormatsPage: React.FC = () => {
     return (
         <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
+                <Typography
+                    variant="h5"
+                    gutterBottom
+                    sx={{ flexGrow: 1 }}
+                >
                     Custom Formats
                 </Typography>
-                <IconButton color="primary" onClick={() => setAddOpen(true)} size="large">
+                <IconButton
+                    color="primary"
+                    onClick={() => setAddOpen(true)}
+                    size="large"
+                >
                     <AddIcon />
                 </IconButton>
             </Box>
-            <TableContainer component={Paper} sx={{ mb: 4 }}>
+            <TableContainer
+                component={Paper}
+                sx={{ mb: 4 }}
+            >
                 <Table size="small">
                     <TableHead>
                         <TableRow>
@@ -146,7 +157,11 @@ const LogFormatsPage: React.FC = () => {
                     <TableBody>
                         {sortedUserFormats.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ color: 'text.secondary' }}>
+                                <TableCell
+                                    colSpan={4}
+                                    align="center"
+                                    sx={{ color: 'text.secondary' }}
+                                >
                                     No custom formats
                                 </TableCell>
                             </TableRow>
@@ -159,8 +174,18 @@ const LogFormatsPage: React.FC = () => {
                                         <div style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{format.regex}</div>
                                     </TableCell>
                                     <TableCell>
-                                        <Button size="small" color="primary" disabled>Edit</Button>
-                                        <Button size="small" color="error" onClick={() => deleteUserFormat(format.id)}>Delete</Button>
+                                        <Button
+                                            size="small"
+                                            color="primary"
+                                            disabled
+                                        >Edit
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            color="error"
+                                            onClick={() => deleteUserFormat(format.id)}
+                                        >Delete
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))

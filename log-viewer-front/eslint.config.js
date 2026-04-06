@@ -31,7 +31,9 @@ export default [
       ],
       'indent': ['error', 4, { SwitchCase: 1 }],
       'react/jsx-first-prop-new-line': ['error', 'multiline'],
-      'react/jsx-max-props-per-line': ['error', { maximum: 1, when: 'multiline' }],
+      'react/jsx-max-props-per-line': ['error', { maximum: 1, when: 'always' }],
+      'react/jsx-closing-bracket-location': ['error', { nonEmpty: 'tag-aligned', selfClosing: 'tag-aligned' }],
+      'react/jsx-closing-tag-location': 'error',
     },
   },
 ];

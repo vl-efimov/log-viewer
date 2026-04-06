@@ -38,7 +38,10 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                 width: '100%',
             }}
         >
-            <Typography variant="h4" gutterBottom>
+            <Typography
+                variant="h4"
+                gutterBottom
+            >
                 Welcome to LogViewer!
             </Typography>
             <Typography
@@ -53,7 +56,10 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
             {indexing ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <CircularProgress />
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
                         Indexing file...
                     </Typography>
                 </Box>

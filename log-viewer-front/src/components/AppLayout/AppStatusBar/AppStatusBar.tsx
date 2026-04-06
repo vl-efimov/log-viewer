@@ -175,7 +175,11 @@ const AppStatusBar: React.FC = () => {
                 }}
             >
                 {isIndexing && (
-                    <Tooltip title={`Indexing ${indexingProgress}%`} arrow placement="top">
+                    <Tooltip
+                        title={`Indexing ${indexingProgress}%`}
+                        arrow
+                        placement="top"
+                    >
                         <Box
                             sx={{
                                 display: 'flex',
@@ -200,7 +204,11 @@ const AppStatusBar: React.FC = () => {
                     </Tooltip>
                 )}
                 {anomalyStatus && (
-                    <Tooltip title={anomalyStatus.full} arrow placement="top">
+                    <Tooltip
+                        title={anomalyStatus.full}
+                        arrow
+                        placement="top"
+                    >
                         <Typography sx={anomalyTextSx}>
                             {anomalyStatus.compact}
                         </Typography>

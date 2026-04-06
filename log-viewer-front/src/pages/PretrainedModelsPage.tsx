@@ -80,12 +80,19 @@ const PretrainedModelsPage: React.FC = () => {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Typography variant="h5">Pretrained Models</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+                variant="body2"
+                color="text.secondary"
+            >
                 Available backend models for anomaly detection.
             </Typography>
 
             {loading && (
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                >
                     <CircularProgress size={18} />
                     <Typography variant="body2">Loading models...</Typography>
                 </Stack>
@@ -94,8 +101,17 @@ const PretrainedModelsPage: React.FC = () => {
             {!loading && error && <Alert severity="error">{error}</Alert>}
 
             {!loading && !error && models.map((model) => (
-                <Paper key={model.id} variant="outlined" sx={{ p: 2 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                <Paper
+                    key={model.id}
+                    variant="outlined"
+                    sx={{ p: 2 }}
+                >
+                    <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{ mb: 1 }}
+                    >
                         <Typography variant="h6">{model.name}</Typography>
                         <Chip
                             label={
@@ -118,14 +134,23 @@ const PretrainedModelsPage: React.FC = () => {
                         </>
                     )}
                     {model.prepareError && (
-                        <Alert severity="error" sx={{ mt: 1 }}>
+                        <Alert
+                            severity="error"
+                            sx={{ mt: 1 }}
+                        >
                             {model.prepareError}
                         </Alert>
                     )}
                     {model.status === 'installing' && (
                         <Box sx={{ mt: 1 }}>
-                            <LinearProgress variant="determinate" value={model.prepareProgress} />
-                            <Typography variant="caption" color="text.secondary">
+                            <LinearProgress
+                                variant="determinate"
+                                value={model.prepareProgress}
+                            />
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                            >
                                 {model.prepareProgress}%
                             </Typography>
                         </Box>

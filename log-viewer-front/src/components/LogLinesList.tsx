@@ -76,7 +76,6 @@ const LogLinesList: FC<LogLinesListProps> = ({
                                 fontSize: '0.8rem',
                                 lineHeight: '20px',
                                 userSelect: 'none',
-                                mr: 2,
                                 flexShrink: 0,
                             }}
                         >

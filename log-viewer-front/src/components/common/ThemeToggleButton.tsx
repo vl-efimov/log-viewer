@@ -61,7 +61,8 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ mode, toggleTheme
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
-                }}>
+                }}
+            >
                 <DarkMode sx={{ color: 'white' }}  />
             </span>
         </Slide>
