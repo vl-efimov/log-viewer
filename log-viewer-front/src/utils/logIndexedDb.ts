@@ -50,6 +50,12 @@ export type FilteredLinesResult = {
     lines: Array<{ lineNumber: number; raw: string }>;
 };
 
+type QueryFilteredLinesOptions = {
+    limit?: number;
+    signal?: AbortSignal;
+    onProgress?: (partial: FilteredLinesResult) => void;
+};
+
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 const requestToPromise = <T>(request: IDBRequest<T>): Promise<T> => {
@@ -420,9 +426,21 @@ const matchesDateRange = (record: LogLineRecord, startMs: number | null, endMs: 
 export const queryFilteredLines = async (
     sessionId: string,
     filters: LogFilters,
-    options: { limit?: number } = {}
+    options: QueryFilteredLinesOptions = {}
 ): Promise<FilteredLinesResult> => {
     const limit = options.limit ?? MAX_FILTER_LINES_DEFAULT;
+    const signal = options.signal;
+    const onProgress = options.onProgress;
+    const PROGRESS_CHUNK_SIZE = 2_000;
+
+    const throwIfAborted = () => {
+        if (signal?.aborted) {
+            throw new DOMException('Filtering aborted', 'AbortError');
+        }
+    };
+
+    throwIfAborted();
+
     const entries = Object.entries(filters).filter(([, value]) => {
         if (!value) return false;
         if (Array.isArray(value)) return value.length > 0;
@@ -462,6 +480,7 @@ export const queryFilteredLines = async (
     }
 
     if (rangeStart !== null || rangeEnd !== null) {
+        throwIfAborted();
         const matches = await collectLineNumbersByTimestamp(sessionId, rangeStart, rangeEnd);
         candidateLines = candidateLines ? intersectSets(candidateLines, matches) : matches;
     }
@@ -472,55 +491,92 @@ export const queryFilteredLines = async (
         const tx = db.transaction(STORE_LINES, 'readonly');
         const index = tx.objectStore(STORE_LINES).index('by_session');
 
-        const matchedGroupIds = new Set<number>();
-        const matchedLines: LogLineRecord[] = [];
+        const lines: Array<{ lineNumber: number; raw: string }> = [];
+        let totalMatches = 0;
+        let activeMatchedGroupId: number | null = null;
+        let lastReportedCount = 0;
+        let progressChunk: Array<{ lineNumber: number; raw: string }> = [];
 
         await new Promise<void>((resolve, reject) => {
             const request = index.openCursor(IDBKeyRange.only(sessionId));
             request.onsuccess = () => {
+                if (signal?.aborted) {
+                    reject(new DOMException('Filtering aborted', 'AbortError'));
+                    return;
+                }
                 const cursor = request.result;
                 if (!cursor) {
                     resolve();
                     return;
                 }
                 const record = cursor.value as LogLineRecord;
-                if (
-                    record.parsed
-                    && matchesDateRange(record, rangeStart, rangeEnd)
-                    && matchesEnumFilters(record, enumFilters)
-                    && matchesTextFilters(record, textFilters)
-                ) {
-                    matchedGroupIds.add(record.groupId);
-                    matchedLines.push(record);
+
+                if (record.parsed) {
+                    const parsedMatches = (
+                        matchesDateRange(record, rangeStart, rangeEnd)
+                        && matchesEnumFilters(record, enumFilters)
+                        && matchesTextFilters(record, textFilters)
+                    );
+
+                    if (parsedMatches) {
+                        activeMatchedGroupId = record.groupId;
+                        totalMatches += 1;
+                        if (lines.length < limit) {
+                            const row = { lineNumber: record.lineNumber, raw: record.raw };
+                            lines.push(row);
+                            progressChunk.push(row);
+                        }
+                    } else {
+                        activeMatchedGroupId = null;
+                    }
+                } else if (activeMatchedGroupId !== null && record.groupId === activeMatchedGroupId) {
+                    totalMatches += 1;
+                    if (lines.length < limit) {
+                        const row = { lineNumber: record.lineNumber, raw: record.raw };
+                        lines.push(row);
+                        progressChunk.push(row);
+                    }
                 }
+
+                if (onProgress && totalMatches - lastReportedCount >= PROGRESS_CHUNK_SIZE) {
+                    lastReportedCount = totalMatches;
+                    onProgress({
+                        totalMatches,
+                        lines: progressChunk,
+                    });
+                    progressChunk = [];
+                }
+
                 cursor.continue();
             };
             request.onerror = () => reject(request.error);
         });
 
-        await transactionDone(tx);
-
-        const groupLines = await fetchLinesByGroupIds(sessionId, Array.from(matchedGroupIds));
-        const all = [...matchedLines, ...groupLines];
-        const unique = new Map<number, LogLineRecord>();
-        for (const record of all) {
-            unique.set(record.lineNumber, record);
+        if (onProgress && progressChunk.length > 0) {
+            onProgress({
+                totalMatches,
+                lines: progressChunk,
+            });
         }
 
-        const sorted = Array.from(unique.values()).sort((a, b) => a.lineNumber - b.lineNumber);
+        await transactionDone(tx);
         return {
-            totalMatches: sorted.length,
-            lines: sorted.slice(0, limit).map((record) => ({ lineNumber: record.lineNumber, raw: record.raw })),
+            totalMatches,
+            lines,
         };
     }
 
+    throwIfAborted();
     const candidateArray = Array.from(candidateLines).sort((a, b) => a - b);
     const candidateRecords = await fetchLineRecords(sessionId, candidateArray);
 
     const matchedGroupIds = new Set<number>();
     const parsedMatches: LogLineRecord[] = [];
+    let lastReportedCount = 0;
+    let progressChunk: Array<{ lineNumber: number; raw: string }> = [];
 
     for (const record of candidateRecords) {
+        throwIfAborted();
         if (!record.parsed) {
             continue;
         }
@@ -535,6 +591,25 @@ export const queryFilteredLines = async (
         }
         matchedGroupIds.add(record.groupId);
         parsedMatches.push(record);
+        if (parsedMatches.length <= limit) {
+            progressChunk.push({ lineNumber: record.lineNumber, raw: record.raw });
+        }
+
+        if (onProgress && parsedMatches.length - lastReportedCount >= PROGRESS_CHUNK_SIZE) {
+            lastReportedCount = parsedMatches.length;
+            onProgress({
+                totalMatches: parsedMatches.length,
+                lines: progressChunk,
+            });
+            progressChunk = [];
+        }
+    }
+
+    if (onProgress && progressChunk.length > 0) {
+        onProgress({
+            totalMatches: parsedMatches.length,
+            lines: progressChunk,
+        });
     }
 
     const groupLines = await fetchLinesByGroupIds(sessionId, Array.from(matchedGroupIds));

@@ -30,7 +30,8 @@ const MAX_RANGE_BYTES = 512 * 1024; // 512 KB
 const MAX_VIRTUAL_ROWS = 1_500_000;
 const WINDOW_REBASE_MARGIN = 200_000;
 const MAX_LARGE_FILE_VIEW_CACHE_ENTRIES = 3;
-const MAX_INDEXED_FILTER_ROWS = 200_000;
+const MAX_INDEXED_FILTER_ROWS = 50_000;
+const FILTER_PROGRESS_UI_BATCH_ROWS = 5_000;
 const PREVIEW_BYTES = 2 * 1024 * 1024;
 const DB_RANGE_LOAD_PADDING = 120;
 
@@ -472,17 +473,58 @@ const ViewLogsPage: React.FC = () => {
         }
 
         let cancelled = false;
+        const controller = new AbortController();
+        let bufferedRows: ViewRow[] = [];
         setIsFilterLoading(true);
+        setIndexedFilteredRows([]);
+
+        const flushBufferedRows = () => {
+            if (cancelled || bufferedRows.length === 0) {
+                return;
+            }
+
+            const chunk = bufferedRows;
+            bufferedRows = [];
+            setIndexedFilteredRows((prev) => {
+                if (prev.length >= MAX_INDEXED_FILTER_ROWS) {
+                    return prev;
+                }
+                const available = MAX_INDEXED_FILTER_ROWS - prev.length;
+                if (available <= 0) {
+                    return prev;
+                }
+                const toAppend = chunk.slice(0, available);
+                if (toAppend.length === 0) {
+                    return prev;
+                }
+                return [...prev, ...toAppend];
+            });
+        };
 
         const run = async () => {
-            const result = await queryFilteredLines(analyticsSessionId, filters, {
-                limit: MAX_INDEXED_FILTER_ROWS,
-            });
-            if (cancelled) return;
-            setIndexedFilteredRows(result.lines.map((row) => ({
-                lineNumber: row.lineNumber,
-                raw: row.raw,
-            })));
+            try {
+                const result = await queryFilteredLines(analyticsSessionId, filters, {
+                    limit: MAX_INDEXED_FILTER_ROWS,
+                    signal: controller.signal,
+                    onProgress: (partial) => {
+                        if (cancelled) return;
+                        if (partial.lines.length === 0) return;
+                        bufferedRows.push(...partial.lines);
+                        if (bufferedRows.length >= FILTER_PROGRESS_UI_BATCH_ROWS) {
+                            flushBufferedRows();
+                        }
+                    },
+                });
+                if (cancelled) return;
+                flushBufferedRows();
+                setIndexedFilteredRows((prev) => (
+                    prev.length === result.lines.length ? prev : result.lines
+                ));
+            } catch (error) {
+                if ((error as Error).name !== 'AbortError') {
+                    console.error('Indexed filter query failed:', error);
+                }
+            }
         };
 
         void run().finally(() => {
@@ -493,6 +535,8 @@ const ViewLogsPage: React.FC = () => {
 
         return () => {
             cancelled = true;
+            bufferedRows = [];
+            controller.abort();
         };
     }, [analyticsSessionId, filters, isLargeFile]);
 
@@ -510,9 +554,6 @@ const ViewLogsPage: React.FC = () => {
         }
 
         if (analyticsSessionId) {
-            if (isFilterLoading) {
-                return [];
-            }
             return indexedFilteredRows;
         }
 
