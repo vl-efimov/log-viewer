@@ -1,7 +1,6 @@
 import { parseLogLineAuto, type ParsedLogLine } from './logFormatDetector';
 import type { HistogramLine, LargeFileAggregateStats } from './histogramSampling';
 import {
-    type LogFieldIndexRecord,
     type LogLineRecord,
     type LogSessionRecord,
     createLogSessionId,
@@ -301,7 +300,6 @@ export const indexLogFile = async (
     let lastParsedLineNumber = 0;
 
     const linesBatch: LogLineRecord[] = [];
-    const fieldBatch: LogFieldIndexRecord[] = [];
     const sampledLines: HistogramLine[] = [];
 
     const stats: LargeFileAggregateStats = {
@@ -315,13 +313,12 @@ export const indexLogFile = async (
     const fieldUniqueCounts: Record<string, number> = {};
 
     const flushBatch = async () => {
-        if (linesBatch.length === 0 && fieldBatch.length === 0) return;
+        if (linesBatch.length === 0) return;
         if (signal?.aborted || cancelledSessions.has(sessionId)) {
             throw new DOMException('Indexing aborted', 'AbortError');
         }
         const batchLines = linesBatch.splice(0, linesBatch.length);
-        const batchFields = fieldBatch.splice(0, fieldBatch.length);
-        await putLineBatch(batchLines, batchFields);
+        await putLineBatch(batchLines);
     };
 
     try {
@@ -378,19 +375,6 @@ export const indexLogFile = async (
                     isContinuation,
                 });
 
-                if (parsed) {
-                    Object.entries(fields).forEach(([field, value]) => {
-                        const normalized = normalizeFieldValue(value);
-                        if (!normalized) return;
-                        fieldBatch.push({
-                            sessionId: session.sessionId,
-                            field,
-                            value: normalized.toUpperCase(),
-                            lineNumber,
-                        });
-                    });
-                }
-
                 pushSampledLine(sampledLines, { lineNumber, parsed, raw }, lineNumber);
 
                 stats.totalLines += 1;
@@ -440,19 +424,6 @@ export const indexLogFile = async (
                 groupId,
                 isContinuation,
             });
-
-            if (parsed) {
-                Object.entries(fields).forEach(([field, value]) => {
-                    const normalized = normalizeFieldValue(value);
-                    if (!normalized) return;
-                    fieldBatch.push({
-                        sessionId: session.sessionId,
-                        field,
-                        value: normalized.toUpperCase(),
-                        lineNumber,
-                    });
-                });
-            }
 
             pushSampledLine(sampledLines, { lineNumber, parsed, raw: carry }, lineNumber);
 

@@ -2,7 +2,7 @@ import type { LogFilters, DateRangeFilter, TextFilter } from '../types/filters';
 import type { HistogramLine, LargeFileAggregateStats } from './histogramSampling';
 
 const DB_NAME = 'log_viewer';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_SESSIONS = 'sessions';
 const STORE_LINES = 'lines';
 const STORE_FIELD_INDEX = 'fieldIndex';
@@ -36,12 +36,6 @@ export type LogLineRecord = {
     isContinuation: boolean;
 };
 
-export type LogFieldIndexRecord = {
-    sessionId: string;
-    field: string;
-    value: string;
-    lineNumber: number;
-};
 
 export type LogStatsRecord = {
     sessionId: string;
@@ -92,11 +86,8 @@ const openLogDb = (): Promise<IDBDatabase> => {
                 store.createIndex('by_session_group', ['sessionId', 'groupId'], { unique: false });
             }
 
-            if (!db.objectStoreNames.contains(STORE_FIELD_INDEX)) {
-                const store = db.createObjectStore(STORE_FIELD_INDEX, { keyPath: ['sessionId', 'field', 'value', 'lineNumber'] });
-                store.createIndex('by_session', 'sessionId', { unique: false });
-                store.createIndex('by_session_field', ['sessionId', 'field'], { unique: false });
-                store.createIndex('by_session_field_value', ['sessionId', 'field', 'value'], { unique: false });
+            if (db.objectStoreNames.contains(STORE_FIELD_INDEX)) {
+                db.deleteObjectStore(STORE_FIELD_INDEX);
             }
 
             if (!db.objectStoreNames.contains(STORE_STATS)) {
@@ -209,7 +200,6 @@ export const deleteSessionData = async (sessionId: string): Promise<void> => {
 
     const range = IDBKeyRange.only(sessionId);
     await deleteByIndex(db, STORE_LINES, 'by_session', range);
-    await deleteByIndex(db, STORE_FIELD_INDEX, 'by_session', range);
     await deleteByIndex(db, STORE_STATS, 'by_session', range);
 
     const tx = db.transaction(STORE_SESSIONS, 'readwrite');
@@ -217,23 +207,15 @@ export const deleteSessionData = async (sessionId: string): Promise<void> => {
     await transactionDone(tx);
 };
 
-export const putLineBatch = async (
-    lines: LogLineRecord[],
-    fieldIndexEntries: LogFieldIndexRecord[]
-): Promise<void> => {
-    if (lines.length === 0 && fieldIndexEntries.length === 0) return;
+export const putLineBatch = async (lines: LogLineRecord[]): Promise<void> => {
+    if (lines.length === 0) return;
 
     const db = await getLogDb();
-    const tx = db.transaction([STORE_LINES, STORE_FIELD_INDEX], 'readwrite');
+    const tx = db.transaction(STORE_LINES, 'readwrite');
     const lineStore = tx.objectStore(STORE_LINES);
-    const fieldStore = tx.objectStore(STORE_FIELD_INDEX);
 
     for (const line of lines) {
         lineStore.put(line);
-    }
-
-    for (const entry of fieldIndexEntries) {
-        fieldStore.put(entry);
     }
 
     await transactionDone(tx);
@@ -267,38 +249,8 @@ const isEnumFilter = (value: unknown): value is string[] => {
     return Array.isArray(value);
 };
 
-const normalizeIndexValue = (value: string): string => {
+const normalizeFilterValue = (value: string): string => {
     return value.trim().toUpperCase();
-};
-
-const collectLineNumbersByFieldValue = async (
-    sessionId: string,
-    field: string,
-    value: string
-): Promise<Set<number>> => {
-    const db = await getLogDb();
-    const tx = db.transaction(STORE_FIELD_INDEX, 'readonly');
-    const index = tx.objectStore(STORE_FIELD_INDEX).index('by_session_field_value');
-    const range = IDBKeyRange.only([sessionId, field, value]);
-
-    const result = await new Promise<Set<number>>((resolve, reject) => {
-        const lineNumbers = new Set<number>();
-        const request = index.openCursor(range);
-        request.onsuccess = () => {
-            const cursor = request.result;
-            if (!cursor) {
-                resolve(lineNumbers);
-                return;
-            }
-            const key = cursor.primaryKey as [string, string, string, number];
-            lineNumbers.add(key[3]);
-            cursor.continue();
-        };
-        request.onerror = () => reject(request.error);
-    });
-
-    await transactionDone(tx);
-    return result;
 };
 
 const collectLineNumbersByTimestamp = async (
@@ -408,6 +360,27 @@ const matchesTextFilters = (record: LogLineRecord, textFilters: Array<[string, T
     return true;
 };
 
+const matchesEnumFilters = (record: LogLineRecord, enumFilters: Array<[string, string[]]>): boolean => {
+    if (enumFilters.length === 0) return true;
+    for (const [field, values] of enumFilters) {
+        const value = record.fields[field];
+        if (!value) return false;
+        const normalized = normalizeFilterValue(value);
+        if (!values.includes(normalized)) {
+            return false;
+        }
+    }
+    return true;
+};
+
+const matchesDateRange = (record: LogLineRecord, startMs: number | null, endMs: number | null): boolean => {
+    if (startMs === null && endMs === null) return true;
+    if (record.timestampMs === null) return false;
+    if (startMs !== null && record.timestampMs < startMs) return false;
+    if (endMs !== null && record.timestampMs > endMs) return false;
+    return true;
+};
+
 export const queryFilteredLines = async (
     sessionId: string,
     filters: LogFilters,
@@ -428,23 +401,23 @@ export const queryFilteredLines = async (
 
     let candidateLines: Set<number> | null = null;
     const textFilters: Array<[string, TextFilter]> = [];
+    const enumFilters: Array<[string, string[]]> = [];
+    let rangeStart: number | null = null;
+    let rangeEnd: number | null = null;
 
     for (const [field, value] of entries) {
         if (isEnumFilter(value)) {
-            const unionSet = new Set<number>();
-            for (const item of value) {
-                const normalized = normalizeIndexValue(item);
-                const matches = await collectLineNumbersByFieldValue(sessionId, field, normalized);
-                for (const lineNumber of matches) {
-                    unionSet.add(lineNumber);
-                }
-            }
-            candidateLines = candidateLines ? intersectSets(candidateLines, unionSet) : unionSet;
+            const normalized = value.map((item) => normalizeFilterValue(item));
+            enumFilters.push([field, normalized]);
         } else if (isDateRangeFilter(value)) {
             const startMs = value.start ? value.start.getTime() : null;
             const endMs = value.end ? value.end.getTime() : null;
-            const matches = await collectLineNumbersByTimestamp(sessionId, startMs, endMs);
-            candidateLines = candidateLines ? intersectSets(candidateLines, matches) : matches;
+            if (startMs !== null) {
+                rangeStart = rangeStart === null ? startMs : Math.max(rangeStart, startMs);
+            }
+            if (endMs !== null) {
+                rangeEnd = rangeEnd === null ? endMs : Math.min(rangeEnd, endMs);
+            }
         } else if (isTextFilter(value)) {
             if (value.value) {
                 textFilters.push([field, value]);
@@ -452,8 +425,13 @@ export const queryFilteredLines = async (
         }
     }
 
+    if (rangeStart !== null || rangeEnd !== null) {
+        const matches = await collectLineNumbersByTimestamp(sessionId, rangeStart, rangeEnd);
+        candidateLines = candidateLines ? intersectSets(candidateLines, matches) : matches;
+    }
+
     if (!candidateLines) {
-        // Only text filters: scan all lines.
+        // Scan all lines.
         const db = await getLogDb();
         const tx = db.transaction(STORE_LINES, 'readonly');
         const index = tx.objectStore(STORE_LINES).index('by_session');
@@ -470,7 +448,12 @@ export const queryFilteredLines = async (
                     return;
                 }
                 const record = cursor.value as LogLineRecord;
-                if (record.parsed && matchesTextFilters(record, textFilters)) {
+                if (
+                    record.parsed
+                    && matchesDateRange(record, rangeStart, rangeEnd)
+                    && matchesEnumFilters(record, enumFilters)
+                    && matchesTextFilters(record, textFilters)
+                ) {
                     matchedGroupIds.add(record.groupId);
                     matchedLines.push(record);
                 }
@@ -503,6 +486,12 @@ export const queryFilteredLines = async (
 
     for (const record of candidateRecords) {
         if (!record.parsed) {
+            continue;
+        }
+        if (!matchesDateRange(record, rangeStart, rangeEnd)) {
+            continue;
+        }
+        if (!matchesEnumFilters(record, enumFilters)) {
             continue;
         }
         if (!matchesTextFilters(record, textFilters)) {
