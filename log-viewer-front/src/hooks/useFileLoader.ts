@@ -133,9 +133,13 @@ export const useFileLoader = () => {
             await loadFile(file, handle);
             return true;
         } catch (error) {
-            if ((error as Error).name !== 'AbortError') {
-                console.error('Error selecting file:', error);
+            if ((error as Error).name === 'AbortError') {
+                // User cancelled the picker; treat as handled to avoid fallback dialog.
+                setIndexing(false);
+                return true;
             }
+
+            console.error('Error selecting file:', error);
             setIndexing(false);
             return false;
         }
