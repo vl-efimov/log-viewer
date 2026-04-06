@@ -7,7 +7,6 @@ import type { VirtuosoHandle } from 'react-virtuoso';
 import { RootState } from '../redux/store';
 import {
     updateLogContent,
-    appendLogContent,
 } from '../redux/slices/logFileSlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
 import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
@@ -20,6 +19,7 @@ import { useParsedRowsCache } from '../hooks/useParsedRowsCache';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
 import { sampleAndAnalyzeLargeFile } from '../utils/histogramSampling';
+import { getDashboardSnapshot, queryFilteredLines } from '../utils/logIndexedDb';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024; // 4 MB
 const LINE_INDEX_CHUNK_SIZE = 1_000_000; // Offsets per chunk
@@ -31,6 +31,8 @@ const MAX_VIRTUAL_ROWS = 1_500_000;
 const WINDOW_REBASE_MARGIN = 200_000;
 const MAX_LARGE_FILE_VIEW_CACHE_ENTRIES = 3;
 const MAX_NORMAL_HISTOGRAM_SAMPLE_LINES = 50_000;
+const MAX_INDEXED_FILTER_ROWS = 200_000;
+const PREVIEW_BYTES = 2 * 1024 * 1024;
 
 type ViewParsedLine = {
     lineNumber: number;
@@ -173,6 +175,7 @@ const ViewLogsPage: React.FC = () => {
         size: fileSize,
         isLargeFile,
         analyticsSessionId,
+        loaded,
     } = useSelector((state: RootState) => state.logFile);
 
     const {
@@ -182,6 +185,9 @@ const ViewLogsPage: React.FC = () => {
     } = useSelector((state: RootState) => state.anomaly);
 
     const [normalRows, setNormalRows] = useState<ViewRow[]>([]);
+    const [indexedFilteredRows, setIndexedFilteredRows] = useState<ViewRow[]>([]);
+    const [isFilterLoading, setIsFilterLoading] = useState<boolean>(false);
+    const [indexedHistogramLines, setIndexedHistogramLines] = useState<ViewParsedLine[]>([]);
     const [filters, setFilters] = useState<LogFilters>({});
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -416,6 +422,38 @@ const ViewLogsPage: React.FC = () => {
         lastSizeRef.current = fileSize;
     }, [clearParsedRowCache, content, fileSize, isLargeFile]);
 
+    useEffect(() => {
+        if (isLargeFile || !analyticsSessionId || !hasActiveFilters(filters)) {
+            setIndexedFilteredRows([]);
+            setIsFilterLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+        setIsFilterLoading(true);
+
+        const run = async () => {
+            const result = await queryFilteredLines(analyticsSessionId, filters, {
+                limit: MAX_INDEXED_FILTER_ROWS,
+            });
+            if (cancelled) return;
+            setIndexedFilteredRows(result.lines.map((row) => ({
+                lineNumber: row.lineNumber,
+                raw: row.raw,
+            })));
+        };
+
+        void run().finally(() => {
+            if (!cancelled) {
+                setIsFilterLoading(false);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [analyticsSessionId, filters, isLargeFile]);
+
     // Apply filters to lightweight rows using lazy parsing only when needed.
     const filteredRows = useMemo(() => {
         if (isLargeFile) {
@@ -426,10 +464,17 @@ const ViewLogsPage: React.FC = () => {
             return normalRows;
         }
 
+        if (analyticsSessionId) {
+            if (isFilterLoading) {
+                return [];
+            }
+            return indexedFilteredRows;
+        }
+
         const parsedRows = normalRows.map((row) => getParsedRow(row));
         const filteredParsed = applyLogFilters(parsedRows, filters);
         return filteredParsed.map((row) => ({ lineNumber: row.lineNumber, raw: row.raw }));
-    }, [filters, getParsedRow, isLargeFile, normalRows]);
+    }, [analyticsSessionId, filters, getParsedRow, indexedFilteredRows, isFilterLoading, isLargeFile, normalRows]);
 
     const anomalyLineSet = useMemo(() => {
         return new Set(anomalyLineNumbers);
@@ -538,9 +583,34 @@ const ViewLogsPage: React.FC = () => {
         virtualWindowStart,
     ]);
 
+    useEffect(() => {
+        if (isLargeFile || !analyticsSessionId) {
+            setIndexedHistogramLines([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadHistogramSample = async () => {
+            const snapshot = await getDashboardSnapshot(analyticsSessionId);
+            if (cancelled) return;
+            setIndexedHistogramLines(snapshot?.sampledLines ?? []);
+        };
+
+        void loadHistogramSample();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [analyticsSessionId, isLargeFile]);
+
     const histogramSourceLines = useMemo(() => {
         if (isLargeFile) {
             return largeFileHistogramLines;
+        }
+
+        if (indexedHistogramLines.length > 0) {
+            return indexedHistogramLines;
         }
 
         if (normalRows.length === 0) {
@@ -554,7 +624,7 @@ const ViewLogsPage: React.FC = () => {
         }
 
         return sampled;
-    }, [getParsedRow, isLargeFile, largeFileHistogramLines, normalRows]);
+    }, [getParsedRow, indexedHistogramLines, isLargeFile, largeFileHistogramLines, normalRows]);
 
     const handleAnomalyRangeSelect = useCallback((startLine: number, endLine: number) => {
         const normalizedStart = Math.min(startLine, endLine);
@@ -891,39 +961,15 @@ const ViewLogsPage: React.FC = () => {
                                 return;
                             }
 
-                            // Check if file was truncated (size decreased) - full reload needed
-                            if (currentSize < lastSizeRef.current) {
-                                console.log('File truncated, performing full reload');
-                                const fullContent = await file.text();
+                            const preview = await file.slice(0, Math.min(file.size, PREVIEW_BYTES)).text();
+                            dispatch(updateLogContent({
+                                content: preview,
+                                lastModified: file.lastModified,
+                                size: currentSize,
+                            }));
 
-                                dispatch(updateLogContent({
-                                    content: fullContent,
-                                    lastModified: file.lastModified,
-                                }));
-
-                                lastSizeRef.current = currentSize;
-                                setLastUpdate(new Date());
-                            }
-                            // File grew - read only new content (incremental)
-                            else if (currentSize > lastSizeRef.current) {
-                                console.log(`File grew from ${lastSizeRef.current} to ${currentSize} bytes, reading increment`);
-
-                                // Read only the new part
-                                const blob = await file.slice(lastSizeRef.current, currentSize).text();
-
-                                dispatch(appendLogContent({
-                                    newContent: blob,
-                                    newSize: currentSize,
-                                    lastModified: file.lastModified,
-                                }));
-
-                                lastSizeRef.current = currentSize;
-                                setLastUpdate(new Date());
-                            }
-                            // Size same but modified timestamp changed - probably same content, skip
-                            else {
-                                console.log('File modified but size unchanged, skipping update');
-                            }
+                            lastSizeRef.current = currentSize;
+                            setLastUpdate(new Date());
                         }
                     } catch (error) {
                         console.error('Error reading file:', error);
@@ -981,11 +1027,12 @@ const ViewLogsPage: React.FC = () => {
 
             const file = await fileHandle.getFile();
             lastModifiedRef.current = file.lastModified;
-            const newContent = await file.text();
+            const newContent = await file.slice(0, Math.min(file.size, PREVIEW_BYTES)).text();
 
             dispatch(updateLogContent({
                 content: newContent,
                 lastModified: file.lastModified,
+                size: file.size,
             }));
 
             setLastUpdate(new Date());
@@ -994,7 +1041,7 @@ const ViewLogsPage: React.FC = () => {
         }
     };
 
-    if (!isMonitoring) {
+    if (!isMonitoring && !loaded) {
         return(         
             <FileSelectionView
                 indexing={indexing}

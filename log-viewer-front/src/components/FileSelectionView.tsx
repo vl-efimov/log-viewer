@@ -54,7 +54,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <CircularProgress />
                     <Typography variant="body2" color="text.secondary">
-                        Indexing large file...
+                        Indexing file...
                     </Typography>
                 </Box>
             ) : (

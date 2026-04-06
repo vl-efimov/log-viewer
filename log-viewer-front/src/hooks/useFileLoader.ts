@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { setLogFile, setMonitoringState, setFileHandle, setFileObject } from '../redux/slices/logFileSlice';
+import { useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearLogFile, setLogFile, setMonitoringState, setFileHandle, setFileObject, setIndexingState } from '../redux/slices/logFileSlice';
+import type { RootState } from '../redux/store';
 import { detectLogFormat } from '../utils/logFormatDetector';
+import { deleteSessionData } from '../utils/logIndexedDb';
+import { cancelIndexing, clearIndexingController, createSessionRecord, indexLogFile, registerIndexingController } from '../utils/logIndexer';
 
 const LARGE_FILE_BYTES = 300 * 1024 * 1024; // 300 MB
 const FORMAT_PREVIEW_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -9,9 +12,16 @@ const FORMAT_PREVIEW_BYTES = 2 * 1024 * 1024; // 2 MB
 export const useFileLoader = () => {
     const dispatch = useDispatch();
     const [indexing, setIndexing] = useState(false);
+    const currentSessionId = useSelector((state: RootState) => state.logFile.analyticsSessionId);
+    const activeSessionIdRef = useRef<string | null>(null);
 
     const loadFile = async (file: File, handle?: FileSystemFileHandle) => {
         setIndexing(true);
+        dispatch(setIndexingState({ isIndexing: true, progress: 0 }));
+        if (currentSessionId) {
+            cancelIndexing(currentSessionId);
+            await deleteSessionData(currentSessionId);
+        }
 
         try {
             const isLargeFile = file.size >= LARGE_FILE_BYTES;
@@ -24,19 +34,67 @@ export const useFileLoader = () => {
             }
             setFileObject(file);
 
-            const content = isLargeFile ? '' : await file.text();
+            const content = previewText;
 
-            dispatch(setLogFile({
-                name: file.name,
-                size: file.size,
-                content: content,
-                format: detectedFormat || 'Unknown',
-                lastModified: file.lastModified,
-                hasFileHandle: !!handle,
-                isLargeFile,
-            }));
-        } finally {
+            if (isLargeFile) {
+                setIndexing(false);
+                dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+                activeSessionIdRef.current = null;
+                dispatch(setLogFile({
+                    name: file.name,
+                    size: file.size,
+                    content: content,
+                    format: detectedFormat || 'Unknown',
+                    lastModified: file.lastModified,
+                    hasFileHandle: !!handle,
+                    isLargeFile,
+                    analyticsSessionId: '',
+                }));
+            } else {
+                const session = createSessionRecord({
+                    fileName: file.name,
+                    fileSize: file.size,
+                    lastModified: file.lastModified,
+                    formatId: detectedFormat || 'unknown',
+                    previewText,
+                });
+                activeSessionIdRef.current = session.sessionId;
+
+                dispatch(setLogFile({
+                    name: file.name,
+                    size: file.size,
+                    content: content,
+                    format: detectedFormat || 'Unknown',
+                    lastModified: file.lastModified,
+                    hasFileHandle: !!handle,
+                    isLargeFile,
+                    analyticsSessionId: session.sessionId,
+                }));
+
+                const controller = new AbortController();
+                registerIndexingController(session.sessionId, controller);
+                void indexLogFile(file, session, {
+                    signal: controller.signal,
+                    onProgress: (progress) => {
+                        const percent = progress.totalBytes > 0
+                            ? Math.min(99, Math.max(0, Math.round((progress.processedBytes / progress.totalBytes) * 100)))
+                            : 0;
+                        dispatch(setIndexingState({ isIndexing: true, progress: percent }));
+                    },
+                }).catch((error) => {
+                    if ((error as Error).name !== 'AbortError') {
+                        console.error('Indexing failed:', error);
+                    }
+                }).finally(() => {
+                    clearIndexingController(session.sessionId);
+                    setIndexing(false);
+                    dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+                });
+            }
+        } catch (error) {
             setIndexing(false);
+            dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+            throw error;
         }
         
         dispatch(setMonitoringState(true));
@@ -83,10 +141,20 @@ export const useFileLoader = () => {
         }
     };
 
-    const stopMonitoring = () => {
+    const stopMonitoring = async () => {
         dispatch(setMonitoringState(false));
+        dispatch(clearLogFile());
         setFileHandle(null);
         setFileObject(null);
+        dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+
+        const sessionId = activeSessionIdRef.current || currentSessionId;
+        if (sessionId) {
+            cancelIndexing(sessionId);
+            await deleteSessionData(sessionId);
+        }
+
+        setIndexing(false);
     };
 
     return {

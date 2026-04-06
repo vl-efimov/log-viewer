@@ -31,6 +31,8 @@ interface LogFileState {
     hasFileHandle: boolean; // Flag indicating if we have a File System Access API handle
     isMonitoring: boolean; // Flag for live monitoring state
     isLargeFile: boolean; // Flag for chunked loading mode
+    isIndexing: boolean;
+    indexingProgress: number;
 }
 
 const initialLogFileState: LogFileState = {
@@ -44,6 +46,8 @@ const initialLogFileState: LogFileState = {
     hasFileHandle: false,
     isMonitoring: false,
     isLargeFile: false,
+    isIndexing: false,
+    indexingProgress: 0,
 };
 
 const logFileSlice = createSlice({
@@ -58,20 +62,28 @@ const logFileSlice = createSlice({
             lastModified?: number;
             hasFileHandle?: boolean;
             isLargeFile?: boolean;
+            analyticsSessionId?: string;
         }>) => {
             state.name = action.payload.name;
             state.size = action.payload.size;
             state.content = action.payload.content;
             state.format = action.payload.format;
-            state.analyticsSessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+            if ('analyticsSessionId' in action.payload) {
+                state.analyticsSessionId = action.payload.analyticsSessionId ?? '';
+            } else {
+                state.analyticsSessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+            }
             state.lastModified = action.payload.lastModified || Date.now();
             state.hasFileHandle = action.payload.hasFileHandle || false;
             state.isLargeFile = action.payload.isLargeFile || false;
             state.loaded = true;
         },
-        updateLogContent: (state, action: PayloadAction<{ content: string; lastModified?: number }>) => {
+        updateLogContent: (state, action: PayloadAction<{ content: string; lastModified?: number; size?: number }>) => {
             if (!state.isLargeFile) {
                 state.content = action.payload.content;
+            }
+            if (action.payload.size !== undefined) {
+                state.size = action.payload.size;
             }
             state.lastModified = action.payload.lastModified || Date.now();
         },
@@ -85,6 +97,14 @@ const logFileSlice = createSlice({
         setMonitoringState: (state, action: PayloadAction<boolean>) => {
             state.isMonitoring = action.payload;
         },
+        setIndexingState: (state, action: PayloadAction<{ isIndexing: boolean; progress?: number }>) => {
+            state.isIndexing = action.payload.isIndexing;
+            if (action.payload.progress !== undefined) {
+                state.indexingProgress = action.payload.progress;
+            } else if (!action.payload.isIndexing) {
+                state.indexingProgress = 0;
+            }
+        },
         clearLogFile: (state) => {
             state.name = '';
             state.size = 0;
@@ -96,6 +116,8 @@ const logFileSlice = createSlice({
             state.hasFileHandle = false;
             state.isMonitoring = false;
             state.isLargeFile = false;
+            state.isIndexing = false;
+            state.indexingProgress = 0;
         },
     },
 });
@@ -105,6 +127,7 @@ export const {
     updateLogContent,
     appendLogContent,
     setMonitoringState,
+    setIndexingState,
     clearLogFile,
 } = logFileSlice.actions;
 

@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
+import LinearProgress from '@mui/material/LinearProgress';
 import DescriptionIcon from '@mui/icons-material/Description';
 import StorageIcon from '@mui/icons-material/Storage';
 import DataObjectIcon from '@mui/icons-material/DataObject';
@@ -29,6 +30,8 @@ const AppStatusBar: React.FC = () => {
         size,
         format,
         loaded,
+        isIndexing,
+        indexingProgress,
     } = useSelector((state: RootState) => state.logFile);
     const {
         rowsCount: anomalyRowsCount,
@@ -171,6 +174,31 @@ const AppStatusBar: React.FC = () => {
                     gap: 2,
                 }}
             >
+                {isIndexing && (
+                    <Tooltip title={`Indexing ${indexingProgress}%`} arrow placement="top">
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                minWidth: 180,
+                            }}
+                        >
+                            <Typography sx={anomalyTextSx}>
+                                Indexing {indexingProgress}%
+                            </Typography>
+                            <LinearProgress
+                                variant="determinate"
+                                value={Math.max(0, Math.min(indexingProgress, 100))}
+                                sx={{
+                                    width: 120,
+                                    height: 6,
+                                    borderRadius: 3,
+                                }}
+                            />
+                        </Box>
+                    </Tooltip>
+                )}
                 {anomalyStatus && (
                     <Tooltip title={anomalyStatus.full} arrow placement="top">
                         <Typography sx={anomalyTextSx}>

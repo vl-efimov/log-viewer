@@ -16,6 +16,7 @@ import NoFileSelected from '../components/common/NoFileSelected';
 import { parseLogLineAuto, type ParsedLogLine } from '../utils/logFormatDetector';
 import LogHistogram from '../components/LogHistogram';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
+import { getDashboardSnapshot } from '../utils/logIndexedDb';
 import {
     countFileLines,
     sampleAndAnalyzeLargeFile,
@@ -231,11 +232,14 @@ const DashboardPage: React.FC = () => {
         analyticsSessionId,
         size: fileSize,
         lastModified,
+        loaded,
     } = useSelector((state: RootState) => state.logFile);
     const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [histogramProgress, setHistogramProgress] = useState<number>(0);
     const [largeFileHistogramLines, setLargeFileHistogramLines] = useState<HistogramLine[]>([]);
     const [largeFileStats, setLargeFileStats] = useState<LargeFileAggregateStats | null>(null);
+    const [normalSnapshot, setNormalSnapshot] = useState<NormalDashboardSnapshot | null>(null);
+    const [isNormalSnapshotLoading, setIsNormalSnapshotLoading] = useState<boolean>(false);
     const largeFileCacheKey = useMemo(() => {
         return getLargeFileDashboardCacheKey(analyticsSessionId, fileName, fileSize, lastModified);
     }, [analyticsSessionId, fileName, fileSize, lastModified]);
@@ -324,6 +328,10 @@ const DashboardPage: React.FC = () => {
             };
         }
 
+        if (normalSnapshot) {
+            return normalSnapshot;
+        }
+
         const cached = normalDashboardCache.get(normalFileCacheKey);
         if (cached) {
             return cached;
@@ -379,7 +387,101 @@ const DashboardPage: React.FC = () => {
         };
         setNormalDashboardCache(normalFileCacheKey, snapshot);
         return snapshot;
-    }, [content, isLargeFile, largeFileHistogramLines, largeFileStats, normalFileCacheKey]);
+    }, [content, isLargeFile, largeFileHistogramLines, largeFileStats, normalFileCacheKey, normalSnapshot]);
+
+    useEffect(() => {
+        if (isLargeFile || !analyticsSessionId) {
+            setNormalSnapshot(null);
+            setIsNormalSnapshotLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadSnapshot = async () => {
+            setIsNormalSnapshotLoading(true);
+            try {
+                const snapshot = await getDashboardSnapshot(analyticsSessionId);
+                if (cancelled) return;
+                if (snapshot) {
+                    const fieldValueCounters = toFieldCounterMap(snapshot.stats.fieldValueCounts);
+                    const toSortedValues = (counter?: Map<string, number>) => {
+                        if (!counter) {
+                            return [];
+                        }
+
+                        return Array.from(counter.entries())
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, MAX_CATEGORY_VALUES)
+                            .map(([label, count]) => ({ label: shortLabel(label), count }));
+                    };
+
+                    const buildFacets = (fieldCounters: Map<string, Map<string, number>>): Facet[] => {
+                        const preferredFacetFields = PRIORITY_FIELDS.filter((field) => {
+                            const counter = fieldCounters.get(field);
+                            return Boolean(counter && counter.size > 1 && !CORE_CHART_FIELDS.includes(field));
+                        });
+
+                        const fallbackFacetFields = Array.from(fieldCounters.entries())
+                            .filter(([field, counter]) => {
+                                return counter.size > 1
+                                    && !preferredFacetFields.includes(field)
+                                    && !CORE_CHART_FIELDS.includes(field);
+                            })
+                            .sort(([, a], [, b]) => {
+                                const sumA = Array.from(a.values()).reduce((acc, curr) => acc + curr, 0);
+                                const sumB = Array.from(b.values()).reduce((acc, curr) => acc + curr, 0);
+                                if (sumA !== sumB) {
+                                    return sumB - sumA;
+                                }
+                                return b.size - a.size;
+                            })
+                            .map(([field]) => field);
+
+                        const selectedFacetFields = [...preferredFacetFields, ...fallbackFacetFields].slice(0, 3);
+
+                        return selectedFacetFields.map((field) => {
+                            const values = fieldCounters.get(field);
+                            return {
+                                field,
+                                values: toSortedValues(values),
+                            };
+                        });
+                    };
+
+                    const snapshotData: NormalDashboardSnapshot = {
+                        totalLines: snapshot.stats.totalLines,
+                        analyzedLines: snapshot.stats.totalLines,
+                        nonEmptyLines: snapshot.stats.nonEmptyLines,
+                        parsedLines: snapshot.stats.parsedLines,
+                        unparsedLines: Math.max(snapshot.stats.nonEmptyLines - snapshot.stats.parsedLines, 0),
+                        parseRate: snapshot.stats.nonEmptyLines > 0
+                            ? Math.round((snapshot.stats.parsedLines / snapshot.stats.nonEmptyLines) * 100)
+                            : 0,
+                        parsedRows: snapshot.sampledLines,
+                        levelValues: toSortedValues(fieldValueCounters.get('level')),
+                        statusValues: toSortedValues(fieldValueCounters.get('status')),
+                        methodValues: toSortedValues(fieldValueCounters.get('method')),
+                        facets: buildFacets(fieldValueCounters),
+                    };
+
+                    setNormalSnapshot(snapshotData);
+                } else {
+                    setNormalSnapshot(null);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsNormalSnapshotLoading(false);
+                }
+            }
+        };
+
+        void loadSnapshot();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [analyticsSessionId, isLargeFile]);
 
     useEffect(() => {
         if (!isMonitoring || !isLargeFile) {
@@ -441,7 +543,7 @@ const DashboardPage: React.FC = () => {
 
     const isLargeScanPending = isLargeFile && !largeFileStats;
 
-    if (!isMonitoring) {
+    if (!isMonitoring && !loaded) {
         return (
             <NoFileSelected
                 title={t('dashboard.title')}
@@ -450,7 +552,7 @@ const DashboardPage: React.FC = () => {
         );
     }
 
-    if (!content && !isLargeFile) {
+    if (!content && !isLargeFile && !normalSnapshot && !isNormalSnapshotLoading) {
         return (
             <NoFileSelected
                 title={t('dashboard.title')}

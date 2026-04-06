@@ -18,7 +18,9 @@ import { ColorModeEnum } from '../../../constants/ColorModeEnum';
 import { RootState } from '../../../redux/store';
 import { useDispatch, useSelector } from 'react-redux';
 import Tooltip from '@mui/material/Tooltip';
-import { clearLogFile, setFileHandle } from '../../../redux/slices/logFileSlice';
+import { clearLogFile, setFileHandle, setFileObject } from '../../../redux/slices/logFileSlice';
+import { deleteAllLogData } from '../../../utils/logIndexedDb';
+import { cancelIndexing } from '../../../utils/logIndexer';
 
 import {
     appBarSx,
@@ -51,11 +53,16 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
     const textColor = mode === ColorModeEnum.Light ? '#fff' : undefined;
 
-    const { name: fileName } = useSelector((state: RootState) => state.logFile);
+    const { name: fileName, analyticsSessionId } = useSelector((state: RootState) => state.logFile);
 
-    const handleClearFile = () => {
+    const handleClearFile = async () => {
         dispatch(clearLogFile());
         setFileHandle(null);
+        setFileObject(null);
+        if (analyticsSessionId) {
+            cancelIndexing(analyticsSessionId);
+        }
+        await deleteAllLogData();
     };
 
     return (
