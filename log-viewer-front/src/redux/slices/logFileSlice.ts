@@ -57,16 +57,17 @@ const logFileSlice = createSlice({
         setLogFile: (state, action: PayloadAction<{
             name: string;
             size: number;
-            content: string;
             format: string;
+            content?: string;
             lastModified?: number;
             hasFileHandle?: boolean;
             isLargeFile?: boolean;
             analyticsSessionId?: string;
         }>) => {
+            console.log('setLogFile');
             state.name = action.payload.name;
             state.size = action.payload.size;
-            state.content = action.payload.content;
+            state.content = action.payload.content ?? '';
             state.format = action.payload.format;
             if ('analyticsSessionId' in action.payload) {
                 state.analyticsSessionId = action.payload.analyticsSessionId ?? '';
@@ -79,6 +80,8 @@ const logFileSlice = createSlice({
             state.loaded = true;
         },
         updateLogContent: (state, action: PayloadAction<{ content: string; lastModified?: number; size?: number }>) => {
+            console.log('updateLogContent');
+            
             if (!state.isLargeFile) {
                 state.content = action.payload.content;
             }
@@ -88,6 +91,7 @@ const logFileSlice = createSlice({
             state.lastModified = action.payload.lastModified || Date.now();
         },
         appendLogContent: (state, action: PayloadAction<{ newContent: string; newSize: number; lastModified?: number }>) => {
+            console.log('appendLogContent');
             if (!state.isLargeFile) {
                 state.content = state.content + action.payload.newContent;
             }

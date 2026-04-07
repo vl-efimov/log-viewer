@@ -37,7 +37,6 @@ export default function App () {
             dispatch(setLogFile({
                 name: session.fileName,
                 size: session.fileSize,
-                content: session.previewText,
                 format: session.formatId || 'Unknown',
                 lastModified: session.lastModified,
                 hasFileHandle: false,
