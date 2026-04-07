@@ -9,12 +9,14 @@ interface FileSelectionViewProps {
     indexing: boolean;
     onFileSelect: () => Promise<boolean>;
     onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onFileDrop?: (file: File) => Promise<void> | void;
 }
 
 export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
     indexing,
     onFileSelect,
     onFileInputChange,
+    onFileDrop,
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +81,12 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                 style={{ display: 'none' }}
                 ref={fileInputRef}
                 onChange={onFileInputChange}
+                onDrop={(event) => {
+                    if (!onFileDrop) return;
+                    const file = event.dataTransfer.files?.[0];
+                    if (!file) return;
+                    void onFileDrop(file);
+                }}
             />
         </Box>
     );

@@ -29,6 +29,10 @@ class Region:
         return self.end_index - self.start_index + 1
 
 
+class PredictionCancelledError(RuntimeError):
+    pass
+
+
 def _build_windows(
     total_rows: int,
     window_size: int,
@@ -151,6 +155,10 @@ class NeuralLogAnomalyService:
         include_rows: bool = True,
         include_windows: bool = True,
     ) -> dict[str, Any]:
+        def raise_if_cancelled() -> None:
+            if self.runtime.is_cancel_requested():
+                raise PredictionCancelledError("Prediction cancelled by user")
+
         if threshold < 0 or threshold > 1:
             raise ValueError("threshold must be in [0, 1]")
         if step_size <= 0:
@@ -179,6 +187,7 @@ class NeuralLogAnomalyService:
         timestamps: list[str | None] = []
 
         for row in rows:
+            raise_if_cancelled()
             message = extract_message(row, forced_column=text_column)
             messages.append(message)
             processed.append(prepare_log_message(message))
@@ -186,6 +195,7 @@ class NeuralLogAnomalyService:
 
         embeddings: list[np.ndarray] = []
         for item in processed:
+            raise_if_cancelled()
             if not item:
                 embeddings.append(np.zeros((EMBED_DIM,), dtype=np.float32))
                 continue
@@ -199,6 +209,7 @@ class NeuralLogAnomalyService:
         windows_out: list[dict[str, Any]] = []
         window_batch_size = 256
         for chunk_start in range(0, len(window_spans), window_batch_size):
+            raise_if_cancelled()
             chunk_spans = window_spans[chunk_start : chunk_start + window_batch_size]
             chunk_batch = _build_window_batch(embeddings, chunk_spans)
             chunk_scores = self.runtime.predict_window_batch(chunk_batch) if len(chunk_spans) > 0 else np.array([])

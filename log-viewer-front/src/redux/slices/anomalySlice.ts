@@ -14,9 +14,13 @@ interface AnomalyState {
     hasResults: boolean;
     rowsCount: number;
     error: string;
+    isStopped: boolean;
+    stoppedAt: number | null;
     lastAnalyzedAt: number | null;
     lastModelId: 'bgl' | 'hdfs' | null;
     isRunning: boolean;
+    runningModelId: 'bgl' | 'hdfs' | null;
+    cancelRequestSeq: number;
     runStartedAt: number | null;
     expectedDurationSec: number | null;
     lastDurationSec: number | null;
@@ -39,9 +43,13 @@ const initialAnomalyState: AnomalyState = {
     hasResults: false,
     rowsCount: 0,
     error: '',
+    isStopped: false,
+    stoppedAt: null,
     lastAnalyzedAt: null,
     lastModelId: null,
     isRunning: false,
+    runningModelId: null,
+    cancelRequestSeq: 0,
     runStartedAt: null,
     expectedDurationSec: null,
     lastDurationSec: null,
@@ -69,19 +77,35 @@ const anomalySlice = createSlice({
             state.hasResults = true;
             state.rowsCount = action.payload.rowsCount;
             state.error = '';
+            state.isStopped = false;
+            state.stoppedAt = null;
             state.lastAnalyzedAt = action.payload.analyzedAt;
             state.lastModelId = action.payload.modelId;
             state.lastRunParams = action.payload.params;
         },
         setAnomalyError: (state, action: PayloadAction<string>) => {
             state.error = action.payload;
+            state.isStopped = false;
+            state.stoppedAt = null;
+        },
+        setAnomalyStopped: (state) => {
+            state.error = '';
+            state.isStopped = true;
+            state.stoppedAt = Date.now();
+        },
+        requestAnomalyCancel: (state) => {
+            state.cancelRequestSeq += 1;
         },
         setAnomalyRunning: (state, action: PayloadAction<{
             running: boolean;
+            modelId?: 'bgl' | 'hdfs' | null;
             startedAt?: number | null;
             expectedDurationSec?: number | null;
         }>) => {
             state.isRunning = action.payload.running;
+            if (action.payload.modelId !== undefined) {
+                state.runningModelId = action.payload.modelId;
+            }
             if (action.payload.startedAt !== undefined) {
                 state.runStartedAt = action.payload.startedAt;
             }
@@ -89,6 +113,7 @@ const anomalySlice = createSlice({
                 state.expectedDurationSec = action.payload.expectedDurationSec;
             }
             if (!action.payload.running) {
+                state.runningModelId = null;
                 state.runStartedAt = null;
                 state.expectedDurationSec = null;
             }
@@ -110,9 +135,12 @@ const anomalySlice = createSlice({
             state.hasResults = false;
             state.rowsCount = 0;
             state.error = '';
+            state.isStopped = false;
+            state.stoppedAt = null;
             state.lastAnalyzedAt = null;
             state.lastModelId = null;
             state.isRunning = false;
+            state.runningModelId = null;
             state.runStartedAt = null;
             state.expectedDurationSec = null;
             state.lastDurationSec = null;
@@ -124,6 +152,8 @@ const anomalySlice = createSlice({
 export const {
     setAnomalyResults,
     setAnomalyError,
+    setAnomalyStopped,
+    requestAnomalyCancel,
     setAnomalyRunning,
     setAnomalyLastDurationSec,
     updateAnomalyRowsPerSecond,

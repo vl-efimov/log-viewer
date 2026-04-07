@@ -165,6 +165,7 @@ export async function predictBglAnomalies(payload: BglPredictRequest): Promise<B
 export async function predictBglAnomaliesFromFile(
     file: File,
     payload: Omit<BglPredictRequest, 'rows'>,
+    options?: { signal?: AbortSignal },
 ): Promise<BglPredictResponse> {
     const formData = new FormData();
     formData.append('file', file);
@@ -195,6 +196,7 @@ export async function predictBglAnomaliesFromFile(
     const response = await fetch(`${backendBaseUrl}/bgl/predict-file`, {
         method: 'POST',
         body: formData,
+        signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -335,4 +337,15 @@ export async function isBglModelReady(modelId: string = 'bgl'): Promise<boolean>
     }
     const payload = await response.json() as BglHealthResponse;
     return Boolean(payload.model_ready);
+}
+
+export async function cancelBglAnomalyPrediction(modelId: string = 'bgl'): Promise<void> {
+    const response = await fetch(`${backendBaseUrl}/bgl/cancel?model_id=${encodeURIComponent(modelId)}`, {
+        method: 'POST',
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Cancel request failed (${response.status})`);
+    }
 }

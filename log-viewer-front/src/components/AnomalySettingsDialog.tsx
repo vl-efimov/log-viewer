@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -142,12 +143,13 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     </Stack>
 
                     {!isAnomalyLoading && !canRunAnomalyAnalysis && anomalyDisabledReason && (
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
+                        <Alert
+                            severity="info"
+                            variant="outlined"
+                            sx={{ py: 0.25 }}
                         >
                             {anomalyDisabledReason}
-                        </Typography>
+                        </Alert>
                     )}
 
                     <Stack spacing={0.5}>

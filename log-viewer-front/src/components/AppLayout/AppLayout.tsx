@@ -15,7 +15,7 @@ export default function MainLayout () {
     });
     const [isDragActive, setIsDragActive] = useState(false);
     const dragCounterRef = useRef(0);
-    const { handleFileDrop } = useFileLoader();
+    const { handleFileDrop, handleFileSystemAccess } = useFileLoader();
     
     const toggleSidebar = () => {
         setSidebarOpen(prev => {
@@ -26,7 +26,8 @@ export default function MainLayout () {
     };
 
     const shouldHandleDrag = (event: React.DragEvent<HTMLDivElement>) => {
-        return Array.from(event.dataTransfer.types).includes('Files');
+        const types = Array.from(event.dataTransfer.types);
+        return types.includes('Files') || types.includes('text/uri-list');
     };
 
     const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
@@ -56,8 +57,13 @@ export default function MainLayout () {
         dragCounterRef.current = 0;
         setIsDragActive(false);
         const file = event.dataTransfer.files?.[0];
-        if (!file) return;
-        await handleFileDrop(file);
+        if (file) {
+            await handleFileDrop(file);
+            return;
+        }
+
+        // Some drag sources provide only URI/text payloads. Request a real file.
+        await handleFileSystemAccess();
     };
 
     return (

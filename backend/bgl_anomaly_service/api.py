@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from .inference import NeuralLogAnomalyService
+from .inference import NeuralLogAnomalyService, PredictionCancelledError
 from .io_utils import parse_rows_from_bytes
 from .model_runtime import get_all_runtimes, get_runtime
 from .schemas import PredictJsonRequest
@@ -130,10 +130,23 @@ def prepare_start(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
     }
 
 
+@app.post("/bgl/cancel")
+def cancel_prediction(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    selected = _normalize_model_id(model_id)
+    runtime = get_runtime(selected)
+    runtime.request_cancel()
+    return {
+        "ok": True,
+        "model_id": selected,
+        "message": "Cancellation requested",
+    }
+
+
 @app.post("/bgl/predict-json")
 def predict_json(request: PredictJsonRequest) -> dict[str, Any]:
     try:
         service = services[request.model_id]
+        service.runtime.reset_cancel()
         return service.predict_rows(
             rows=request.rows,
             text_column=request.text_column,
@@ -144,6 +157,8 @@ def predict_json(request: PredictJsonRequest) -> dict[str, Any]:
             include_rows=request.include_rows,
             include_windows=request.include_windows,
         )
+    except PredictionCancelledError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -162,9 +177,10 @@ async def predict_file(
 ) -> dict[str, Any]:
     try:
         selected = _normalize_model_id(model_id)
+        service = services[selected]
+        service.runtime.reset_cancel()
         raw = await file.read()
         rows = parse_rows_from_bytes(raw, source_name=file.filename or "")
-        service = services[selected]
         return service.predict_rows(
             rows=rows,
             text_column=text_column,
@@ -175,5 +191,7 @@ async def predict_file(
             include_rows=include_rows,
             include_windows=include_windows,
         )
+    except PredictionCancelledError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=400, detail=str(exc)) from exc

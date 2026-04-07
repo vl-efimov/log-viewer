@@ -34,6 +34,7 @@ class ModelRuntime:
         self._prepare_progress = 0
         self._prepare_message = "Not prepared"
         self._prepare_error: str | None = None
+        self._cancel_event = threading.Event()
         self._tokenizer: BertTokenizer | None = None
         self._bert_model: TFBertModel | None = None
         self._classifier = None
@@ -81,6 +82,15 @@ class ModelRuntime:
                 "error": self._prepare_error,
                 "loaded": self._loaded,
             }
+
+    def request_cancel(self) -> None:
+        self._cancel_event.set()
+
+    def reset_cancel(self) -> None:
+        self._cancel_event.clear()
+
+    def is_cancel_requested(self) -> bool:
+        return self._cancel_event.is_set()
 
     def load(self) -> None:
         with self._lock:

@@ -1,20 +1,25 @@
 import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
 import LinearProgress from '@mui/material/LinearProgress';
 import DescriptionIcon from '@mui/icons-material/Description';
+import CloseIcon from '@mui/icons-material/Close';
 import StorageIcon from '@mui/icons-material/Storage';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RootState } from '../../../redux/store';
 import { baseUrl } from '../../../constants/BaseUrl';
 import { RouteViewLogs } from '../../../routes/routePaths';
+import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
+import { cancelBglAnomalyPrediction } from '../../../services/bglAnomalyApi';
 import AppStatusBarItem from '../AppStatusBarItem';
 import {
     anomalyTextSx,
+    closeButtonSx,
     statusBarDividerSx,
     iconRaisedSx,
     statusBarIconSx,
@@ -24,6 +29,7 @@ import {
 } from './styles';
 
 const AppStatusBar: React.FC = () => {
+    const dispatch = useDispatch();
     const location = useLocation();
     const {
         name,
@@ -36,9 +42,12 @@ const AppStatusBar: React.FC = () => {
     const {
         rowsCount: anomalyRowsCount,
         error: anomalyError,
+        isStopped: anomalyIsStopped,
+        stoppedAt: anomalyStoppedAt,
         lastAnalyzedAt: anomalyLastAnalyzedAt,
         lastModelId: anomalyLastModelId,
         isRunning: anomalyIsRunning,
+        runningModelId: anomalyRunningModelId,
         runStartedAt: anomalyRunStartedAt,
         expectedDurationSec: anomalyExpectedDurationSec,
         lastRunParams: anomalyLastRunParams,
@@ -108,6 +117,14 @@ const AppStatusBar: React.FC = () => {
             };
         }
 
+        if (anomalyIsStopped) {
+            const time = anomalyStoppedAt ? new Date(anomalyStoppedAt).toLocaleTimeString() : '';
+            return {
+                compact: time ? `Anomaly: stopped | ${time}` : 'Anomaly: stopped',
+                full: 'Anomaly analysis was stopped by user.',
+            };
+        }
+
         if (anomalyLastAnalyzedAt && anomalyLastModelId && anomalyLastRunParams) {
             const time = new Date(anomalyLastAnalyzedAt).toLocaleTimeString();
             return {
@@ -118,6 +135,19 @@ const AppStatusBar: React.FC = () => {
 
         return null;
     })();
+
+    const handleCancelAnomaly = async () => {
+        const modelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
+        dispatch(requestAnomalyCancel());
+        try {
+            await cancelBglAnomalyPrediction(modelId);
+            dispatch(setAnomalyStopped());
+        } catch (error) {
+            dispatch(setAnomalyError(error instanceof Error ? error.message : 'Не удалось остановить расчет аномалий'));
+        } finally {
+            dispatch(setAnomalyRunning({ running: false }));
+        }
+    };
 
     return (
         <Box sx={statusBarSx}>
@@ -204,15 +234,32 @@ const AppStatusBar: React.FC = () => {
                     </Tooltip>
                 )}
                 {anomalyStatus && (
-                    <Tooltip
-                        title={anomalyStatus.full}
-                        arrow
-                        placement="top"
-                    >
-                        <Typography sx={anomalyTextSx}>
-                            {anomalyStatus.compact}
-                        </Typography>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Tooltip
+                            title={anomalyStatus.full}
+                            arrow
+                            placement="top"
+                        >
+                            <Typography sx={anomalyTextSx}>
+                                {anomalyStatus.compact}
+                            </Typography>
+                        </Tooltip>
+                        {anomalyIsRunning && (
+                            <Tooltip
+                                title="Остановить расчет аномалий"
+                                arrow
+                                placement="top"
+                            >
+                                <IconButton
+                                    size="small"
+                                    sx={closeButtonSx}
+                                    onClick={() => void handleCancelAnomaly()}
+                                >
+                                    <CloseIcon fontSize="inherit" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                    </Box>
                 )}
             </Box>
         </Box>

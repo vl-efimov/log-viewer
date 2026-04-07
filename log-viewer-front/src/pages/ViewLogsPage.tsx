@@ -11,6 +11,10 @@ import {
     updateLogContent,
     clearLogContent,
 } from '../redux/slices/logFileSlice';
+import {
+    clearAnomalyResults,
+    setAnomalyResults,
+} from '../redux/slices/anomalySlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
 import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
 import { LogHistogram } from '../components/LogHistogram';
@@ -21,7 +25,15 @@ import { useFileLoader } from '../hooks/useFileLoader';
 import { useParsedRowsCache } from '../hooks/useParsedRowsCache';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
-import { getDashboardSnapshot, getLinesRange, getSessionLineCount, queryFilteredLines } from '../utils/logIndexedDb';
+import {
+    deleteAnomalySnapshot,
+    getAnomalySnapshot,
+    getDashboardSnapshot,
+    getLinesRange,
+    getSessionLineCount,
+    queryFilteredLines,
+    saveAnomalySnapshot,
+} from '../utils/logIndexedDb';
 import { appendLogFileToIndex } from '../utils/logIndexer';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -181,6 +193,7 @@ const ViewLogsPage: React.FC = () => {
         isMonitoring,
         hasFileHandle,
         size: fileSize,
+        lastModified,
         isLargeFile,
         analyticsSessionId,
         loaded,
@@ -191,7 +204,13 @@ const ViewLogsPage: React.FC = () => {
         regions: anomalyRegions,
         lineNumbers: anomalyLineNumbers,
         hasResults: hasAnomalyResults,
+        rowsCount: anomalyRowsCount,
+        lastAnalyzedAt: anomalyLastAnalyzedAt,
+        lastModelId: anomalyLastModelId,
+        lastRunParams: anomalyLastRunParams,
     } = useSelector((state: RootState) => state.anomaly);
+
+    const [isAnomalySnapshotHydrated, setIsAnomalySnapshotHydrated] = useState(false);
 
     const [normalRows, setNormalRows] = useState<ViewRow[]>([]);
     const [indexedFilteredRows, setIndexedFilteredRows] = useState<ViewRow[]>([]);
@@ -234,6 +253,18 @@ const ViewLogsPage: React.FC = () => {
         return analyticsSessionId || `${fileName}|${fileSize}`;
     }, [analyticsSessionId, fileName, fileSize]);
 
+    const anomalyStorageKey = useMemo(() => {
+        if (analyticsSessionId) {
+            return analyticsSessionId;
+        }
+
+        if (!loaded || !fileName) {
+            return '';
+        }
+
+        return `file:${fileName}|${fileSize}|${lastModified}`;
+    }, [analyticsSessionId, fileName, fileSize, lastModified, loaded]);
+
     const useDbView = useMemo(() => {
         return !isLargeFile && Boolean(analyticsSessionId) && !isIndexing;
     }, [analyticsSessionId, isIndexing, isLargeFile]);
@@ -246,6 +277,77 @@ const ViewLogsPage: React.FC = () => {
 
         return getFileObject();
     }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        setIsAnomalySnapshotHydrated(false);
+
+        const loadAnomalySnapshot = async () => {
+            if (!anomalyStorageKey) {
+                if (!cancelled) {
+                    dispatch(clearAnomalyResults());
+                    setIsAnomalySnapshotHydrated(true);
+                }
+                return;
+            }
+
+            const snapshot = await getAnomalySnapshot(anomalyStorageKey);
+            if (cancelled) {
+                return;
+            }
+
+            if (snapshot) {
+                dispatch(setAnomalyResults({
+                    regions: snapshot.regions,
+                    lineNumbers: snapshot.lineNumbers,
+                    rowsCount: snapshot.rowsCount,
+                    analyzedAt: snapshot.analyzedAt,
+                    modelId: snapshot.modelId,
+                    params: snapshot.params,
+                }));
+            } else {
+                dispatch(clearAnomalyResults());
+            }
+
+            setIsAnomalySnapshotHydrated(true);
+        };
+
+        void loadAnomalySnapshot();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [anomalyStorageKey, dispatch]);
+
+    useEffect(() => {
+        if (!isAnomalySnapshotHydrated || !anomalyStorageKey) {
+            return;
+        }
+
+        if (!hasAnomalyResults || !anomalyLastAnalyzedAt || !anomalyLastModelId || !anomalyLastRunParams) {
+            void deleteAnomalySnapshot(anomalyStorageKey);
+            return;
+        }
+
+        void saveAnomalySnapshot(anomalyStorageKey, {
+            regions: anomalyRegions,
+            lineNumbers: anomalyLineNumbers,
+            rowsCount: anomalyRowsCount,
+            analyzedAt: anomalyLastAnalyzedAt,
+            modelId: anomalyLastModelId,
+            params: anomalyLastRunParams,
+        });
+    }, [
+        anomalyLastAnalyzedAt,
+        anomalyLastModelId,
+        anomalyLastRunParams,
+        anomalyLineNumbers,
+        anomalyRegions,
+        anomalyRowsCount,
+        anomalyStorageKey,
+        hasAnomalyResults,
+        isAnomalySnapshotHydrated,
+    ]);
 
     const handleReattachMonitoring = useCallback(async () => {
         if (!analyticsSessionId) return;
@@ -290,6 +392,45 @@ const ViewLogsPage: React.FC = () => {
         handleFileSystemAccessForMonitoring,
         isLargeFile,
         useDbView,
+    ]);
+
+    const requestFileForAnomalyAnalysis = useCallback(async (): Promise<File | null> => {
+        const existing = await getActiveFile();
+        if (existing) {
+            return existing;
+        }
+
+        if (analyticsSessionId) {
+            const result = await handleFileSystemAccessForMonitoring(analyticsSessionId, {
+                expectedName: fileName,
+                expectedSize: fileSize,
+                expectedLastModified: lastModifiedRef.current,
+                formatHint: format,
+                isLargeFile,
+            });
+
+            if (result === 'attached' || result === 'switched') {
+                return await getActiveFile();
+            }
+
+            return null;
+        }
+
+        const selected = await handleFileSystemAccess();
+        if (!selected) {
+            return null;
+        }
+
+        return await getActiveFile();
+    }, [
+        analyticsSessionId,
+        fileName,
+        fileSize,
+        format,
+        getActiveFile,
+        handleFileSystemAccess,
+        handleFileSystemAccessForMonitoring,
+        isLargeFile,
     ]);
 
     const buildLineIndex = useCallback(async (file: File): Promise<LineIndex> => {
@@ -1354,9 +1495,7 @@ const ViewLogsPage: React.FC = () => {
                 isLargeFile={isLargeFile}
                 lineCount={lineCount}
                 normalRows={normalRows}
-                filteredRows={filteredRows}
-                getParsedRow={getParsedRow}
-                getActiveFile={getActiveFile}
+                requestFileForAnomalyAnalysis={requestFileForAnomalyAnalysis}
             />
 
             <Box

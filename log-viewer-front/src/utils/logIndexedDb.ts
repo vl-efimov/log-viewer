@@ -45,6 +45,32 @@ export type LogStatsRecord = {
     updatedAt: number;
 };
 
+export type AnomalySnapshotRecord = {
+    sessionId: string;
+    kind: 'anomaly';
+    regions: Array<{
+        start_index: number;
+        end_index: number;
+        start_line: number;
+        end_line: number;
+        count: number;
+        start_timestamp: string | null;
+        end_timestamp: string | null;
+    }>;
+    lineNumbers: number[];
+    rowsCount: number;
+    analyzedAt: number;
+    modelId: 'bgl' | 'hdfs';
+    params: {
+        threshold: number;
+        stepSize: number;
+        minRegionLines: number;
+        analysisScope: 'all' | 'filtered';
+        timestampColumn: 'auto' | 'timestamp' | 'datetime' | 'time' | 'date' | 'event_time' | 'created_at';
+    };
+    updatedAt: number;
+};
+
 export type FilteredLinesResult = {
     totalMatches: number;
     lines: Array<{ lineNumber: number; raw: string }>;
@@ -277,6 +303,37 @@ export const getDashboardSnapshot = async (sessionId: string): Promise<LogStatsR
     const result = await requestToPromise<LogStatsRecord | undefined>(store.get([sessionId, 'dashboard']));
     await transactionDone(tx);
     return result ?? null;
+};
+
+export const saveAnomalySnapshot = async (
+    sessionId: string,
+    snapshot: Omit<AnomalySnapshotRecord, 'sessionId' | 'kind' | 'updatedAt'>
+): Promise<void> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_STATS, 'readwrite');
+    tx.objectStore(STORE_STATS).put({
+        sessionId,
+        kind: 'anomaly',
+        ...snapshot,
+        updatedAt: Date.now(),
+    });
+    await transactionDone(tx);
+};
+
+export const getAnomalySnapshot = async (sessionId: string): Promise<AnomalySnapshotRecord | null> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_STATS, 'readonly');
+    const store = tx.objectStore(STORE_STATS);
+    const result = await requestToPromise<AnomalySnapshotRecord | undefined>(store.get([sessionId, 'anomaly']));
+    await transactionDone(tx);
+    return result ?? null;
+};
+
+export const deleteAnomalySnapshot = async (sessionId: string): Promise<void> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_STATS, 'readwrite');
+    tx.objectStore(STORE_STATS).delete([sessionId, 'anomaly']);
+    await transactionDone(tx);
 };
 
 const isDateRangeFilter = (value: unknown): value is DateRangeFilter => {

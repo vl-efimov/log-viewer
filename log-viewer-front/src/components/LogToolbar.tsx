@@ -23,9 +23,10 @@ import {
     setAnomalyLastDurationSec,
     setAnomalyResults,
     setAnomalyRunning,
+    setAnomalyStopped,
     updateAnomalyRowsPerSecond,
 } from '../redux/slices/anomalySlice';
-import { isBglModelReady, predictBglAnomalies, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
+import { getPretrainedModels, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
 import {
     ANOMALY_MIN_REGION_LINES_RANGE,
     ANOMALY_SETTINGS_DEFAULTS,
@@ -37,7 +38,6 @@ import {
     saveAnomalySettings,
     saveSelectedAnomalyModelId,
 } from '../utils/anomalySettings';
-import type { ParsedLogLine } from '../utils/logFormatDetector';
 import AnomalySettingsDialog from './AnomalySettingsDialog';
 import { LogFiltersBar } from './LogFiltersBar';
 import type { LogFilters } from '../types/filters';
@@ -45,12 +45,6 @@ import type { LogFormatField } from '../utils/logFormatDetector';
 
 type AnomalySourceRow = {
     lineNumber: number;
-    raw: string;
-};
-
-type ParsedRow = {
-    lineNumber: number;
-    parsed: ParsedLogLine | null;
     raw: string;
 };
 
@@ -67,9 +61,7 @@ interface LogToolbarProps {
     isLargeFile: boolean;
     lineCount: number;
     normalRows: AnomalySourceRow[];
-    filteredRows: AnomalySourceRow[];
-    getActiveFile: () => Promise<File | null>;
-    getParsedRow: (row: AnomalySourceRow) => ParsedRow;
+    requestFileForAnomalyAnalysis: () => Promise<File | null>;
 }
 
 const LogToolbar: React.FC<LogToolbarProps> = ({
@@ -85,14 +77,13 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     isLargeFile,
     lineCount,
     normalRows,
-    filteredRows,
-    getActiveFile,
-    getParsedRow,
+    requestFileForAnomalyAnalysis,
 }) => {
     const dispatch = useDispatch();
     const { isMonitoring } = useSelector((state: RootState) => state.logFile);
     const {
         isRunning: anomalyIsRunning,
+        cancelRequestSeq,
         rowsPerSecondByModel: anomalyRowsPerSecondByModel,
     } = useSelector((state: RootState) => state.anomaly);
     const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
@@ -101,6 +92,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
+    const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
 
     const compactButtonSx = {
         minWidth: 0,
@@ -129,14 +121,25 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     const isFiltersOpen = Boolean(filtersAnchorEl);
 
     useEffect(() => {
-        if (!isMonitoring) {
-            dispatch(clearAnomalyResults());
-            dispatch(setAnomalyRunning({ running: false }));
+        if (isMonitoring) {
+            return;
         }
-    }, [dispatch, isMonitoring]);
+
+        if (!isLargeFile && normalRows.length > 0) {
+            return;
+        }
+
+        if (isLargeFile && lineCount > 0) {
+            return;
+        }
+
+        dispatch(clearAnomalyResults());
+        dispatch(setAnomalyRunning({ running: false }));
+    }, [dispatch, isLargeFile, isMonitoring, lineCount, normalRows.length]);
 
     useEffect(() => {
-        if (!isMonitoring) {
+        const hasAnalyzableRows = isLargeFile ? lineCount > 0 : normalRows.length > 0;
+        if (!hasAnalyzableRows) {
             setIsModelReady(false);
             setIsModelReadyLoading(false);
             return;
@@ -147,9 +150,25 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         const checkModelReady = async () => {
             setIsModelReadyLoading(true);
             try {
-                const ready = await isBglModelReady(selectedModelId);
+                const models = await getPretrainedModels();
+                const selectedModel = models.find((model) => model.modelId === selectedModelId);
+                const selectedReady = Boolean(selectedModel && (selectedModel.status === 'ready' || selectedModel.prepared));
+
                 if (!cancelled) {
-                    setIsModelReady(ready);
+                    if (selectedReady) {
+                        setIsModelReady(true);
+                        return;
+                    }
+
+                    const fallbackReadyModel = models.find((model) => model.status === 'ready' || model.prepared);
+                    if (fallbackReadyModel && (fallbackReadyModel.modelId === 'bgl' || fallbackReadyModel.modelId === 'hdfs')) {
+                        setSelectedModelId(fallbackReadyModel.modelId);
+                        saveSelectedAnomalyModelId(fallbackReadyModel.modelId);
+                        setIsModelReady(true);
+                        return;
+                    }
+
+                    setIsModelReady(false);
                 }
             } catch {
                 if (!cancelled) {
@@ -167,7 +186,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         return () => {
             cancelled = true;
         };
-    }, [isMonitoring, selectedModelId]);
+    }, [isLargeFile, lineCount, normalRows.length, selectedModelId]);
 
     const handleSelectedModelChange = useCallback((modelId: 'bgl' | 'hdfs') => {
         setSelectedModelId(modelId);
@@ -211,27 +230,24 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
 
     const runAnomalyAnalysis = useCallback(async () => {
         if (!isModelReady) {
-            dispatch(setAnomalyError('Model is not prepared. Open Pretrained Models and click Prepare Model.'));
-            return;
-        }
-
-        if (!isLargeFile && normalRows.length === 0) {
-            dispatch(setAnomalyError('No parsed lines to analyze.'));
             return;
         }
 
         const runStartedAt = Date.now();
         dispatch(setAnomalyError(''));
+        const abortController = new AbortController();
+        setActiveAbortController(abortController);
 
         try {
             const settings = anomalySettings;
-            const useFilteredScope = !isLargeFile && settings.analysisScope === 'filtered';
-            const sourceRows = useFilteredScope ? filteredRows : normalRows;
-            const sourceLineNumbers = sourceRows.map((line) => line.lineNumber);
+            const activeFile = await requestFileForAnomalyAnalysis();
+            if (!activeFile) {
+                return;
+            }
 
             const rowsToAnalyze = isLargeFile
                 ? Math.max(0, lineCount)
-                : sourceRows.length;
+                : normalRows.length;
 
             const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
             const expectedDurationSec = rowsPerSecond && rowsPerSecond > 0
@@ -240,87 +256,23 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
 
             dispatch(setAnomalyRunning({
                 running: true,
+                modelId: selectedModelId,
                 startedAt: runStartedAt,
                 expectedDurationSec,
             }));
 
-            if (!isLargeFile && sourceRows.length === 0) {
-                dispatch(setAnomalyError('No lines in selected analysis scope.'));
-                dispatch(clearAnomalyResults());
-                return;
-            }
-
-            const result = isLargeFile
-                ? await (async () => {
-                    const activeFile = await getActiveFile();
-                    if (!activeFile) {
-                        throw new Error('Failed to access file for anomaly analysis.');
-                    }
-
-                    return predictBglAnomaliesFromFile(activeFile, {
-                        model_id: selectedModelId,
-                        text_column: 'message',
-                        timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
-                        threshold: settings.threshold,
-                        step_size: settings.stepSize,
-                        min_region_lines: settings.minRegionLines,
-                        include_rows: false,
-                        include_windows: false,
-                    });
-                })()
-                : await (async () => {
-                    const rows = sourceRows.map((line) => {
-                        const parsedLine = getParsedRow(line);
-                        const normalizedTimestamp = parsedLine.parsed?.fields.timestamp
-                            || parsedLine.parsed?.fields.datetime
-                            || (parsedLine.parsed?.fields.date && parsedLine.parsed?.fields.time
-                                ? `${parsedLine.parsed.fields.date} ${parsedLine.parsed.fields.time}`
-                                : null);
-
-                        const row: {
-                            message: string;
-                            timestamp?: string | null;
-                            datetime?: string | null;
-                            time?: string | null;
-                            date?: string | null;
-                            event_time?: string | null;
-                            created_at?: string | null;
-                        } = {
-                            message: line.raw,
-                            timestamp: normalizedTimestamp,
-                        };
-
-                        if (settings.timestampColumn !== 'auto') {
-                            row[settings.timestampColumn] = parsedLine.parsed?.fields[settings.timestampColumn] ?? null;
-                        }
-
-                        return row;
-                    });
-
-                    return predictBglAnomalies({
-                        model_id: selectedModelId,
-                        rows,
-                        text_column: 'message',
-                        timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
-                        threshold: settings.threshold,
-                        step_size: settings.stepSize,
-                        min_region_lines: settings.minRegionLines,
-                        include_rows: false,
-                        include_windows: false,
-                    });
-                })();
-
-            const mappedRegions = isLargeFile
-                ? result.anomaly_regions
-                : result.anomaly_regions.map((region) => {
-                    const mappedStart = sourceLineNumbers[region.start_line - 1];
-                    const mappedEnd = sourceLineNumbers[region.end_line - 1];
-                    return {
-                        ...region,
-                        start_line: Number.isFinite(mappedStart) ? mappedStart : region.start_line,
-                        end_line: Number.isFinite(mappedEnd) ? mappedEnd : region.end_line,
-                    };
-                });
+            const result = await predictBglAnomaliesFromFile(activeFile, {
+                model_id: selectedModelId,
+                text_column: 'message',
+                timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
+                threshold: settings.threshold,
+                step_size: settings.stepSize,
+                min_region_lines: settings.minRegionLines,
+                include_rows: false,
+                include_windows: false,
+            }, {
+                signal: abortController.signal,
+            });
 
             const anomalyRowLines = Array.isArray(result.anomaly_lines)
                 ? result.anomaly_lines
@@ -328,15 +280,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     .filter((row) => row.is_anomaly)
                     .map((row) => row.line);
 
-            const anomalyLineNumbers = isLargeFile
-                ? anomalyRowLines
-                    .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber))
-                : anomalyRowLines
-                    .map((line) => sourceLineNumbers[line - 1])
-                    .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber));
+            const anomalyLineNumbers = anomalyRowLines
+                .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber));
 
             dispatch(setAnomalyResults({
-                regions: mappedRegions,
+                regions: result.anomaly_regions,
                 lineNumbers: anomalyLineNumbers,
                 rowsCount: result.meta.anomaly_rows,
                 analyzedAt: Date.now(),
@@ -345,21 +293,28 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     threshold: settings.threshold,
                     stepSize: settings.stepSize,
                     minRegionLines: settings.minRegionLines,
-                    analysisScope: useFilteredScope ? settings.analysisScope : 'all',
+                    analysisScope: 'all',
                     timestampColumn: settings.timestampColumn,
                 },
             }));
         } catch (err) {
-            dispatch(clearAnomalyResults());
-            dispatch(setAnomalyError(err instanceof Error ? err.message : 'Anomaly analysis failed'));
+            if ((err as Error).name === 'AbortError') {
+                dispatch(setAnomalyStopped());
+            } else {
+                const message = err instanceof Error ? err.message : 'Anomaly analysis failed';
+                if (message.toLowerCase().includes('cancelled')) {
+                    dispatch(setAnomalyStopped());
+                } else {
+                    dispatch(clearAnomalyResults());
+                    dispatch(setAnomalyError(message));
+                }
+            }
         } finally {
+            setActiveAbortController((current) => (current === abortController ? null : current));
             const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
             dispatch(setAnomalyLastDurationSec(elapsedSec));
 
-            const settings = anomalySettings;
-            const useFilteredScope = !isLargeFile && settings.analysisScope === 'filtered';
-            const sourceRows = useFilteredScope ? filteredRows : normalRows;
-            const analyzedRows = isLargeFile ? Math.max(0, lineCount) : sourceRows.length;
+            const analyzedRows = isLargeFile ? Math.max(0, lineCount) : normalRows.length;
             if (analyzedRows > 0) {
                 const measuredRowsPerSecond = analyzedRows / elapsedSec;
                 dispatch(updateAnomalyRowsPerSecond({
@@ -374,22 +329,32 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         anomalyRowsPerSecondByModel,
         anomalySettings,
         dispatch,
-        filteredRows,
-        getActiveFile,
-        getParsedRow,
         isLargeFile,
         isModelReady,
         lineCount,
         normalRows,
+        requestFileForAnomalyAnalysis,
         selectedModelId,
     ]);
 
-    const canRunAnomalyAnalysis = !isModelReadyLoading && isModelReady;
-    const anomalyDisabledReason = isModelReadyLoading
-        ? 'Checking model readiness...'
-        : isModelReady
-            ? undefined
-            : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
+    useEffect(() => {
+        if (!activeAbortController) {
+            return;
+        }
+
+        activeAbortController.abort();
+        setActiveAbortController(null);
+    }, [cancelRequestSeq]);
+
+    const hasAnalyzableRows = isLargeFile ? lineCount > 0 : normalRows.length > 0;
+    const canRunAnomalyAnalysis = hasAnalyzableRows && !isModelReadyLoading && isModelReady;
+    const anomalyDisabledReason = !hasAnalyzableRows
+        ? 'No log rows to analyze. Load or attach a log file first.'
+        : isModelReadyLoading
+            ? 'Checking model readiness...'
+            : isModelReady
+                ? undefined
+                : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
 
     return (
         <>
