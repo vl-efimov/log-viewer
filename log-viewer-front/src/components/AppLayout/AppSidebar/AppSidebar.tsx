@@ -106,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                             whiteSpace: 'nowrap',
                                             transition: 'height 0.3s ease',
                                             height: isSidebarOpen ? '24px' : '0px',
-                                            marginBottom: 1,
+                                            marginBottom: isSidebarOpen ? 1 : 0,
                                             backgroundColor: 'inherit',
                                         }}
                                     >
