@@ -4,6 +4,9 @@ import {
     type LogLineRecord,
     type LogSessionRecord,
     createLogSessionId,
+    getDashboardSnapshot,
+    getLinesRange,
+    getSession,
     putLineBatch,
     saveDashboardSnapshot,
     upsertSession,
@@ -14,6 +17,7 @@ const BATCH_LINES = 1000;
 const MAX_HISTOGRAM_SAMPLE_LINES = 50_000;
 const MAX_TRACKED_FIELDS = 16;
 const MAX_UNIQUE_VALUES_PER_FIELD = 500;
+const APPEND_PARSED_LOOKBACK_LINES = 500;
 
 const PRIORITY_AGG_FIELDS = new Set([
     'level',
@@ -47,6 +51,13 @@ export type IndexingResult = {
     lineCount: number;
     stats: LargeFileAggregateStats;
     sampledLines: HistogramLine[];
+};
+
+export type AppendIndexResult = {
+    addedLines: number;
+    newLineCount: number;
+    newFileSize: number;
+    newLastModified: number;
 };
 
 export type IndexingOptions = {
@@ -464,4 +475,188 @@ export const indexLogFile = async (
     } finally {
         cancelledSessions.delete(sessionId);
     }
+};
+
+const buildFieldUniqueCounts = (stats: LargeFileAggregateStats): Record<string, number> => {
+    const result: Record<string, number> = {};
+    for (const [field, values] of Object.entries(stats.fieldValueCounts)) {
+        result[field] = Object.keys(values).length;
+    }
+    return result;
+};
+
+const getLastParsedLineNumber = async (sessionId: string, endLine: number): Promise<number> => {
+    if (endLine <= 0) return 0;
+    const startLine = Math.max(1, endLine - APPEND_PARSED_LOOKBACK_LINES + 1);
+    const records = await getLinesRange(sessionId, startLine, endLine);
+    for (let i = records.length - 1; i >= 0; i -= 1) {
+        if (records[i].parsed) {
+            return records[i].lineNumber;
+        }
+    }
+    return 0;
+};
+
+const didEndWithNewline = async (file: File, size: number): Promise<boolean> => {
+    if (size <= 0) return true;
+    const tail = new Uint8Array(await file.slice(size - 1, size).arrayBuffer());
+    return tail.length === 1 && tail[0] === 10;
+};
+
+export const appendLogFileToIndex = async (
+    file: File,
+    sessionId: string,
+    options: IndexingOptions = {}
+): Promise<AppendIndexResult | null> => {
+    const { onProgress, signal } = options;
+    const session = await getSession(sessionId);
+    if (!session) return null;
+
+    if (file.size <= session.fileSize) {
+        return {
+            addedLines: 0,
+            newLineCount: session.lineCount,
+            newFileSize: session.fileSize,
+            newLastModified: session.lastModified,
+        };
+    }
+
+    const snapshot = await getDashboardSnapshot(sessionId);
+    const stats = snapshot?.stats;
+    const sampledLines = snapshot?.sampledLines ? snapshot.sampledLines.slice() : [];
+    const fieldUniqueCounts = stats ? buildFieldUniqueCounts(stats) : {};
+
+    const endedWithNewline = await didEndWithNewline(file, session.fileSize);
+    const startLineNumber = endedWithNewline ? session.lineCount + 1 : session.lineCount;
+    const lastParsedBaseline = await getLastParsedLineNumber(
+        sessionId,
+        endedWithNewline ? session.lineCount : session.lineCount - 1,
+    );
+
+    let lastParsedLineNumber = lastParsedBaseline;
+    let carry = '';
+
+    if (!endedWithNewline && session.lineCount > 0) {
+        const lastRecord = await getLinesRange(sessionId, session.lineCount, session.lineCount);
+        carry = lastRecord[0]?.raw ?? '';
+    }
+
+    const decoder = new TextDecoder('utf-8');
+    let offset = session.fileSize;
+    let lineNumber = startLineNumber;
+    const linesBatch: LogLineRecord[] = [];
+
+    const flushBatch = async () => {
+        if (linesBatch.length === 0) return;
+        if (signal?.aborted || cancelledSessions.has(sessionId)) {
+            throw new DOMException('Indexing aborted', 'AbortError');
+        }
+        const batchLines = linesBatch.splice(0, linesBatch.length);
+        await putLineBatch(batchLines);
+    };
+
+    const pushLine = (raw: string) => {
+        const trimmed = raw.trim();
+        if (stats && trimmed.length > 0) {
+            stats.nonEmptyLines += 1;
+        }
+
+        const parsed = trimmed.length > 0 ? parseLogLineAuto(raw) : null;
+        if (parsed) {
+            lastParsedLineNumber = lineNumber;
+        }
+
+        if (stats) {
+            updateStats(parsed, stats, fieldUniqueCounts);
+        }
+
+        const isContinuation = !parsed && lastParsedLineNumber > 0 && isContinuationLine(raw);
+        const groupId = isContinuation ? lastParsedLineNumber : lineNumber;
+        const fields = parsed ? parsed.fields : {};
+        const timestampMs = extractTimestampMs(parsed);
+
+        linesBatch.push({
+            sessionId,
+            lineNumber,
+            raw,
+            parsed: Boolean(parsed),
+            fields,
+            timestampMs,
+            groupId,
+            isContinuation,
+        });
+
+        if (sampledLines) {
+            pushSampledLine(sampledLines, { lineNumber, parsed, raw }, lineNumber);
+        }
+
+        lineNumber += 1;
+    };
+
+    while (offset < file.size) {
+        if (signal?.aborted || cancelledSessions.has(sessionId)) {
+            throw new DOMException('Indexing aborted', 'AbortError');
+        }
+
+        const nextEnd = Math.min(file.size, offset + INDEX_CHUNK_BYTES);
+        const buffer = await file.slice(offset, nextEnd).arrayBuffer();
+        offset = nextEnd;
+
+        const text = decoder.decode(buffer, { stream: offset < file.size });
+        const combined = carry + text;
+        const parts = combined.split(/\r?\n/);
+        carry = parts.pop() ?? '';
+
+        for (const raw of parts) {
+            pushLine(raw);
+            if (linesBatch.length >= BATCH_LINES) {
+                await flushBatch();
+            }
+        }
+
+        onProgress?.({
+            processedBytes: offset - session.fileSize,
+            totalBytes: file.size - session.fileSize,
+            linesIndexed: lineNumber - 1,
+        });
+    }
+
+    if (carry.length > 0) {
+        pushLine(carry);
+    }
+
+    await flushBatch();
+
+    const newLineCount = lineNumber - 1;
+    const addedLines = Math.max(0, newLineCount - session.lineCount);
+
+    const updatedSession: LogSessionRecord = {
+        ...session,
+        fileSize: file.size,
+        lastModified: file.lastModified,
+        lineCount: newLineCount,
+        isIndexed: true,
+        lastOpenedAt: Date.now(),
+    };
+
+    await upsertSession(updatedSession);
+
+    if (stats && sampledLines) {
+        stats.totalLines = newLineCount;
+        const sortedSampled = sampledLines.slice().sort((a, b) => a.lineNumber - b.lineNumber);
+        await saveDashboardSnapshot(sessionId, {
+            sessionId,
+            kind: 'dashboard',
+            stats,
+            sampledLines: sortedSampled,
+            updatedAt: Date.now(),
+        });
+    }
+
+    return {
+        addedLines,
+        newLineCount,
+        newFileSize: file.size,
+        newLastModified: file.lastModified,
+    };
 };

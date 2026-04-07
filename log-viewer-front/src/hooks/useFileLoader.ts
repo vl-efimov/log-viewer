@@ -9,6 +9,16 @@ import { cancelIndexing, clearIndexingController, createSessionRecord, indexLogF
 const LARGE_FILE_BYTES = 300 * 1024 * 1024; // 300 MB
 const FORMAT_PREVIEW_BYTES = 2 * 1024 * 1024; // 2 MB
 
+type AttachOptions = {
+    expectedName?: string;
+    expectedSize?: number;
+    expectedLastModified?: number;
+    formatHint?: string;
+    isLargeFile?: boolean;
+};
+
+type ReattachResult = 'attached' | 'switched' | 'cancelled' | 'failed';
+
 export const useFileLoader = () => {
     const dispatch = useDispatch();
     const [indexing, setIndexing] = useState(false);
@@ -145,6 +155,92 @@ export const useFileLoader = () => {
         }
     };
 
+    const handleFileSystemAccessForMonitoring = async (
+        sessionId: string,
+        options: AttachOptions = {}
+    ): Promise<ReattachResult> => {
+        if (!('showOpenFilePicker' in window)) {
+            return 'failed'; // Not supported
+        }
+
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const [handle] = await (window as any).showOpenFilePicker({
+                types: [
+                    {
+                        description: 'Log Files',
+                        accept: {
+                            'text/plain': ['.txt', '.log'],
+                            'application/json': ['.json'],
+                        },
+                    },
+                ],
+                multiple: false,
+            });
+
+            const file = await handle.getFile();
+            const isDifferentFile = Boolean(options.expectedName && options.expectedName !== file.name);
+
+            if (isDifferentFile) {
+                const shouldReplace = window.confirm(
+                    'Вы выбрали другой файл. Данные в IndexedDB будут перезаписаны. Продолжить?'
+                );
+                if (!shouldReplace) {
+                    return 'cancelled';
+                }
+
+                await loadFile(file, handle);
+                return 'switched';
+            }
+
+            if (options.expectedSize && file.size < options.expectedSize) {
+                await loadFile(file, handle);
+                return 'switched';
+            }
+
+            if (options.expectedSize && options.expectedSize !== file.size) {
+                console.warn('Selected file size differs from session:', {
+                    expected: options.expectedSize,
+                    actual: file.size,
+                });
+            }
+            if (options.expectedLastModified && options.expectedLastModified !== file.lastModified) {
+                console.warn('Selected file lastModified differs from session:', {
+                    expected: options.expectedLastModified,
+                    actual: file.lastModified,
+                });
+            }
+
+            setFileHandle(handle);
+            setFileObject(file);
+
+            const previewBlob = file.slice(0, Math.min(file.size, FORMAT_PREVIEW_BYTES));
+            const previewText = await previewBlob.text();
+            const detectedFormat = detectLogFormat(previewText);
+
+            dispatch(setLogFile({
+                name: file.name,
+                size: file.size,
+                content: previewText,
+                format: options.formatHint || detectedFormat || 'Unknown',
+                lastModified: file.lastModified,
+                hasFileHandle: true,
+                isLargeFile: options.isLargeFile ?? file.size >= LARGE_FILE_BYTES,
+                analyticsSessionId: sessionId,
+            }));
+
+            dispatch(setMonitoringState(true));
+            return 'attached';
+        } catch (error) {
+            if ((error as Error).name === 'AbortError') {
+                return 'cancelled';
+            }
+
+            console.error('Error selecting file for monitoring:', error);
+            return 'failed';
+        }
+    };
+
     const stopMonitoring = async () => {
         dispatch(setMonitoringState(false));
         dispatch(clearLogFile());
@@ -165,6 +261,7 @@ export const useFileLoader = () => {
         indexing,
         handleFileInputChange,
         handleFileSystemAccess,
+        handleFileSystemAccessForMonitoring,
         stopMonitoring,
     };
 };

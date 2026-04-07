@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
@@ -21,6 +22,7 @@ import { useParsedRowsCache } from '../hooks/useParsedRowsCache';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
 import { getDashboardSnapshot, getLinesRange, getSessionLineCount, queryFilteredLines } from '../utils/logIndexedDb';
+import { appendLogFileToIndex } from '../utils/logIndexer';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024; // 4 MB
 const LINE_INDEX_CHUNK_SIZE = 1_000_000; // Offsets per chunk
@@ -170,7 +172,7 @@ const ViewLogsPage: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewModeEnum>(ViewModeEnum.FromEnd);
 
     const dispatch = useDispatch();
-    
+
     // Get data from Redux
     const {
         content,
@@ -226,6 +228,7 @@ const ViewLogsPage: React.FC = () => {
         indexing,
         handleFileInputChange,
         handleFileSystemAccess,
+        handleFileSystemAccessForMonitoring,
     } = useFileLoader();
     const largeFileCacheKey = useMemo(() => {
         return analyticsSessionId || `${fileName}|${fileSize}`;
@@ -243,6 +246,51 @@ const ViewLogsPage: React.FC = () => {
 
         return getFileObject();
     }, []);
+
+    const handleReattachMonitoring = useCallback(async () => {
+        if (!analyticsSessionId) return;
+
+        const result = await handleFileSystemAccessForMonitoring(analyticsSessionId, {
+            expectedName: fileName,
+            expectedSize: fileSize,
+            expectedLastModified: lastModifiedRef.current,
+            formatHint: format,
+            isLargeFile,
+        });
+
+        if (result !== 'attached') return;
+
+        const file = await getActiveFile();
+        if (!file) return;
+
+        lastModifiedRef.current = file.lastModified;
+        lastSizeRef.current = file.size;
+
+        if (!useDbView) return;
+
+        const previousDbLineCount = dbLineCount;
+        const appendResult = await appendLogFileToIndex(file, analyticsSessionId);
+        if (!appendResult) return;
+
+        setDbLineCount(appendResult.newLineCount);
+        if (appendResult.addedLines > 0) {
+            setNewLinesCount(appendResult.addedLines);
+            setTimeout(() => setNewLinesCount(0), 3000);
+        } else if (previousDbLineCount > 0) {
+            dbLineCacheRef.current.delete(previousDbLineCount - 1);
+            setDbLineCacheVersion((version) => version + 1);
+        }
+    }, [
+        analyticsSessionId,
+        dbLineCount,
+        fileName,
+        fileSize,
+        format,
+        getActiveFile,
+        handleFileSystemAccessForMonitoring,
+        isLargeFile,
+        useDbView,
+    ]);
 
     const buildLineIndex = useCallback(async (file: File): Promise<LineIndex> => {
         const offsets = createLineIndex();
@@ -1099,11 +1147,32 @@ const ViewLogsPage: React.FC = () => {
                             }
 
                             const preview = await file.slice(0, Math.min(file.size, PREVIEW_BYTES)).text();
-                            dispatch(updateLogContent({
-                                content: preview,
-                                lastModified: file.lastModified,
-                                size: currentSize,
-                            }));
+                            if (useDbView && analyticsSessionId) {
+                                const previousDbLineCount = dbLineCount;
+                                const result = await appendLogFileToIndex(file, analyticsSessionId);
+                                if (result) {
+                                    setDbLineCount(result.newLineCount);
+                                    if (result.addedLines > 0) {
+                                        setNewLinesCount(result.addedLines);
+                                        setTimeout(() => setNewLinesCount(0), 3000);
+                                    } else if (previousDbLineCount > 0) {
+                                        dbLineCacheRef.current.delete(previousDbLineCount - 1);
+                                        setDbLineCacheVersion((version) => version + 1);
+                                    }
+                                }
+
+                                dispatch(updateLogContent({
+                                    content,
+                                    lastModified: file.lastModified,
+                                    size: currentSize,
+                                }));
+                            } else {
+                                dispatch(updateLogContent({
+                                    content: preview,
+                                    lastModified: file.lastModified,
+                                    size: currentSize,
+                                }));
+                            }
 
                             lastSizeRef.current = currentSize;
                         }
@@ -1124,7 +1193,20 @@ const ViewLogsPage: React.FC = () => {
                 window.clearInterval(intervalId);
             }
         };
-    }, [isMonitoring, autoRefresh, hasFileHandle, dispatch, isLargeFile, buildLineIndex, lineCount, requestRangeLoad, viewMode]);
+    }, [
+        analyticsSessionId,
+        autoRefresh,
+        buildLineIndex,
+        content,
+        dbLineCount,
+        dispatch,
+        hasFileHandle,
+        isLargeFile,
+        isMonitoring,
+        requestRangeLoad,
+        useDbView,
+        viewMode,
+    ]);
 
     const handleToggleAutoRefresh = () => {
         setAutoRefresh(prev => !prev);
@@ -1176,7 +1258,7 @@ const ViewLogsPage: React.FC = () => {
     };
 
     if (!isMonitoring && !loaded) {
-        return(         
+        return (
             <FileSelectionView
                 indexing={indexing}
                 onFileSelect={handleFileSystemAccess}
@@ -1195,6 +1277,35 @@ const ViewLogsPage: React.FC = () => {
                 overflow: 'hidden',
             }}
         >
+            {useDbView && !hasFileHandle && (
+                <Box
+                    sx={{
+                        mb: 1,
+                        p: 2,
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                        backgroundColor: (theme) => theme.palette.background.paper,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 2,
+                    }}
+                >
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
+                        Для отслеживания новых строк выберите тот же файл снова.
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => void handleReattachMonitoring()}
+                    >
+                        Выбрать файл для мониторинга
+                    </Button>
+                </Box>
+            )}
             {/* Log Timeline Histogram */}
             {(isIndexing || isHistogramLoading) && !isLargeFile && (
                 <Box
@@ -1248,9 +1359,9 @@ const ViewLogsPage: React.FC = () => {
                 getActiveFile={getActiveFile}
             />
 
-            <Box 
-                sx={{ 
-                    flexGrow: 1, 
+            <Box
+                sx={{
+                    flexGrow: 1,
                     flexShrink: 1,
                     minHeight: 0,
                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
