@@ -265,9 +265,11 @@ const ViewLogsPage: React.FC = () => {
         return `file:${fileName}|${fileSize}|${lastModified}`;
     }, [analyticsSessionId, fileName, fileSize, lastModified, loaded]);
 
+    const useStreamView = isLargeFile || isIndexing;
+
     const useDbView = useMemo(() => {
-        return !isLargeFile && Boolean(analyticsSessionId) && !isIndexing;
-    }, [analyticsSessionId, isIndexing, isLargeFile]);
+        return !useStreamView && Boolean(analyticsSessionId);
+    }, [analyticsSessionId, useStreamView]);
 
     const getActiveFile = useCallback(async (): Promise<File | null> => {
         const handle = getFileHandle();
@@ -588,7 +590,7 @@ const ViewLogsPage: React.FC = () => {
     }, []);
 
     const setWindowAroundDisplayIndex = useCallback((displayIndex: number): number => {
-        if (!isLargeFile || lineCount <= MAX_VIRTUAL_ROWS) {
+        if (!useStreamView || lineCount <= MAX_VIRTUAL_ROWS) {
             setVirtualWindowStart(0);
             return Math.max(0, Math.min(displayIndex, Math.max(0, lineCount - 1)));
         }
@@ -601,11 +603,11 @@ const ViewLogsPage: React.FC = () => {
 
         setVirtualWindowStart(desiredStart);
         return virtualIndex;
-    }, [clampWindowStart, isLargeFile, lineCount]);
+    }, [clampWindowStart, lineCount, useStreamView]);
 
     // Load initial content from Redux
     useEffect(() => {
-        if (isLargeFile) {
+        if (useStreamView) {
             setNormalRows([]);
             clearParsedRowCache();
             previousLineCountRef.current = 0;
@@ -624,7 +626,7 @@ const ViewLogsPage: React.FC = () => {
         }
         previousLineCountRef.current = rows.length;
         lastSizeRef.current = fileSize;
-    }, [clearParsedRowCache, content, fileSize, isLargeFile]);
+    }, [clearParsedRowCache, content, fileSize, useStreamView]);
 
     useEffect(() => {
         if (!useDbView || !analyticsSessionId) {
@@ -656,7 +658,7 @@ const ViewLogsPage: React.FC = () => {
     }, [analyticsSessionId, useDbView]);
 
     useEffect(() => {
-        if (isLargeFile || !analyticsSessionId || !hasActiveFilters(filters)) {
+        if (useStreamView || !analyticsSessionId || !hasActiveFilters(filters)) {
             setIndexedFilteredRows([]);
             setIsFilterLoading(false);
             return;
@@ -728,11 +730,11 @@ const ViewLogsPage: React.FC = () => {
             bufferedRows = [];
             controller.abort();
         };
-    }, [analyticsSessionId, filters, isLargeFile]);
+    }, [analyticsSessionId, filters, useStreamView]);
 
     // Apply filters to lightweight rows using lazy parsing only when needed.
     const filteredRows = useMemo(() => {
-        if (isLargeFile) {
+        if (useStreamView) {
             return [];
         }
 
@@ -750,14 +752,14 @@ const ViewLogsPage: React.FC = () => {
         const parsedRows = normalRows.map((row) => getParsedRow(row));
         const filteredParsed = applyLogFilters(parsedRows, filters);
         return filteredParsed.map((row) => ({ lineNumber: row.lineNumber, raw: row.raw }));
-    }, [analyticsSessionId, filters, getParsedRow, indexedFilteredRows, isFilterLoading, isLargeFile, normalRows, useDbView]);
+    }, [analyticsSessionId, filters, getParsedRow, indexedFilteredRows, isFilterLoading, normalRows, useDbView, useStreamView]);
 
     const anomalyLineSet = useMemo(() => {
         return new Set(anomalyLineNumbers);
     }, [anomalyLineNumbers]);
 
     const displayLines = useMemo(() => {
-        if (isLargeFile) {
+        if (useStreamView) {
             return [];
         }
 
@@ -785,7 +787,7 @@ const ViewLogsPage: React.FC = () => {
                 ? (anomalyLineSet.has(row.lineNumber) ? 'anomaly' as const : 'normal' as const)
                 : undefined,
         }));
-    }, [anomalyLineSet, filteredRows, hasAnomalyResults, viewMode, isLargeFile, filters, useDbView]);
+    }, [anomalyLineSet, filteredRows, hasAnomalyResults, viewMode, filters, useDbView, useStreamView]);
 
     const loadDbLinesForRange = useCallback(async (startIndex: number, endIndex: number) => {
         if (!analyticsSessionId) return;
@@ -884,7 +886,7 @@ const ViewLogsPage: React.FC = () => {
     }, [anomalyLineSet, dbLineCount, hasAnomalyResults, useDbView, viewMode, dbLineCacheVersion]);
 
     const getLineAtIndex = useCallback((displayIndex: number) => {
-        if (!isLargeFile) {
+        if (!useStreamView) {
             if (useDbView && !hasActiveFilters(filters)) {
                 return getDbLineAtIndex(displayIndex);
             }
@@ -915,10 +917,10 @@ const ViewLogsPage: React.FC = () => {
                 ? (anomalyLineSet.has(fileIndex + 1) ? 'anomaly' as const : 'normal' as const)
                 : undefined,
         };
-    }, [anomalyLineSet, displayLines, hasAnomalyResults, isLargeFile, lineCount, viewMode, lineCacheVersion, virtualWindowStart]);
+    }, [anomalyLineSet, displayLines, hasAnomalyResults, lineCount, viewMode, lineCacheVersion, virtualWindowStart, useStreamView]);
 
     const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
-        if (!isLargeFile || lineCount === 0) return;
+        if (!useStreamView || lineCount === 0) return;
 
         const virtualCount = getVirtualWindowSize(virtualWindowStart, lineCount);
         const safeStart = Math.max(0, Math.min(startIndex, Math.max(0, virtualCount - 1)));
@@ -955,11 +957,11 @@ const ViewLogsPage: React.FC = () => {
     }, [
         clampWindowStart,
         getVirtualWindowSize,
-        isLargeFile,
         lineCount,
         requestRangeLoad,
         viewMode,
         virtualWindowStart,
+        useStreamView,
     ]);
 
     const handleDbRangeChange = useCallback((startIndex: number, endIndex: number) => {
@@ -976,7 +978,7 @@ const ViewLogsPage: React.FC = () => {
     }, [dbLineCount, filters, requestDbRangeLoad, useDbView, viewMode]);
 
     useEffect(() => {
-        if (isLargeFile || !analyticsSessionId || isIndexing) {
+        if (useStreamView || !analyticsSessionId || isIndexing) {
             setIndexedHistogramLines([]);
             setIsHistogramLoading(false);
             return;
@@ -1000,15 +1002,15 @@ const ViewLogsPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [analyticsSessionId, isIndexing, isLargeFile]);
+    }, [analyticsSessionId, isIndexing, useStreamView]);
 
     const histogramSourceLines = useMemo(() => {
-        if (isLargeFile) {
+        if (useStreamView) {
             return [];
         }
 
         return indexedHistogramLines;
-    }, [indexedHistogramLines, isLargeFile]);
+    }, [indexedHistogramLines, useStreamView]);
 
     const handleAnomalyRangeSelect = useCallback((startLine: number, endLine: number) => {
         const normalizedStart = Math.min(startLine, endLine);
@@ -1020,7 +1022,7 @@ const ViewLogsPage: React.FC = () => {
             return;
         }
 
-        if (isLargeFile) {
+        if (useStreamView) {
             if (!virtuosoRef.current || lineCount <= 0) return;
 
             const fileIndex = Math.max(0, Math.min(lineCount - 1, Math.floor(targetSourceLine) - 1));
@@ -1096,11 +1098,11 @@ const ViewLogsPage: React.FC = () => {
     }, [
         displayLines,
         getVirtualWindowSize,
-        isLargeFile,
         lineCount,
         setWindowAroundDisplayIndex,
         viewMode,
         virtualWindowStart,
+        useStreamView,
     ]);
 
     // Get field definitions from detected format for filter configuration
@@ -1123,7 +1125,7 @@ const ViewLogsPage: React.FC = () => {
     }, [content, format]);
 
     useEffect(() => {
-        if (!isMonitoring || !isLargeFile) return;
+        if (!useStreamView) return;
 
         const cached = largeFileViewCache.get(largeFileCacheKey);
         if (cached) {
@@ -1183,10 +1185,10 @@ const ViewLogsPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [isMonitoring, isLargeFile, largeFileCacheKey, buildLineIndex, getActiveFile, requestRangeLoad, viewMode]);
+    }, [buildLineIndex, getActiveFile, largeFileCacheKey, requestRangeLoad, useStreamView, viewMode]);
 
     useEffect(() => {
-        if (!isLargeFile || lineCount === 0) return;
+        if (!useStreamView || lineCount === 0) return;
 
         if (viewMode === ViewModeEnum.FromEnd) {
             const start = Math.max(0, lineCount - 1 - RANGE_LOAD_PADDING);
@@ -1194,19 +1196,19 @@ const ViewLogsPage: React.FC = () => {
         } else {
             requestRangeLoad(0, Math.min(RANGE_LOAD_PADDING, lineCount - 1));
         }
-    }, [viewMode, isLargeFile, lineCount, requestRangeLoad]);
+    }, [lineCount, requestRangeLoad, useStreamView, viewMode]);
 
     useEffect(() => {
-        if (!isLargeFile) {
+        if (!useStreamView) {
             setVirtualWindowStart(0);
             return;
         }
 
         setVirtualWindowStart((current) => clampWindowStart(current, lineCount));
-    }, [clampWindowStart, isLargeFile, lineCount]);
+    }, [clampWindowStart, lineCount, useStreamView]);
 
     useEffect(() => {
-        if (!isLargeFile) return;
+        if (!useStreamView) return;
         if (rebaseAnchorRef.current === null) return;
         if (!virtuosoRef.current) return;
 
@@ -1216,7 +1218,7 @@ const ViewLogsPage: React.FC = () => {
         const anchor = Math.max(0, Math.min(rebaseAnchorRef.current, virtualCount - 1));
         virtuosoRef.current.scrollToIndex({ index: anchor, align: 'center', behavior: 'auto' });
         rebaseAnchorRef.current = null;
-    }, [getVirtualWindowSize, isLargeFile, lineCount, virtualWindowStart]);
+    }, [getVirtualWindowSize, lineCount, useStreamView, virtualWindowStart]);
 
     // Poll for file changes using File System Access API with incremental reading
     useEffect(() => {
@@ -1244,7 +1246,7 @@ const ViewLogsPage: React.FC = () => {
                             lastModifiedRef.current = file.lastModified;
                             const currentSize = file.size;
 
-                            if (isLargeFile) {
+                            if (useStreamView) {
                                 if (currentSize < lastSizeRef.current) {
                                     console.log('File truncated, rebuilding index');
                                     const offsets = await buildLineIndex(file);
@@ -1342,10 +1344,10 @@ const ViewLogsPage: React.FC = () => {
         dbLineCount,
         dispatch,
         hasFileHandle,
-        isLargeFile,
         isMonitoring,
         requestRangeLoad,
         useDbView,
+        useStreamView,
         viewMode,
     ]);
 
@@ -1355,10 +1357,10 @@ const ViewLogsPage: React.FC = () => {
 
     const handleManualRefresh = async () => {
         const fileHandle = getFileHandle();
-        if (!fileHandle && !isLargeFile) return;
+        if (!fileHandle && !useStreamView) return;
 
         try {
-            if (isLargeFile) {
+            if (useStreamView) {
                 const file = await getActiveFile();
                 if (!file) return;
 
@@ -1492,7 +1494,8 @@ const ViewLogsPage: React.FC = () => {
                 filters={filters}
                 onFiltersChange={setFilters}
                 fieldDefinitions={fieldDefinitions}
-                isLargeFile={isLargeFile}
+                isStreamView={useStreamView}
+                filtersDisabled={isIndexing}
                 lineCount={lineCount}
                 normalRows={normalRows}
                 requestFileForAnomalyAnalysis={requestFileForAnomalyAnalysis}
@@ -1510,12 +1513,12 @@ const ViewLogsPage: React.FC = () => {
             >
                 <LogLinesList
                     displayLines={displayLines}
-                    totalCount={isLargeFile
+                    totalCount={useStreamView
                         ? getVirtualWindowSize(virtualWindowStart, lineCount)
                         : (useDbView && !hasActiveFilters(filters) ? dbLineCount : displayLines.length)
                     }
                     getLineAtIndex={getLineAtIndex}
-                    onRangeChange={isLargeFile ? handleRangeChange : (useDbView ? handleDbRangeChange : undefined)}
+                    onRangeChange={useStreamView ? handleRangeChange : (useDbView ? handleDbRangeChange : undefined)}
                     selectedLine={selectedLine}
                     onSelectLine={setSelectedLine}
                     virtuosoRef={virtuosoRef}

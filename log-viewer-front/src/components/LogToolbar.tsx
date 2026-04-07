@@ -58,7 +58,8 @@ interface LogToolbarProps {
     filters: LogFilters;
     onFiltersChange: (filters: LogFilters) => void;
     fieldDefinitions: LogFormatField[];
-    isLargeFile: boolean;
+    isStreamView: boolean;
+    filtersDisabled: boolean;
     lineCount: number;
     normalRows: AnomalySourceRow[];
     requestFileForAnomalyAnalysis: () => Promise<File | null>;
@@ -74,7 +75,8 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     filters,
     onFiltersChange,
     fieldDefinitions,
-    isLargeFile,
+    isStreamView,
+    filtersDisabled,
     lineCount,
     normalRows,
     requestFileForAnomalyAnalysis,
@@ -118,27 +120,32 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         return false;
     }).length;
 
-    const isFiltersOpen = Boolean(filtersAnchorEl);
+    const isFiltersOpen = Boolean(filtersAnchorEl) && !filtersDisabled;
+
+    useEffect(() => {
+        if (!filtersDisabled) return;
+        setFiltersAnchorEl(null);
+    }, [filtersDisabled]);
 
     useEffect(() => {
         if (isMonitoring) {
             return;
         }
 
-        if (!isLargeFile && normalRows.length > 0) {
+        if (!isStreamView && normalRows.length > 0) {
             return;
         }
 
-        if (isLargeFile && lineCount > 0) {
+        if (isStreamView && lineCount > 0) {
             return;
         }
 
         dispatch(clearAnomalyResults());
         dispatch(setAnomalyRunning({ running: false }));
-    }, [dispatch, isLargeFile, isMonitoring, lineCount, normalRows.length]);
+    }, [dispatch, isMonitoring, isStreamView, lineCount, normalRows.length]);
 
     useEffect(() => {
-        const hasAnalyzableRows = isLargeFile ? lineCount > 0 : normalRows.length > 0;
+        const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
         if (!hasAnalyzableRows) {
             setIsModelReady(false);
             setIsModelReadyLoading(false);
@@ -186,7 +193,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         return () => {
             cancelled = true;
         };
-    }, [isLargeFile, lineCount, normalRows.length, selectedModelId]);
+    }, [isStreamView, lineCount, normalRows.length, selectedModelId]);
 
     const handleSelectedModelChange = useCallback((modelId: 'bgl' | 'hdfs') => {
         setSelectedModelId(modelId);
@@ -245,7 +252,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 return;
             }
 
-            const rowsToAnalyze = isLargeFile
+            const rowsToAnalyze = isStreamView
                 ? Math.max(0, lineCount)
                 : normalRows.length;
 
@@ -314,7 +321,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
             const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
             dispatch(setAnomalyLastDurationSec(elapsedSec));
 
-            const analyzedRows = isLargeFile ? Math.max(0, lineCount) : normalRows.length;
+            const analyzedRows = isStreamView ? Math.max(0, lineCount) : normalRows.length;
             if (analyzedRows > 0) {
                 const measuredRowsPerSecond = analyzedRows / elapsedSec;
                 dispatch(updateAnomalyRowsPerSecond({
@@ -329,7 +336,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         anomalyRowsPerSecondByModel,
         anomalySettings,
         dispatch,
-        isLargeFile,
+        isStreamView,
         isModelReady,
         lineCount,
         normalRows,
@@ -346,7 +353,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         setActiveAbortController(null);
     }, [cancelRequestSeq]);
 
-    const hasAnalyzableRows = isLargeFile ? lineCount > 0 : normalRows.length > 0;
+    const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
     const canRunAnomalyAnalysis = hasAnalyzableRows && !isModelReadyLoading && isModelReady;
     const anomalyDisabledReason = !hasAnalyzableRows
         ? 'No log rows to analyze. Load or attach a log file first.'
@@ -566,7 +573,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 >
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                         <Tooltip
-                            title="Filters"
+                            title={filtersDisabled ? 'Filters disabled while indexing' : 'Filters'}
                             arrow
                         >
                             <Badge
@@ -578,6 +585,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                     size="small"
                                     variant='outlined'
                                     onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
+                                    disabled={filtersDisabled}
                                     startIcon={(
                                         <FilterAltIcon fontSize="small" />
                                     )}
