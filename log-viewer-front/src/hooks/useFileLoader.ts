@@ -117,6 +117,10 @@ export const useFileLoader = () => {
         await loadFile(file);
     };
 
+    const handleFileDrop = async (file: File) => {
+        await loadFile(file);
+    };
+
     const handleFileSystemAccess = async (): Promise<boolean> => {
         if (!('showOpenFilePicker' in window)) {
             return false; // Not supported
@@ -260,6 +264,7 @@ export const useFileLoader = () => {
     return {
         indexing,
         handleFileInputChange,
+        handleFileDrop,
         handleFileSystemAccess,
         handleFileSystemAccessForMonitoring,
         stopMonitoring,

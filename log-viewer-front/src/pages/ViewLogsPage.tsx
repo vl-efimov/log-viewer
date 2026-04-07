@@ -227,6 +227,7 @@ const ViewLogsPage: React.FC = () => {
     const {
         indexing,
         handleFileInputChange,
+        handleFileDrop,
         handleFileSystemAccess,
         handleFileSystemAccessForMonitoring,
     } = useFileLoader();
@@ -1263,6 +1264,7 @@ const ViewLogsPage: React.FC = () => {
                 indexing={indexing}
                 onFileSelect={handleFileSystemAccess}
                 onFileInputChange={handleFileInputChange}
+                onFileDrop={handleFileDrop}
             />
         );
     }
