@@ -24,20 +24,37 @@ export const useFileLoader = () => {
     const [indexing, setIndexing] = useState(false);
     const currentSessionId = useSelector((state: RootState) => state.logFile.analyticsSessionId);
     const activeSessionIdRef = useRef<string | null>(null);
+    const loadTokenRef = useRef(0);
 
     const loadFile = async (file: File, handle?: FileSystemFileHandle) => {
+        const loadToken = ++loadTokenRef.current;
+        const isLargeFile = file.size >= LARGE_FILE_BYTES;
+
         setIndexing(true);
         dispatch(setIndexingState({ isIndexing: true, progress: 0 }));
+        dispatch(setLogFile({
+            name: file.name,
+            size: file.size,
+            format: '',
+            content: '',
+            lastModified: file.lastModified,
+            hasFileHandle: !!handle,
+            isLargeFile,
+            analyticsSessionId: '',
+        }));
         if (currentSessionId) {
             cancelIndexing(currentSessionId);
             await deleteSessionData(currentSessionId);
         }
 
         try {
-            const isLargeFile = file.size >= LARGE_FILE_BYTES;
             const previewBlob = file.slice(0, Math.min(file.size, FORMAT_PREVIEW_BYTES));
             const previewText = await previewBlob.text();
             const detectedFormat = detectLogFormat(previewText);
+
+            if (loadToken !== loadTokenRef.current) {
+                return;
+            }
 
             if (handle) {
                 setFileHandle(handle);
@@ -86,6 +103,9 @@ export const useFileLoader = () => {
                 void indexLogFile(file, session, {
                     signal: controller.signal,
                     onProgress: (progress) => {
+                        if (loadToken !== loadTokenRef.current) {
+                            return;
+                        }
                         const percent = progress.totalBytes > 0
                             ? Math.min(99, Math.max(0, Math.round((progress.processedBytes / progress.totalBytes) * 100)))
                             : 0;
@@ -96,18 +116,25 @@ export const useFileLoader = () => {
                         console.error('Indexing failed:', error);
                     }
                 }).finally(() => {
+                    if (loadToken !== loadTokenRef.current) {
+                        return;
+                    }
                     clearIndexingController(session.sessionId);
                     setIndexing(false);
                     dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
                 });
             }
         } catch (error) {
-            setIndexing(false);
-            dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+            if (loadToken === loadTokenRef.current) {
+                setIndexing(false);
+                dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+            }
             throw error;
         }
-        
-        dispatch(setMonitoringState(true));
+
+        if (loadToken === loadTokenRef.current) {
+            dispatch(setMonitoringState(true));
+        }
     };
 
     const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
