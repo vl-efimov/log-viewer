@@ -15,43 +15,293 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MemoryIcon from '@mui/icons-material/Memory';
 import StorageIcon from '@mui/icons-material/Storage';
 import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
-import type { AnomalySettings } from '../utils/anomalySettings';
+import { useCallback, useEffect, useState } from 'react';
+import type { MouseEvent } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState } from '../redux/store';
+import {
+    clearAnomalyResults,
+    setAnomalyError,
+    setAnomalyLastDurationSec,
+    setAnomalyResults,
+    setAnomalyRunning,
+    setAnomalyStopped,
+    updateAnomalyRowsPerSecond,
+} from '../redux/slices/anomalySlice';
+import { getPretrainedModels, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
+import {
+    ANOMALY_MIN_REGION_LINES_RANGE,
+    ANOMALY_SETTINGS_DEFAULTS,
+    ANOMALY_STEP_SIZE_RANGE,
+    ANOMALY_THRESHOLD_RANGE,
+    type AnomalySettings,
+    loadAnomalySettings,
+    loadSelectedAnomalyModelId,
+    saveAnomalySettings,
+    saveSelectedAnomalyModelId,
+} from '../utils/anomalySettings';
+
+type AnomalySourceRow = {
+    lineNumber: number;
+    raw: string;
+};
 
 interface AnomalySettingsDialogProps {
     open: boolean;
     onClose: () => void;
-    selectedModelId: 'bgl' | 'hdfs';
-    anomalySettings: AnomalySettings;
-    thresholdRange: { min: number; max: number; step: number };
-    stepSizeRange: { min: number; max: number; step: number };
-    minRegionLinesRange: { min: number; max: number; step: number };
-    isAnomalyLoading: boolean;
-    canRunAnomalyAnalysis: boolean;
-    anomalyDisabledReason?: string;
-    onAnomalySettingsChange: (patch: Partial<AnomalySettings>) => void;
-    onSensitivityProfileApply: (profileId: 'sensitive' | 'balanced' | 'strict') => void;
-    onResetAnomalySettings: () => void;
-    onSelectedModelChange: (value: 'bgl' | 'hdfs') => void;
-    onRunAnomalyAnalysis: () => void;
+    isStreamView: boolean;
+    lineCount: number;
+    normalRows: AnomalySourceRow[];
+    requestFileForAnomalyAnalysis: () => Promise<File | null>;
 }
 
 const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     open,
     onClose,
-    selectedModelId,
-    anomalySettings,
-    thresholdRange,
-    stepSizeRange,
-    minRegionLinesRange,
-    isAnomalyLoading,
-    canRunAnomalyAnalysis,
-    anomalyDisabledReason,
-    onAnomalySettingsChange,
-    onSensitivityProfileApply,
-    onResetAnomalySettings,
-    onSelectedModelChange,
-    onRunAnomalyAnalysis,
+    isStreamView,
+    lineCount,
+    normalRows,
+    requestFileForAnomalyAnalysis,
 }) => {
+    const dispatch = useDispatch();
+    const { isMonitoring } = useSelector((state: RootState) => state.logFile);
+    const {
+        isRunning: anomalyIsRunning,
+        cancelRequestSeq,
+        rowsPerSecondByModel: anomalyRowsPerSecondByModel,
+    } = useSelector((state: RootState) => state.anomaly);
+    const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
+    const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
+    const [isModelReady, setIsModelReady] = useState<boolean>(false);
+    const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
+    const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
+
+    useEffect(() => {
+        if (isMonitoring) {
+            return;
+        }
+
+        if (!isStreamView && normalRows.length > 0) {
+            return;
+        }
+
+        if (isStreamView && lineCount > 0) {
+            return;
+        }
+
+        dispatch(clearAnomalyResults());
+        dispatch(setAnomalyRunning({ running: false }));
+    }, [dispatch, isMonitoring, isStreamView, lineCount, normalRows.length]);
+
+    useEffect(() => {
+        if (!open) return;
+        const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
+        if (!hasAnalyzableRows) {
+            setIsModelReady(false);
+            setIsModelReadyLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const checkModelReady = async () => {
+            setIsModelReadyLoading(true);
+            try {
+                const models = await getPretrainedModels();
+                const selectedModel = models.find((model) => model.modelId === selectedModelId);
+                const selectedReady = Boolean(selectedModel && (selectedModel.status === 'ready' || selectedModel.prepared));
+
+                if (!cancelled) {
+                    if (selectedReady) {
+                        setIsModelReady(true);
+                        return;
+                    }
+
+                    const fallbackReadyModel = models.find((model) => model.status === 'ready' || model.prepared);
+                    if (fallbackReadyModel && (fallbackReadyModel.modelId === 'bgl' || fallbackReadyModel.modelId === 'hdfs')) {
+                        setSelectedModelId(fallbackReadyModel.modelId);
+                        saveSelectedAnomalyModelId(fallbackReadyModel.modelId);
+                        setIsModelReady(true);
+                        return;
+                    }
+
+                    setIsModelReady(false);
+                }
+            } catch {
+                if (!cancelled) {
+                    setIsModelReady(false);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsModelReadyLoading(false);
+                }
+            }
+        };
+
+        void checkModelReady();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, isStreamView, lineCount, normalRows.length, selectedModelId]);
+
+    useEffect(() => {
+        setAnomalySettings(loadAnomalySettings(selectedModelId));
+    }, [selectedModelId]);
+
+    const handleSelectedModelChange = useCallback((modelId: 'bgl' | 'hdfs') => {
+        setSelectedModelId(modelId);
+        saveSelectedAnomalyModelId(modelId);
+    }, []);
+
+    const updateAnomalySettings = useCallback((patch: Partial<AnomalySettings>) => {
+        setAnomalySettings((prev) => {
+            const next: AnomalySettings = {
+                ...prev,
+                ...patch,
+                modelId: selectedModelId,
+            };
+            saveAnomalySettings(next);
+            return next;
+        });
+    }, [selectedModelId]);
+
+    const applySensitivityProfile = useCallback((profileId: 'sensitive' | 'balanced' | 'strict') => {
+        const profiles: Record<'sensitive' | 'balanced' | 'strict', Pick<AnomalySettings, 'threshold' | 'stepSize' | 'minRegionLines'>> = {
+            sensitive: { threshold: 0.35, stepSize: 5, minRegionLines: 1 },
+            balanced: { threshold: 0.5, stepSize: 10, minRegionLines: 2 },
+            strict: { threshold: 0.7, stepSize: 20, minRegionLines: 3 },
+        };
+        updateAnomalySettings(profiles[profileId]);
+    }, [updateAnomalySettings]);
+
+    const resetAnomalySettings = useCallback(() => {
+        const reset: AnomalySettings = {
+            ...ANOMALY_SETTINGS_DEFAULTS,
+            modelId: selectedModelId,
+        };
+        setAnomalySettings(reset);
+        saveAnomalySettings(reset);
+    }, [selectedModelId]);
+
+    const runAnomalyAnalysis = useCallback(async () => {
+        if (!isModelReady) {
+            return;
+        }
+
+        const runStartedAt = Date.now();
+        dispatch(setAnomalyError(''));
+        const abortController = new AbortController();
+        setActiveAbortController(abortController);
+
+        try {
+            const settings = anomalySettings;
+            const activeFile = await requestFileForAnomalyAnalysis();
+            if (!activeFile) {
+                return;
+            }
+
+            const rowsToAnalyze = isStreamView
+                ? Math.max(0, lineCount)
+                : normalRows.length;
+
+            const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
+            const expectedDurationSec = rowsPerSecond && rowsPerSecond > 0
+                ? Math.max(1, Math.round(rowsToAnalyze / rowsPerSecond))
+                : null;
+
+            dispatch(setAnomalyRunning({
+                running: true,
+                modelId: selectedModelId,
+                startedAt: runStartedAt,
+                expectedDurationSec,
+            }));
+
+            const result = await predictBglAnomaliesFromFile(activeFile, {
+                model_id: selectedModelId,
+                text_column: 'message',
+                timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
+                threshold: settings.threshold,
+                step_size: settings.stepSize,
+                min_region_lines: settings.minRegionLines,
+                include_rows: false,
+                include_windows: false,
+            }, {
+                signal: abortController.signal,
+            });
+
+            const anomalyRowLines = Array.isArray(result.anomaly_lines)
+                ? result.anomaly_lines
+                : (result.rows ?? [])
+                    .filter((row) => row.is_anomaly)
+                    .map((row) => row.line);
+
+            const anomalyLineNumbers = anomalyRowLines
+                .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber));
+
+            dispatch(setAnomalyResults({
+                regions: result.anomaly_regions,
+                lineNumbers: anomalyLineNumbers,
+                rowsCount: result.meta.anomaly_rows,
+                analyzedAt: Date.now(),
+                modelId: selectedModelId,
+                params: {
+                    threshold: settings.threshold,
+                    stepSize: settings.stepSize,
+                    minRegionLines: settings.minRegionLines,
+                    analysisScope: 'all',
+                    timestampColumn: settings.timestampColumn,
+                },
+            }));
+        } catch (err) {
+            if ((err as Error).name === 'AbortError') {
+                dispatch(setAnomalyStopped());
+            } else {
+                const message = err instanceof Error ? err.message : 'Anomaly analysis failed';
+                if (message.toLowerCase().includes('cancelled')) {
+                    dispatch(setAnomalyStopped());
+                } else {
+                    dispatch(clearAnomalyResults());
+                    dispatch(setAnomalyError(message));
+                }
+            }
+        } finally {
+            setActiveAbortController((current) => (current === abortController ? null : current));
+            const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
+            dispatch(setAnomalyLastDurationSec(elapsedSec));
+
+            const analyzedRows = isStreamView ? Math.max(0, lineCount) : normalRows.length;
+            if (analyzedRows > 0) {
+                const measuredRowsPerSecond = analyzedRows / elapsedSec;
+                dispatch(updateAnomalyRowsPerSecond({
+                    modelId: selectedModelId,
+                    rowsPerSecond: measuredRowsPerSecond,
+                }));
+            }
+
+            dispatch(setAnomalyRunning({ running: false }));
+        }
+    }, [
+        anomalyRowsPerSecondByModel,
+        anomalySettings,
+        dispatch,
+        isModelReady,
+        isStreamView,
+        lineCount,
+        normalRows.length,
+        requestFileForAnomalyAnalysis,
+        selectedModelId,
+    ]);
+
+    useEffect(() => {
+        if (!activeAbortController) {
+            return;
+        }
+
+        activeAbortController.abort();
+        setActiveAbortController(null);
+    }, [cancelRequestSeq]);
+
     const selectedSensitivityProfile =
         Math.abs(anomalySettings.threshold - 0.35) < 0.001
         && anomalySettings.stepSize === 5
@@ -67,13 +317,22 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     ? 'strict'
                     : null;
 
-    const handleModelChange = (_event: React.MouseEvent<HTMLElement>, value: 'bgl' | 'hdfs' | null) => {
+    const handleModelChange = (_event: MouseEvent<HTMLElement>, value: 'bgl' | 'hdfs' | null) => {
         if (value) {
-            onSelectedModelChange(value);
+            handleSelectedModelChange(value);
         }
     };
 
-    const isAnalyzeDisabled = isAnomalyLoading || !canRunAnomalyAnalysis;
+    const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
+    const canRunAnomalyAnalysis = hasAnalyzableRows && !isModelReadyLoading && isModelReady;
+    const anomalyDisabledReason = !hasAnalyzableRows
+        ? 'No log rows to analyze. Load or attach a log file first.'
+        : isModelReadyLoading
+            ? 'Checking model readiness...'
+            : isModelReady
+                ? undefined
+                : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
+    const isAnalyzeDisabled = anomalyIsRunning || !canRunAnomalyAnalysis;
     const analyzeTooltip = isAnalyzeDisabled && anomalyDisabledReason
         ? anomalyDisabledReason
         : 'Analyze anomalies';
@@ -132,7 +391,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 <Button
                                     size="small"
                                     variant="contained"
-                                    onClick={onRunAnomalyAnalysis}
+                                    onClick={runAnomalyAnalysis}
                                     startIcon={<TroubleshootIcon />}
                                     disabled={isAnalyzeDisabled}
                                 >
@@ -142,7 +401,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                         </Tooltip>
                     </Stack>
 
-                    {!isAnomalyLoading && !canRunAnomalyAnalysis && anomalyDisabledReason && (
+                    {!anomalyIsRunning && !canRunAnomalyAnalysis && anomalyDisabledReason && (
                         <Alert
                             severity="info"
                             variant="outlined"
@@ -202,11 +461,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 onChange={(event) => {
                                     const next = Number(event.target.value);
                                     if (!Number.isFinite(next)) return;
-                                    onAnomalySettingsChange({
-                                        threshold: Math.max(thresholdRange.min, Math.min(thresholdRange.max, next)),
+                                    updateAnomalySettings({
+                                        threshold: Math.max(ANOMALY_THRESHOLD_RANGE.min, Math.min(ANOMALY_THRESHOLD_RANGE.max, next)),
                                     });
                                 }}
-                                inputProps={{ min: thresholdRange.min, max: thresholdRange.max, step: thresholdRange.step }}
+                                inputProps={{ min: ANOMALY_THRESHOLD_RANGE.min, max: ANOMALY_THRESHOLD_RANGE.max, step: ANOMALY_THRESHOLD_RANGE.step }}
                             />
                         </Box>
                         <Box sx={{ minWidth: 130 }}>
@@ -232,11 +491,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 onChange={(event) => {
                                     const next = Number(event.target.value);
                                     if (!Number.isFinite(next)) return;
-                                    onAnomalySettingsChange({
-                                        stepSize: Math.max(stepSizeRange.min, Math.min(stepSizeRange.max, Math.round(next))),
+                                    updateAnomalySettings({
+                                        stepSize: Math.max(ANOMALY_STEP_SIZE_RANGE.min, Math.min(ANOMALY_STEP_SIZE_RANGE.max, Math.round(next))),
                                     });
                                 }}
-                                inputProps={{ min: stepSizeRange.min, max: stepSizeRange.max, step: stepSizeRange.step }}
+                                inputProps={{ min: ANOMALY_STEP_SIZE_RANGE.min, max: ANOMALY_STEP_SIZE_RANGE.max, step: ANOMALY_STEP_SIZE_RANGE.step }}
                             />
                         </Box>
                         <Box sx={{ minWidth: 130 }}>
@@ -262,11 +521,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 onChange={(event) => {
                                     const next = Number(event.target.value);
                                     if (!Number.isFinite(next)) return;
-                                    onAnomalySettingsChange({
-                                        minRegionLines: Math.max(minRegionLinesRange.min, Math.min(minRegionLinesRange.max, Math.round(next))),
+                                    updateAnomalySettings({
+                                        minRegionLines: Math.max(ANOMALY_MIN_REGION_LINES_RANGE.min, Math.min(ANOMALY_MIN_REGION_LINES_RANGE.max, Math.round(next))),
                                     });
                                 }}
-                                inputProps={{ min: minRegionLinesRange.min, max: minRegionLinesRange.max, step: minRegionLinesRange.step }}
+                                inputProps={{ min: ANOMALY_MIN_REGION_LINES_RANGE.min, max: ANOMALY_MIN_REGION_LINES_RANGE.max, step: ANOMALY_MIN_REGION_LINES_RANGE.step }}
                             />
                         </Box>
                     </Stack>
@@ -282,7 +541,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             <Button
                                 size="small"
                                 variant={selectedSensitivityProfile === 'sensitive' ? 'contained' : 'outlined'}
-                                onClick={() => onSensitivityProfileApply('sensitive')}
+                                onClick={() => applySensitivityProfile('sensitive')}
                             >
                                 Sensitive
                             </Button>
@@ -294,7 +553,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             <Button
                                 size="small"
                                 variant={selectedSensitivityProfile === 'balanced' ? 'contained' : 'outlined'}
-                                onClick={() => onSensitivityProfileApply('balanced')}
+                                onClick={() => applySensitivityProfile('balanced')}
                             >
                                 Balanced
                             </Button>
@@ -306,7 +565,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             <Button
                                 size="small"
                                 variant={selectedSensitivityProfile === 'strict' ? 'contained' : 'outlined'}
-                                onClick={() => onSensitivityProfileApply('strict')}
+                                onClick={() => applySensitivityProfile('strict')}
                             >
                                 Strict
                             </Button>
@@ -318,7 +577,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 <Button
                     size="small"
                     variant="text"
-                    onClick={onResetAnomalySettings}
+                    onClick={resetAnomalySettings}
                 >Reset
                 </Button>
                 <Button

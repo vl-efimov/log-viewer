@@ -13,31 +13,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import { useCallback, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import type { RootState } from '../redux/store';
+import { useEffect, useState } from 'react';
 import { ViewModeEnum } from '../constants/ViewModeEnum';
-import {
-    clearAnomalyResults,
-    setAnomalyError,
-    setAnomalyLastDurationSec,
-    setAnomalyResults,
-    setAnomalyRunning,
-    setAnomalyStopped,
-    updateAnomalyRowsPerSecond,
-} from '../redux/slices/anomalySlice';
-import { getPretrainedModels, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
-import {
-    ANOMALY_MIN_REGION_LINES_RANGE,
-    ANOMALY_SETTINGS_DEFAULTS,
-    ANOMALY_STEP_SIZE_RANGE,
-    ANOMALY_THRESHOLD_RANGE,
-    type AnomalySettings,
-    loadAnomalySettings,
-    loadSelectedAnomalyModelId,
-    saveAnomalySettings,
-    saveSelectedAnomalyModelId,
-} from '../utils/anomalySettings';
 import AnomalySettingsDialog from './AnomalySettingsDialog';
 import { LogFiltersBar } from './LogFiltersBar';
 import type { LogFilters } from '../types/filters';
@@ -81,20 +58,8 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     normalRows,
     requestFileForAnomalyAnalysis,
 }) => {
-    const dispatch = useDispatch();
-    const { isMonitoring } = useSelector((state: RootState) => state.logFile);
-    const {
-        isRunning: anomalyIsRunning,
-        cancelRequestSeq,
-        rowsPerSecondByModel: anomalyRowsPerSecondByModel,
-    } = useSelector((state: RootState) => state.anomaly);
-    const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
-    const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
-    const [isModelReady, setIsModelReady] = useState<boolean>(false);
-    const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
-    const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
 
     const compactButtonSx = {
         minWidth: 0,
@@ -126,242 +91,6 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         if (!filtersDisabled) return;
         setFiltersAnchorEl(null);
     }, [filtersDisabled]);
-
-    useEffect(() => {
-        if (isMonitoring) {
-            return;
-        }
-
-        if (!isStreamView && normalRows.length > 0) {
-            return;
-        }
-
-        if (isStreamView && lineCount > 0) {
-            return;
-        }
-
-        dispatch(clearAnomalyResults());
-        dispatch(setAnomalyRunning({ running: false }));
-    }, [dispatch, isMonitoring, isStreamView, lineCount, normalRows.length]);
-
-    useEffect(() => {
-        const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
-        if (!hasAnalyzableRows) {
-            setIsModelReady(false);
-            setIsModelReadyLoading(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        const checkModelReady = async () => {
-            setIsModelReadyLoading(true);
-            try {
-                const models = await getPretrainedModels();
-                const selectedModel = models.find((model) => model.modelId === selectedModelId);
-                const selectedReady = Boolean(selectedModel && (selectedModel.status === 'ready' || selectedModel.prepared));
-
-                if (!cancelled) {
-                    if (selectedReady) {
-                        setIsModelReady(true);
-                        return;
-                    }
-
-                    const fallbackReadyModel = models.find((model) => model.status === 'ready' || model.prepared);
-                    if (fallbackReadyModel && (fallbackReadyModel.modelId === 'bgl' || fallbackReadyModel.modelId === 'hdfs')) {
-                        setSelectedModelId(fallbackReadyModel.modelId);
-                        saveSelectedAnomalyModelId(fallbackReadyModel.modelId);
-                        setIsModelReady(true);
-                        return;
-                    }
-
-                    setIsModelReady(false);
-                }
-            } catch {
-                if (!cancelled) {
-                    setIsModelReady(false);
-                }
-            } finally {
-                if (!cancelled) {
-                    setIsModelReadyLoading(false);
-                }
-            }
-        };
-
-        void checkModelReady();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [isStreamView, lineCount, normalRows.length, selectedModelId]);
-
-    const handleSelectedModelChange = useCallback((modelId: 'bgl' | 'hdfs') => {
-        setSelectedModelId(modelId);
-        saveSelectedAnomalyModelId(modelId);
-        setIsAnomalySettingsPanelOpen(true);
-    }, []);
-
-    useEffect(() => {
-        setAnomalySettings(loadAnomalySettings(selectedModelId));
-    }, [selectedModelId]);
-
-    const updateAnomalySettings = useCallback((patch: Partial<AnomalySettings>) => {
-        setAnomalySettings((prev) => {
-            const next: AnomalySettings = {
-                ...prev,
-                ...patch,
-                modelId: selectedModelId,
-            };
-            saveAnomalySettings(next);
-            return next;
-        });
-    }, [selectedModelId]);
-
-    const applySensitivityProfile = useCallback((profileId: 'sensitive' | 'balanced' | 'strict') => {
-        const profiles: Record<'sensitive' | 'balanced' | 'strict', Pick<AnomalySettings, 'threshold' | 'stepSize' | 'minRegionLines'>> = {
-            sensitive: { threshold: 0.35, stepSize: 5, minRegionLines: 1 },
-            balanced: { threshold: 0.5, stepSize: 10, minRegionLines: 2 },
-            strict: { threshold: 0.7, stepSize: 20, minRegionLines: 3 },
-        };
-        updateAnomalySettings(profiles[profileId]);
-    }, [updateAnomalySettings]);
-
-    const resetAnomalySettings = useCallback(() => {
-        const reset: AnomalySettings = {
-            ...ANOMALY_SETTINGS_DEFAULTS,
-            modelId: selectedModelId,
-        };
-        setAnomalySettings(reset);
-        saveAnomalySettings(reset);
-    }, [selectedModelId]);
-
-    const runAnomalyAnalysis = useCallback(async () => {
-        if (!isModelReady) {
-            return;
-        }
-
-        const runStartedAt = Date.now();
-        dispatch(setAnomalyError(''));
-        const abortController = new AbortController();
-        setActiveAbortController(abortController);
-
-        try {
-            const settings = anomalySettings;
-            const activeFile = await requestFileForAnomalyAnalysis();
-            if (!activeFile) {
-                return;
-            }
-
-            const rowsToAnalyze = isStreamView
-                ? Math.max(0, lineCount)
-                : normalRows.length;
-
-            const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
-            const expectedDurationSec = rowsPerSecond && rowsPerSecond > 0
-                ? Math.max(1, Math.round(rowsToAnalyze / rowsPerSecond))
-                : null;
-
-            dispatch(setAnomalyRunning({
-                running: true,
-                modelId: selectedModelId,
-                startedAt: runStartedAt,
-                expectedDurationSec,
-            }));
-
-            const result = await predictBglAnomaliesFromFile(activeFile, {
-                model_id: selectedModelId,
-                text_column: 'message',
-                timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
-                threshold: settings.threshold,
-                step_size: settings.stepSize,
-                min_region_lines: settings.minRegionLines,
-                include_rows: false,
-                include_windows: false,
-            }, {
-                signal: abortController.signal,
-            });
-
-            const anomalyRowLines = Array.isArray(result.anomaly_lines)
-                ? result.anomaly_lines
-                : (result.rows ?? [])
-                    .filter((row) => row.is_anomaly)
-                    .map((row) => row.line);
-
-            const anomalyLineNumbers = anomalyRowLines
-                .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber));
-
-            dispatch(setAnomalyResults({
-                regions: result.anomaly_regions,
-                lineNumbers: anomalyLineNumbers,
-                rowsCount: result.meta.anomaly_rows,
-                analyzedAt: Date.now(),
-                modelId: selectedModelId,
-                params: {
-                    threshold: settings.threshold,
-                    stepSize: settings.stepSize,
-                    minRegionLines: settings.minRegionLines,
-                    analysisScope: 'all',
-                    timestampColumn: settings.timestampColumn,
-                },
-            }));
-        } catch (err) {
-            if ((err as Error).name === 'AbortError') {
-                dispatch(setAnomalyStopped());
-            } else {
-                const message = err instanceof Error ? err.message : 'Anomaly analysis failed';
-                if (message.toLowerCase().includes('cancelled')) {
-                    dispatch(setAnomalyStopped());
-                } else {
-                    dispatch(clearAnomalyResults());
-                    dispatch(setAnomalyError(message));
-                }
-            }
-        } finally {
-            setActiveAbortController((current) => (current === abortController ? null : current));
-            const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
-            dispatch(setAnomalyLastDurationSec(elapsedSec));
-
-            const analyzedRows = isStreamView ? Math.max(0, lineCount) : normalRows.length;
-            if (analyzedRows > 0) {
-                const measuredRowsPerSecond = analyzedRows / elapsedSec;
-                dispatch(updateAnomalyRowsPerSecond({
-                    modelId: selectedModelId,
-                    rowsPerSecond: measuredRowsPerSecond,
-                }));
-            }
-
-            dispatch(setAnomalyRunning({ running: false }));
-        }
-    }, [
-        anomalyRowsPerSecondByModel,
-        anomalySettings,
-        dispatch,
-        isStreamView,
-        isModelReady,
-        lineCount,
-        normalRows,
-        requestFileForAnomalyAnalysis,
-        selectedModelId,
-    ]);
-
-    useEffect(() => {
-        if (!activeAbortController) {
-            return;
-        }
-
-        activeAbortController.abort();
-        setActiveAbortController(null);
-    }, [cancelRequestSeq]);
-
-    const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
-    const canRunAnomalyAnalysis = hasAnalyzableRows && !isModelReadyLoading && isModelReady;
-    const anomalyDisabledReason = !hasAnalyzableRows
-        ? 'No log rows to analyze. Load or attach a log file first.'
-        : isModelReadyLoading
-            ? 'Checking model readiness...'
-            : isModelReady
-                ? undefined
-                : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
 
     return (
         <>
@@ -617,19 +346,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
             <AnomalySettingsDialog
                 open={isAnomalySettingsPanelOpen}
                 onClose={() => setIsAnomalySettingsPanelOpen(false)}
-                selectedModelId={selectedModelId}
-                anomalySettings={anomalySettings}
-                thresholdRange={ANOMALY_THRESHOLD_RANGE}
-                stepSizeRange={ANOMALY_STEP_SIZE_RANGE}
-                minRegionLinesRange={ANOMALY_MIN_REGION_LINES_RANGE}
-                isAnomalyLoading={anomalyIsRunning}
-                canRunAnomalyAnalysis={canRunAnomalyAnalysis}
-                anomalyDisabledReason={anomalyDisabledReason}
-                onAnomalySettingsChange={updateAnomalySettings}
-                onSensitivityProfileApply={applySensitivityProfile}
-                onResetAnomalySettings={resetAnomalySettings}
-                onSelectedModelChange={handleSelectedModelChange}
-                onRunAnomalyAnalysis={runAnomalyAnalysis}
+                isStreamView={isStreamView}
+                lineCount={lineCount}
+                normalRows={normalRows}
+                requestFileForAnomalyAnalysis={requestFileForAnomalyAnalysis}
             />
         </>
     );
