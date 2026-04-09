@@ -29,6 +29,7 @@ interface LogToolbarProps {
     onManualRefresh: () => void;
     autoRefresh: boolean;
     onToggleAutoRefresh: () => void;
+    onUploadToServer?: () => void;
     viewMode: ViewModeEnum;
     onViewModeChange: (mode: ViewModeEnum) => void;
     newLinesCount: number;
@@ -40,12 +41,18 @@ interface LogToolbarProps {
     lineCount: number;
     normalRows: AnomalySourceRow[];
     requestFileForAnomalyAnalysis: () => Promise<File | null>;
+    remoteIngestId?: string;
+    showUploadToServer?: boolean;
+    uploadInProgress?: boolean;
+    uploadProgress?: number;
+    fileActionsDisabled?: boolean;
 }
 
 const LogToolbar: React.FC<LogToolbarProps> = ({
     onManualRefresh,
     autoRefresh,
     onToggleAutoRefresh,
+    onUploadToServer,
     viewMode,
     onViewModeChange,
     newLinesCount,
@@ -57,6 +64,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     lineCount,
     normalRows,
     requestFileForAnomalyAnalysis,
+    remoteIngestId,
+    showUploadToServer = false,
+    uploadInProgress = false,
+    uploadProgress = 0,
+    fileActionsDisabled = false,
 }) => {
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
@@ -86,6 +98,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     }).length;
 
     const isFiltersOpen = Boolean(filtersAnchorEl) && !filtersDisabled;
+    const controlsDisabled = fileActionsDisabled || uploadInProgress;
 
     useEffect(() => {
         if (!filtersDisabled) return;
@@ -168,6 +181,43 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     flexItem
                 />
 
+                {showUploadToServer && (
+                    <>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                            <Typography
+                                variant="caption"
+                                sx={{ color: 'text.secondary' }}
+                            >
+                                Сервер
+                            </Typography>
+                            <Tooltip
+                                title={uploadInProgress
+                                    ? `Загрузка на сервер: ${uploadProgress}%`
+                                    : 'Загрузить файл на сервер'
+                                }
+                                arrow
+                            >
+                                <span>
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        onClick={onUploadToServer}
+                                        disabled={uploadInProgress || !onUploadToServer}
+                                        sx={compactButtonSx}
+                                    >
+                                        {uploadInProgress ? `Загрузка ${uploadProgress}%` : 'Загрузить на сервер'}
+                                    </Button>
+                                </span>
+                            </Tooltip>
+                        </Box>
+
+                        <Divider
+                            orientation="vertical"
+                            flexItem
+                        />
+                    </>
+                )}
+
                 <Box
                     sx={{
                         display: 'flex',
@@ -197,6 +247,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 size="small"
                                 variant="outlined"
                                 onClick={onManualRefresh}
+                                disabled={controlsDisabled}
                                 startIcon={<RefreshIcon fontSize="small" />}
                                 sx={compactButtonSx}
                             >
@@ -213,6 +264,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 variant={autoRefresh ? 'contained' : 'outlined'}
                                 color={autoRefresh ? 'success' : 'inherit'}
                                 onClick={onToggleAutoRefresh}
+                                disabled={controlsDisabled}
                                 startIcon={<AutorenewIcon fontSize="small" />}
                                 sx={compactButtonSx}
                             >
@@ -243,6 +295,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 size="small"
                                 variant={isAnomalySettingsPanelOpen ? 'contained' : 'outlined'}
                                 onClick={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
+                                disabled={controlsDisabled}
                                 startIcon={<AutoAwesomeIcon fontSize="small" />}
                                 sx={compactButtonSx}
                             >
@@ -273,7 +326,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 <Button
                                     size="small"
                                     variant="outlined"
-                                    disabled={newLinesCount === 0}
+                                    disabled={controlsDisabled || newLinesCount === 0}
                                     startIcon={(
                                         <Badge
                                             badgeContent={newLinesCount}
@@ -314,7 +367,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                     size="small"
                                     variant='outlined'
                                     onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
-                                    disabled={filtersDisabled}
+                                    disabled={filtersDisabled || controlsDisabled}
                                     startIcon={(
                                         <FilterAltIcon fontSize="small" />
                                     )}
@@ -350,6 +403,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 lineCount={lineCount}
                 normalRows={normalRows}
                 requestFileForAnomalyAnalysis={requestFileForAnomalyAnalysis}
+                remoteIngestId={remoteIngestId}
             />
         </>
     );

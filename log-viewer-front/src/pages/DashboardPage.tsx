@@ -240,6 +240,8 @@ const DashboardPage: React.FC = () => {
     const [largeFileStats, setLargeFileStats] = useState<LargeFileAggregateStats | null>(null);
     const [normalSnapshot, setNormalSnapshot] = useState<NormalDashboardSnapshot | null>(null);
     const [isNormalSnapshotLoading, setIsNormalSnapshotLoading] = useState<boolean>(false);
+    const isRemoteLargeSession = isLargeFile && analyticsSessionId.startsWith('remote:');
+    const useLocalLargeMode = isLargeFile && !isRemoteLargeSession;
     const largeFileCacheKey = useMemo(() => {
         return getLargeFileDashboardCacheKey(analyticsSessionId, fileName, fileSize, lastModified);
     }, [analyticsSessionId, fileName, fileSize, lastModified]);
@@ -292,7 +294,7 @@ const DashboardPage: React.FC = () => {
             });
         };
 
-        if (isLargeFile && !largeFileStats) {
+        if (useLocalLargeMode && !largeFileStats) {
             return {
                 totalLines: 0,
                 analyzedLines: 0,
@@ -308,7 +310,7 @@ const DashboardPage: React.FC = () => {
             };
         }
 
-        if (isLargeFile && largeFileStats) {
+        if (useLocalLargeMode && largeFileStats) {
             const fieldValueCounters = toFieldCounterMap(largeFileStats.fieldValueCounts);
 
             return {
@@ -387,10 +389,10 @@ const DashboardPage: React.FC = () => {
         };
         setNormalDashboardCache(normalFileCacheKey, snapshot);
         return snapshot;
-    }, [content, isLargeFile, largeFileHistogramLines, largeFileStats, normalFileCacheKey, normalSnapshot]);
+    }, [content, largeFileHistogramLines, largeFileStats, normalFileCacheKey, normalSnapshot, useLocalLargeMode]);
 
     useEffect(() => {
-        if (isLargeFile || !analyticsSessionId) {
+        if (useLocalLargeMode || !analyticsSessionId) {
             setNormalSnapshot(null);
             setIsNormalSnapshotLoading(false);
             return;
@@ -481,10 +483,10 @@ const DashboardPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [analyticsSessionId, isLargeFile]);
+    }, [analyticsSessionId, useLocalLargeMode]);
 
     useEffect(() => {
-        if (!isMonitoring || !isLargeFile) {
+        if (!isMonitoring || !useLocalLargeMode) {
             setIsHistogramLoading(false);
             setHistogramProgress(0);
             setLargeFileHistogramLines([]);
@@ -535,13 +537,13 @@ const DashboardPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [isMonitoring, isLargeFile, largeFileCacheKey]);
+    }, [isMonitoring, largeFileCacheKey, useLocalLargeMode]);
 
     const histogramSourceLines = useMemo(() => {
-        return isLargeFile ? largeFileHistogramLines : analytics.parsedRows;
-    }, [analytics.parsedRows, isLargeFile, largeFileHistogramLines]);
+        return useLocalLargeMode ? largeFileHistogramLines : analytics.parsedRows;
+    }, [analytics.parsedRows, largeFileHistogramLines, useLocalLargeMode]);
 
-    const isLargeScanPending = isLargeFile && !largeFileStats;
+    const isLargeScanPending = useLocalLargeMode && !largeFileStats;
 
     if (!isMonitoring && !loaded) {
         return (
@@ -552,7 +554,7 @@ const DashboardPage: React.FC = () => {
         );
     }
 
-    if (!content && !isLargeFile && !normalSnapshot && !isNormalSnapshotLoading) {
+    if (!content && !useLocalLargeMode && !normalSnapshot && !isNormalSnapshotLoading) {
         return (
             <NoFileSelected
                 title={t('dashboard.title')}
@@ -571,7 +573,7 @@ const DashboardPage: React.FC = () => {
                     </Typography>
                 </Box>
 
-                {isLargeFile && (
+                {useLocalLargeMode && (
                     <Alert severity="info">
                         {t('dashboard.largeFileFullScanNotice')}
                     </Alert>
@@ -667,7 +669,7 @@ const DashboardPage: React.FC = () => {
                     <>
                         <Card>
                             <CardContent>
-                                {isLargeFile && isHistogramLoading ? (
+                                {useLocalLargeMode && isHistogramLoading ? (
                                     <Box
                                         sx={{
                                             height: 160,

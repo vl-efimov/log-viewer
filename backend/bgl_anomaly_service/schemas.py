@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, validator
 
 from .settings import DEFAULT_MODEL_ID, MODEL_CATALOG
 from .settings import DEFAULT_MIN_REGION_LINES, DEFAULT_STEP_SIZE, DEFAULT_THRESHOLD
@@ -19,29 +19,25 @@ class PredictJsonRequest(BaseModel):
     include_rows: bool = True
     include_windows: bool = True
 
-    @field_validator("threshold")
-    @classmethod
+    @validator("threshold")
     def validate_threshold(cls, value: float) -> float:
         if value < 0.0 or value > 1.0:
             raise ValueError("threshold must be in [0, 1]")
         return value
 
-    @field_validator("step_size")
-    @classmethod
+    @validator("step_size")
     def validate_step_size(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("step_size must be positive")
         return value
 
-    @field_validator("min_region_lines")
-    @classmethod
+    @validator("min_region_lines")
     def validate_min_region_lines(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("min_region_lines must be positive")
         return value
 
-    @field_validator("model_id")
-    @classmethod
+    @validator("model_id")
     def validate_model_id(cls, value: str) -> str:
         normalized = value.strip().lower()
         if normalized not in MODEL_CATALOG:

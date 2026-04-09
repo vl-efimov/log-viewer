@@ -28,7 +28,7 @@ import {
     setAnomalyStopped,
     updateAnomalyRowsPerSecond,
 } from '../redux/slices/anomalySlice';
-import { getPretrainedModels, predictBglAnomaliesFromFile } from '../services/bglAnomalyApi';
+import { getPretrainedModels, predictBglAnomaliesFromFile, predictBglAnomaliesFromIngest } from '../services/bglAnomalyApi';
 import {
     ANOMALY_MIN_REGION_LINES_RANGE,
     ANOMALY_SETTINGS_DEFAULTS,
@@ -53,6 +53,7 @@ interface AnomalySettingsDialogProps {
     lineCount: number;
     normalRows: AnomalySourceRow[];
     requestFileForAnomalyAnalysis: () => Promise<File | null>;
+    remoteIngestId?: string;
 }
 
 const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
@@ -62,6 +63,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     lineCount,
     normalRows,
     requestFileForAnomalyAnalysis,
+    remoteIngestId,
 }) => {
     const dispatch = useDispatch();
     const { isMonitoring } = useSelector((state: RootState) => state.logFile);
@@ -196,8 +198,8 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
 
         try {
             const settings = anomalySettings;
-            const activeFile = await requestFileForAnomalyAnalysis();
-            if (!activeFile) {
+            const activeFile = remoteIngestId ? null : await requestFileForAnomalyAnalysis();
+            if (!remoteIngestId && !activeFile) {
                 return;
             }
 
@@ -217,7 +219,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 expectedDurationSec,
             }));
 
-            const result = await predictBglAnomaliesFromFile(activeFile, {
+            const requestPayload = {
                 model_id: selectedModelId,
                 text_column: 'message',
                 timestamp_column: settings.timestampColumn === 'auto' ? undefined : settings.timestampColumn,
@@ -226,9 +228,15 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 min_region_lines: settings.minRegionLines,
                 include_rows: false,
                 include_windows: false,
-            }, {
-                signal: abortController.signal,
-            });
+            };
+
+            const result = remoteIngestId
+                ? await predictBglAnomaliesFromIngest(remoteIngestId, requestPayload, {
+                    signal: abortController.signal,
+                })
+                : await predictBglAnomaliesFromFile(activeFile as File, requestPayload, {
+                    signal: abortController.signal,
+                });
 
             const anomalyRowLines = Array.isArray(result.anomaly_lines)
                 ? result.anomaly_lines
@@ -290,6 +298,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         lineCount,
         normalRows.length,
         requestFileForAnomalyAnalysis,
+        remoteIngestId,
         selectedModelId,
     ]);
 

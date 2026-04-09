@@ -19,8 +19,10 @@ import { RootState } from '../../../redux/store';
 import { useDispatch, useSelector } from 'react-redux';
 import Tooltip from '@mui/material/Tooltip';
 import { clearLogFile, setFileHandle, setFileObject } from '../../../redux/slices/logFileSlice';
+import { clearAnomalyResults, requestAnomalyCancel } from '../../../redux/slices/anomalySlice';
 import { deleteAllLogData } from '../../../utils/logIndexedDb';
 import { cancelIndexing } from '../../../utils/logIndexer';
+import { cancelBglAnomalyPrediction, deleteRemoteIngest } from '../../../services/bglAnomalyApi';
 
 import {
     appBarSx,
@@ -54,9 +56,33 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const textColor = mode === ColorModeEnum.Light ? '#fff' : undefined;
 
     const { name: fileName, analyticsSessionId } = useSelector((state: RootState) => state.logFile);
+    const { isRunning: anomalyIsRunning, runningModelId: anomalyRunningModelId, lastModelId: anomalyLastModelId } = useSelector((state: RootState) => state.anomaly);
 
     const handleClearFile = async () => {
+        if (anomalyIsRunning) {
+            dispatch(requestAnomalyCancel());
+            const modelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
+            try {
+                await cancelBglAnomalyPrediction(modelId);
+            } catch (error) {
+                console.error('Failed to cancel anomaly prediction:', error);
+            }
+        }
+
+        const remoteIngestId = analyticsSessionId.startsWith('remote:')
+            ? analyticsSessionId.slice('remote:'.length)
+            : null;
+
+        if (remoteIngestId) {
+            try {
+                await deleteRemoteIngest(remoteIngestId);
+            } catch (error) {
+                console.error('Failed to delete remote ingest data:', error);
+            }
+        }
+
         dispatch(clearLogFile());
+        dispatch(clearAnomalyResults());
         setFileHandle(null);
         setFileObject(null);
         if (analyticsSessionId) {

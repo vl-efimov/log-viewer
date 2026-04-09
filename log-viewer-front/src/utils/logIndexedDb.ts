@@ -1,5 +1,11 @@
 import type { LogFilters, DateRangeFilter, TextFilter } from '../types/filters';
 import type { HistogramLine, LargeFileAggregateStats } from './histogramSampling';
+import {
+    getRemoteDashboardSnapshot,
+    getRemoteLineCount,
+    getRemoteLinesRange,
+    queryRemoteFilteredLines,
+} from '../services/bglAnomalyApi';
 
 const DB_NAME = 'log_viewer';
 const DB_VERSION = 2;
@@ -83,6 +89,47 @@ type QueryFilteredLinesOptions = {
 };
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+
+const REMOTE_PREFIX = 'remote:';
+
+const isRemoteSessionId = (sessionId: string): boolean => sessionId.startsWith(REMOTE_PREFIX);
+
+const toRemoteIngestId = (sessionId: string): string => sessionId.slice(REMOTE_PREFIX.length);
+
+const serializeFiltersForApi = (filters: LogFilters): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (!value) return;
+
+        if (Array.isArray(value)) {
+            if (value.length > 0) {
+                result[key] = value;
+            }
+            return;
+        }
+
+        if (typeof value === 'object' && 'value' in value) {
+            if (value.value) {
+                result[key] = { value: value.value };
+            }
+            return;
+        }
+
+        if (typeof value === 'object' && ('start' in value || 'end' in value)) {
+            const startIso = value.start ? value.start.toISOString() : null;
+            const endIso = value.end ? value.end.toISOString() : null;
+            if (startIso || endIso) {
+                result[key] = {
+                    start: startIso,
+                    end: endIso,
+                };
+            }
+        }
+    });
+
+    return result;
+};
 
 const requestToPromise = <T>(request: IDBRequest<T>): Promise<T> => {
     return new Promise((resolve, reject) => {
@@ -171,6 +218,10 @@ export const getSession = async (sessionId: string): Promise<LogSessionRecord | 
 };
 
 export const getSessionLineCount = async (sessionId: string): Promise<number> => {
+    if (isRemoteSessionId(sessionId)) {
+        return getRemoteLineCount(toRemoteIngestId(sessionId));
+    }
+
     const session = await getSession(sessionId);
     return session?.lineCount ?? 0;
 };
@@ -263,6 +314,20 @@ export const getLinesRange = async (
     startLine: number,
     endLine: number
 ): Promise<LogLineRecord[]> => {
+    if (isRemoteSessionId(sessionId)) {
+        const lines = await getRemoteLinesRange(toRemoteIngestId(sessionId), startLine, endLine);
+        return lines.map((line) => ({
+            sessionId,
+            lineNumber: line.lineNumber,
+            raw: line.raw,
+            parsed: false,
+            fields: {},
+            timestampMs: null,
+            groupId: line.lineNumber,
+            isContinuation: false,
+        }));
+    }
+
     if (endLine < startLine) return [];
 
     const db = await getLogDb();
@@ -297,6 +362,11 @@ export const saveDashboardSnapshot = async (sessionId: string, snapshot: LogStat
 };
 
 export const getDashboardSnapshot = async (sessionId: string): Promise<LogStatsRecord | null> => {
+    if (isRemoteSessionId(sessionId)) {
+        const snapshot = await getRemoteDashboardSnapshot(toRemoteIngestId(sessionId));
+        return snapshot as LogStatsRecord;
+    }
+
     const db = await getLogDb();
     const tx = db.transaction(STORE_STATS, 'readonly');
     const store = tx.objectStore(STORE_STATS);
@@ -485,6 +555,19 @@ export const queryFilteredLines = async (
     filters: LogFilters,
     options: QueryFilteredLinesOptions = {}
 ): Promise<FilteredLinesResult> => {
+    if (isRemoteSessionId(sessionId)) {
+        const limit = options.limit ?? MAX_FILTER_LINES_DEFAULT;
+        const remoteResult = await queryRemoteFilteredLines(
+            toRemoteIngestId(sessionId),
+            serializeFiltersForApi(filters),
+            limit,
+        );
+        return {
+            totalMatches: remoteResult.totalMatches,
+            lines: remoteResult.lines,
+        };
+    }
+
     const limit = options.limit ?? MAX_FILTER_LINES_DEFAULT;
     const signal = options.signal;
     const onProgress = options.onProgress;

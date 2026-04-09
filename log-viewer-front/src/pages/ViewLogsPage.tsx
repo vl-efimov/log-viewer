@@ -10,13 +10,15 @@ import { ViewModeEnum } from '../constants/ViewModeEnum';
 import {
     updateLogContent,
     clearLogContent,
+    setLogFile,
+    setIndexingState,
 } from '../redux/slices/logFileSlice';
 import {
     clearAnomalyResults,
     setAnomalyResults,
 } from '../redux/slices/anomalySlice';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
-import { getFormatFields, detectLogFormat, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
+import { getFormatFields, detectLogFormat, getLogFormatById, parseLogLineAuto, type LogFormatField, type ParsedLogLine } from '../utils/logFormatDetector';
 import { LogHistogram } from '../components/LogHistogram';
 import type { LogFilters } from '../types/filters';
 import { applyLogFilters } from '../utils/logFilters';
@@ -35,6 +37,7 @@ import {
     saveAnomalySnapshot,
 } from '../utils/logIndexedDb';
 import { appendLogFileToIndex } from '../utils/logIndexer';
+import { finishRemoteIngest, startRemoteIngest, uploadRemoteIngestChunk } from '../services/bglAnomalyApi';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024; // 4 MB
 const LINE_INDEX_CHUNK_SIZE = 1_000_000; // Offsets per chunk
@@ -49,6 +52,7 @@ const MAX_INDEXED_FILTER_ROWS = 50_000;
 const FILTER_PROGRESS_UI_BATCH_ROWS = 5_000;
 const PREVIEW_BYTES = 2 * 1024 * 1024;
 const DB_RANGE_LOAD_PADDING = 120;
+const REMOTE_INGEST_CHUNK_BYTES = 4 * 1024 * 1024;
 
 type ViewParsedLine = {
     lineNumber: number;
@@ -232,6 +236,8 @@ const ViewLogsPage: React.FC = () => {
     const dbCacheBytesRef = useRef<number>(0);
     const [dbLineCount, setDbLineCount] = useState<number>(0);
     const [dbLineCacheVersion, setDbLineCacheVersion] = useState<number>(0);
+    const [serverUploadInProgress, setServerUploadInProgress] = useState(false);
+    const [serverUploadProgress, setServerUploadProgress] = useState(0);
     const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
     const rebaseAnchorRef = useRef<number | null>(null);
@@ -265,7 +271,9 @@ const ViewLogsPage: React.FC = () => {
         return `file:${fileName}|${fileSize}|${lastModified}`;
     }, [analyticsSessionId, fileName, fileSize, lastModified, loaded]);
 
-    const useStreamView = isLargeFile || isIndexing;
+    const isRemoteLargeSession = isLargeFile && analyticsSessionId.startsWith('remote:');
+    const useStreamView = (isLargeFile && !isRemoteLargeSession) || isIndexing;
+    const requiresServerUpload = isLargeFile && !isRemoteLargeSession;
 
     const useDbView = useMemo(() => {
         return !useStreamView && Boolean(analyticsSessionId);
@@ -433,6 +441,75 @@ const ViewLogsPage: React.FC = () => {
         handleFileSystemAccess,
         handleFileSystemAccessForMonitoring,
         isLargeFile,
+    ]);
+
+    const handleUploadToServer = useCallback(async () => {
+        if (!requiresServerUpload || serverUploadInProgress) {
+            return;
+        }
+
+        const file = await getActiveFile();
+        if (!file) {
+            return;
+        }
+
+        setServerUploadInProgress(true);
+        setServerUploadProgress(0);
+        dispatch(setIndexingState({ isIndexing: true, progress: 0 }));
+
+        try {
+            const selectedFormat = getLogFormatById(format);
+            const parserPattern = selectedFormat?.patterns?.[0]?.source;
+            const started = await startRemoteIngest(file.name, file.size, {
+                formatId: format || undefined,
+                parserPattern,
+            });
+
+            let offset = 0;
+            while (offset < file.size) {
+                const nextEnd = Math.min(file.size, offset + REMOTE_INGEST_CHUNK_BYTES);
+                const chunk = await file.slice(offset, nextEnd).arrayBuffer();
+                await uploadRemoteIngestChunk(started.ingest_id, chunk);
+                offset = nextEnd;
+
+                const percent = file.size > 0
+                    ? Math.min(99, Math.max(0, Math.round((offset / file.size) * 100)))
+                    : 0;
+                setServerUploadProgress(percent);
+                dispatch(setIndexingState({ isIndexing: true, progress: percent }));
+            }
+
+            await finishRemoteIngest(started.ingest_id);
+            setServerUploadProgress(100);
+
+            dispatch(setLogFile({
+                name: fileName,
+                size: fileSize,
+                format,
+                content,
+                lastModified,
+                hasFileHandle,
+                isLargeFile,
+                analyticsSessionId: `remote:${started.ingest_id}`,
+            }));
+        } catch (error) {
+            console.error('Failed to upload large file to server:', error);
+        } finally {
+            dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+            setServerUploadInProgress(false);
+        }
+    }, [
+        content,
+        dispatch,
+        fileName,
+        fileSize,
+        format,
+        getActiveFile,
+        hasFileHandle,
+        isLargeFile,
+        lastModified,
+        requiresServerUpload,
+        serverUploadInProgress,
     ]);
 
     const buildLineIndex = useCallback(async (file: File): Promise<LineIndex> => {
@@ -849,12 +926,19 @@ const ViewLogsPage: React.FC = () => {
 
         const run = async () => {
             state.isLoading = true;
-            while (state.pending) {
-                const { start, end } = state.pending;
-                state.pending = null;
-                await loadDbLinesForRange(start, end);
+            try {
+                while (state.pending) {
+                    const { start, end } = state.pending;
+                    state.pending = null;
+                    try {
+                        await loadDbLinesForRange(start, end);
+                    } catch (error) {
+                        console.error('Failed to load DB lines range:', error);
+                    }
+                }
+            } finally {
+                state.isLoading = false;
             }
-            state.isLoading = false;
         };
 
         void run();
@@ -974,6 +1058,21 @@ const ViewLogsPage: React.FC = () => {
             requestDbRangeLoad(mappedStart, mappedEnd);
         } else {
             requestDbRangeLoad(safeStart, safeEnd);
+        }
+    }, [dbLineCount, filters, requestDbRangeLoad, useDbView, viewMode]);
+
+    useEffect(() => {
+        if (!useDbView || hasActiveFilters(filters) || dbLineCount === 0) {
+            return;
+        }
+
+        const end = Math.min(DB_RANGE_LOAD_PADDING, dbLineCount - 1);
+        if (viewMode === ViewModeEnum.FromEnd) {
+            const mappedStart = Math.max(0, dbLineCount - 1 - end);
+            const mappedEnd = dbLineCount - 1;
+            requestDbRangeLoad(mappedStart, mappedEnd);
+        } else {
+            requestDbRangeLoad(0, end);
         }
     }, [dbLineCount, filters, requestDbRangeLoad, useDbView, viewMode]);
 
@@ -1420,7 +1519,7 @@ const ViewLogsPage: React.FC = () => {
                 overflow: 'hidden',
             }}
         >
-            {useDbView && !hasFileHandle && (
+            {useDbView && !hasFileHandle && !isRemoteLargeSession && (
                 <Box
                     sx={{
                         mb: 1,
@@ -1488,6 +1587,7 @@ const ViewLogsPage: React.FC = () => {
                 onManualRefresh={handleManualRefresh}
                 autoRefresh={autoRefresh}
                 onToggleAutoRefresh={handleToggleAutoRefresh}
+                onUploadToServer={requiresServerUpload ? () => void handleUploadToServer() : undefined}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 newLinesCount={newLinesCount}
@@ -1495,10 +1595,15 @@ const ViewLogsPage: React.FC = () => {
                 onFiltersChange={setFilters}
                 fieldDefinitions={fieldDefinitions}
                 isStreamView={useStreamView}
-                filtersDisabled={isIndexing}
+                filtersDisabled={isIndexing || serverUploadInProgress}
                 lineCount={lineCount}
                 normalRows={normalRows}
                 requestFileForAnomalyAnalysis={requestFileForAnomalyAnalysis}
+                remoteIngestId={isRemoteLargeSession ? analyticsSessionId.replace('remote:', '') : undefined}
+                showUploadToServer={requiresServerUpload}
+                uploadInProgress={serverUploadInProgress}
+                uploadProgress={serverUploadProgress}
+                fileActionsDisabled={requiresServerUpload}
             />
 
             <Box

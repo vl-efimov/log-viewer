@@ -52,6 +52,24 @@ export interface BglPredictResponse {
     anomaly_regions: BglAnomalyRegion[];
 }
 
+export interface IngestStartResponse {
+    ok: boolean;
+    ingest_id: string;
+    recommended_chunk_bytes: number;
+}
+
+export interface IngestStatusResponse {
+    ok: boolean;
+    ingest_id: string;
+    file_name: string;
+    file_size: number;
+    created_at: number;
+    status: string;
+    total_lines: number;
+    processed_bytes: number;
+    parser_version: string;
+}
+
 export interface PretrainedModelInfo {
     id: string;
     modelId: string;
@@ -210,6 +228,193 @@ export async function predictBglAnomaliesFromFile(
     }
 
     return (await response.json()) as BglPredictResponse;
+}
+
+export async function predictBglAnomaliesFromIngest(
+    ingestId: string,
+    payload: Omit<BglPredictRequest, 'rows'>,
+    options?: { signal?: AbortSignal },
+): Promise<BglPredictResponse> {
+    const formData = new FormData();
+    formData.append('ingest_id', ingestId);
+    formData.append('model_id', payload.model_id ?? 'bgl');
+
+    if (payload.text_column) {
+        formData.append('text_column', payload.text_column);
+    }
+    if (payload.timestamp_column) {
+        formData.append('timestamp_column', payload.timestamp_column);
+    }
+    if (typeof payload.threshold === 'number') {
+        formData.append('threshold', String(payload.threshold));
+    }
+    if (typeof payload.step_size === 'number') {
+        formData.append('step_size', String(payload.step_size));
+    }
+    if (typeof payload.min_region_lines === 'number') {
+        formData.append('min_region_lines', String(payload.min_region_lines));
+    }
+    if (typeof payload.include_rows === 'boolean') {
+        formData.append('include_rows', String(payload.include_rows));
+    }
+    if (typeof payload.include_windows === 'boolean') {
+        formData.append('include_windows', String(payload.include_windows));
+    }
+
+    const response = await fetch(`${backendBaseUrl}/bgl/predict-ingest`, {
+        method: 'POST',
+        body: formData,
+        signal: options?.signal,
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        try {
+            const parsed = JSON.parse(errorText) as { detail?: string };
+            throw new Error(parsed.detail || `BGL predict ingest request failed (${response.status})`);
+        } catch {
+            throw new Error(errorText || `BGL predict ingest request failed (${response.status})`);
+        }
+    }
+
+    return (await response.json()) as BglPredictResponse;
+}
+
+export async function startRemoteIngest(
+    fileName: string,
+    fileSize: number,
+    options?: {
+        formatId?: string;
+        parserPattern?: string;
+    },
+): Promise<IngestStartResponse> {
+    const formData = new FormData();
+    formData.append('file_name', fileName);
+    formData.append('file_size', String(fileSize));
+    if (options?.formatId) {
+        formData.append('format_id', options.formatId);
+    }
+    if (options?.parserPattern) {
+        formData.append('parser_pattern', options.parserPattern);
+    }
+
+    const response = await fetch(`${backendBaseUrl}/ingest/start`, {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to start ingest (${response.status})`);
+    }
+
+    return (await response.json()) as IngestStartResponse;
+}
+
+export async function uploadRemoteIngestChunk(
+    ingestId: string,
+    chunk: ArrayBuffer,
+    options?: { signal?: AbortSignal },
+): Promise<void> {
+    const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/chunk`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/octet-stream',
+        },
+        body: chunk,
+        signal: options?.signal,
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to upload ingest chunk (${response.status})`);
+    }
+}
+
+export async function finishRemoteIngest(ingestId: string): Promise<IngestStatusResponse> {
+    const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/finish`, {
+        method: 'POST',
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to finish ingest (${response.status})`);
+    }
+
+    return (await response.json()) as IngestStatusResponse;
+}
+
+export async function getRemoteIngestStatus(ingestId: string): Promise<IngestStatusResponse> {
+    const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/status`);
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to fetch ingest status (${response.status})`);
+    }
+    return (await response.json()) as IngestStatusResponse;
+}
+
+export async function deleteRemoteIngest(ingestId: string): Promise<void> {
+    const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to delete ingest (${response.status})`);
+    }
+}
+
+export async function getRemoteLineCount(ingestId: string): Promise<number> {
+    const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/line-count`);
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to fetch line count (${response.status})`);
+    }
+    const payload = await response.json() as { line_count: number };
+    return Number(payload.line_count ?? 0);
+}
+
+export async function getRemoteLinesRange(
+    ingestId: string,
+    startLine: number,
+    endLine: number,
+): Promise<Array<{ lineNumber: number; raw: string }>> {
+    const response = await fetch(
+        `${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/lines?start_line=${startLine}&end_line=${endLine}`
+    );
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to fetch lines range (${response.status})`);
+    }
+    const payload = await response.json() as { lines: Array<{ lineNumber: number; raw: string }> };
+    return payload.lines ?? [];
+}
+
+export async function queryRemoteFilteredLines(
+    ingestId: string,
+    filters: Record<string, unknown>,
+    limit: number,
+): Promise<{ totalMatches: number; lines: Array<{ lineNumber: number; raw: string }> }> {
+    const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/filter`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filters, limit }),
+    });
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to query filtered lines (${response.status})`);
+    }
+    return (await response.json()) as { totalMatches: number; lines: Array<{ lineNumber: number; raw: string }> };
+}
+
+export async function getRemoteDashboardSnapshot(ingestId: string): Promise<unknown> {
+    const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/dashboard`);
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to fetch dashboard snapshot (${response.status})`);
+    }
+    const payload = await response.json() as { snapshot: unknown };
+    return payload.snapshot;
 }
 
 export async function getPretrainedModels(): Promise<PretrainedModelInfo[]> {
