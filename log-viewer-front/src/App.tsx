@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { baseUrl } from './constants/BaseUrl';
@@ -23,6 +23,7 @@ const router = createBrowserRouter(AppRoutes, {
 
 export default function App () {
     const dispatch = useDispatch();
+    const store = useStore<RootState>();
     const isLoaded = useSelector((state: RootState) => state.logFile.loaded);
     const hasRestoredRef = useRef(false);
 
@@ -33,6 +34,10 @@ export default function App () {
         const restoreSession = async () => {
             const session = await getLastSession();
             if (!session) return;
+
+            if (store.getState().logFile.loaded) {
+                return;
+            }
 
             dispatch(setLogFile({
                 name: session.fileName,

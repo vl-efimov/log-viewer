@@ -45,20 +45,6 @@ export const getCustomTheme = (
                         color: '#23272f',
                     },
                 },
-                defaultProps: {
-                    slotProps: {
-                        popper: {
-                            modifiers: [
-                                {
-                                    name: 'offset',
-                                    options: {
-                                        offset: [0, -6],
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                },
             },
         },
         custom: {

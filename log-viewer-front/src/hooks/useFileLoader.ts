@@ -58,6 +58,8 @@ export const useFileLoader = () => {
 
             if (handle) {
                 setFileHandle(handle);
+            } else {
+                setFileHandle(null);
             }
             setFileObject(file);
 
