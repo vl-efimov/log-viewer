@@ -38,6 +38,8 @@ const AppStatusBar: React.FC = () => {
         loaded,
         isIndexing,
         indexingProgress,
+        isLargeFile,
+        analyticsSessionId,
     } = useSelector((state: RootState) => state.logFile);
     const {
         rowsCount: anomalyRowsCount,
@@ -65,6 +67,7 @@ const AppStatusBar: React.FC = () => {
     const currentPath = location.pathname.replace(/\/+$/, '');
     const fullViewLogsPath = `${baseUrl}${RouteViewLogs}`.replace(/\/+/g, '/').replace(/\/+$/, '');
     const isViewLogsRoute = currentPath === fullViewLogsPath;
+    const isServerUploadInProgress = isIndexing && isLargeFile && !analyticsSessionId.startsWith('remote:');
 
     useEffect(() => {
         if (!anomalyIsRunning) {
@@ -91,6 +94,17 @@ const AppStatusBar: React.FC = () => {
         return `${mm}:${String(ss).padStart(2, '0')}`;
     };
 
+    const buildEtaCorridor = (elapsedSec: number, expectedSec: number | null): { minSec: number; maxSec: number } | null => {
+        if (expectedSec == null) {
+            return null;
+        }
+
+        const correctedExpected = Math.max(expectedSec, Math.ceil(elapsedSec * 1.2));
+        const corridorMin = Math.max(elapsedSec, Math.floor(correctedExpected * 0.88));
+        const corridorMax = Math.max(corridorMin + 1, Math.ceil(correctedExpected * 1.28));
+        return { minSec: corridorMin, maxSec: corridorMax };
+    };
+
     const anomalyStatus = (() => {
         if (!loaded || !isViewLogsRoute) {
             return null;
@@ -98,15 +112,14 @@ const AppStatusBar: React.FC = () => {
 
         if (anomalyIsRunning) {
             const elapsedSec = anomalyRunStartedAt ? Math.max(0, Math.floor((nowMs - anomalyRunStartedAt) / 1000)) : 0;
-            const expected = anomalyExpectedDurationSec;
-            const remainingSec = expected != null ? Math.max(0, expected - elapsedSec) : null;
+            const corridor = buildEtaCorridor(elapsedSec, anomalyExpectedDurationSec);
             return {
-                compact: expected != null
-                    ? `Anomaly: ${formatDuration(elapsedSec)} / ${formatDuration(remainingSec ?? 0)}`
-                    : `Anomaly: ${formatDuration(elapsedSec)} / --:--`,
-                full: expected
-                    ? `Anomaly analysis in progress. Elapsed ${formatDuration(elapsedSec)}, remaining about ${formatDuration(remainingSec ?? 0)}.`
-                    : `Anomaly analysis in progress. Elapsed ${formatDuration(elapsedSec)}. Remaining time is not available yet.`,
+                compact: corridor
+                    ? `Происходит расчет аномалий. ${formatDuration(elapsedSec)} / ~${formatDuration(corridor.minSec)}-${formatDuration(corridor.maxSec)}`
+                    : `Происходит расчет аномалий. ${formatDuration(elapsedSec)} / --:--`,
+                full: corridor
+                    ? `Происходит расчет аномалий. Прошло ${formatDuration(elapsedSec)}. Прогнозный коридор общего времени: ${formatDuration(corridor.minSec)}-${formatDuration(corridor.maxSec)}.`
+                    : `Происходит расчет аномалий. Прошло ${formatDuration(elapsedSec)}. Прогноз времени пока недоступен.`,
             };
         }
 
@@ -189,11 +202,6 @@ const AppStatusBar: React.FC = () => {
                             </AppStatusBarItem>
                         )}
 
-                        {/* {lastUpdate && (
-                            <Typography variant="caption" color="text.secondary">
-                                Last updated: {lastUpdate.toLocaleTimeString()}
-                            </Typography>
-                        )} */}
                     </>
                 )}
             </Box>
@@ -206,7 +214,10 @@ const AppStatusBar: React.FC = () => {
             >
                 {isIndexing && (
                     <Tooltip
-                        title={`Indexing ${indexingProgress}%`}
+                        title={isServerUploadInProgress
+                            ? `Идет загрузка на сервер ${indexingProgress}%`
+                            : `Indexing ${indexingProgress}%`
+                        }
                         arrow
                         placement="top"
                     >
@@ -219,7 +230,10 @@ const AppStatusBar: React.FC = () => {
                             }}
                         >
                             <Typography sx={anomalyTextSx}>
-                                Indexing {indexingProgress}%
+                                {isServerUploadInProgress
+                                    ? `Идет загрузка на сервер ${indexingProgress}%`
+                                    : `Indexing ${indexingProgress}%`
+                                }
                             </Typography>
                             <LinearProgress
                                 variant="determinate"

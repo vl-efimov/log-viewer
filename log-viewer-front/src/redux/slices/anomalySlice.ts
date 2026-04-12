@@ -23,7 +23,6 @@ interface AnomalyState {
     cancelRequestSeq: number;
     runStartedAt: number | null;
     expectedDurationSec: number | null;
-    lastDurationSec: number | null;
     rowsPerSecondByModel: {
         bgl: number | null;
         hdfs: number | null;
@@ -52,7 +51,6 @@ const initialAnomalyState: AnomalyState = {
     cancelRequestSeq: 0,
     runStartedAt: null,
     expectedDurationSec: null,
-    lastDurationSec: null,
     rowsPerSecondByModel: {
         bgl: null,
         hdfs: null,
@@ -118,16 +116,15 @@ const anomalySlice = createSlice({
                 state.expectedDurationSec = null;
             }
         },
-        setAnomalyLastDurationSec: (state, action: PayloadAction<number | null>) => {
-            state.lastDurationSec = action.payload;
-        },
         updateAnomalyRowsPerSecond: (state, action: PayloadAction<{ modelId: 'bgl' | 'hdfs'; rowsPerSecond: number }>) => {
             const { modelId, rowsPerSecond } = action.payload;
             const prev = state.rowsPerSecondByModel[modelId];
-            // EMA to smooth noisy run-to-run durations.
+            // Adapt down quickly (avoid optimistic ETA), recover up slowly.
             state.rowsPerSecondByModel[modelId] = prev == null
                 ? rowsPerSecond
-                : (prev * 0.6 + rowsPerSecond * 0.4);
+                : (rowsPerSecond < prev
+                    ? (prev * 0.2 + rowsPerSecond * 0.8)
+                    : (prev * 0.85 + rowsPerSecond * 0.15));
         },
         clearAnomalyResults: (state) => {
             state.regions = [];
@@ -143,7 +140,6 @@ const anomalySlice = createSlice({
             state.runningModelId = null;
             state.runStartedAt = null;
             state.expectedDurationSec = null;
-            state.lastDurationSec = null;
             state.lastRunParams = null;
         },
     },
@@ -155,7 +151,6 @@ export const {
     setAnomalyStopped,
     requestAnomalyCancel,
     setAnomalyRunning,
-    setAnomalyLastDurationSec,
     updateAnomalyRowsPerSecond,
     clearAnomalyResults,
 } = anomalySlice.actions;

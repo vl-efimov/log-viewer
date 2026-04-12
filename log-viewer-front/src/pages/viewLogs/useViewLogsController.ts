@@ -28,10 +28,16 @@ import {
     getLinesRange,
     getSessionLineCount,
     queryFilteredLines,
+    upsertSession,
 } from '../../utils/logIndexedDb';
 import { appendLogFileToIndex } from '../../utils/logIndexer';
 import {
+    beginRemoteUploadSession,
+    cancelActiveRemoteUploadSession,
+    deleteRemoteIngest,
+    endRemoteUploadSession,
     finishRemoteIngest,
+    setActiveRemoteUploadIngestId,
     startRemoteIngest,
     uploadRemoteIngestChunk,
 } from '../../services/bglAnomalyApi';
@@ -46,7 +52,7 @@ const MAX_RANGE_BYTES = 512 * 1024;
 const MAX_VIRTUAL_ROWS = 1_500_000;
 const WINDOW_REBASE_MARGIN = 200_000;
 const MAX_LARGE_FILE_VIEW_CACHE_ENTRIES = 3;
-const MAX_INDEXED_FILTER_ROWS = 50_000;
+const MAX_INDEXED_FILTER_ROWS = 100_000;
 const FILTER_PROGRESS_UI_BATCH_ROWS = 5_000;
 const PREVIEW_BYTES = 2 * 1024 * 1024;
 const DB_RANGE_LOAD_PADDING = 120;
@@ -199,6 +205,7 @@ export const useViewLogsController = () => {
         analyticsSessionId,
         loaded,
         isIndexing,
+        indexingProgress,
     } = useSelector((state: RootState) => state.logFile);
 
     const {
@@ -233,8 +240,10 @@ export const useViewLogsController = () => {
     const [serverUploadInProgress, setServerUploadInProgress] = useState(false);
     const [serverUploadProgress, setServerUploadProgress] = useState(0);
     const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
+    const [dbVirtualWindowStart, setDbVirtualWindowStart] = useState<number>(0);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
     const rebaseAnchorRef = useRef<number | null>(null);
+    const dbRebaseAnchorRef = useRef<number | null>(null);
     const rangeLoadStateRef = useRef<{ pending: { start: number; end: number } | null; isLoading: boolean }>({
         pending: null,
         isLoading: false,
@@ -276,8 +285,9 @@ export const useViewLogsController = () => {
     });
 
     const isRemoteLargeSession = isLargeFile && analyticsSessionId.startsWith('remote:');
-    const isStreamView = (isLargeFile && !isRemoteLargeSession) || isIndexing;
+    const isStreamView = !isRemoteLargeSession && (isLargeFile || isIndexing);
     const requiresServerUpload = isLargeFile && !isRemoteLargeSession;
+    const isServerUploadActive = requiresServerUpload && isIndexing;
     const isDbView = !isStreamView && Boolean(analyticsSessionId);
 
     const getActiveFile = useCallback(async (): Promise<File | null> => {
@@ -308,6 +318,7 @@ export const useViewLogsController = () => {
         setDbLineCount(0);
 
         setVirtualWindowStart(0);
+        setDbVirtualWindowStart(0);
         setSelectedLine(null);
         setNormalRows([]);
         setIndexedFilteredRows([]);
@@ -414,6 +425,10 @@ export const useViewLogsController = () => {
         setServerUploadProgress(0);
         dispatch(setIndexingState({ isIndexing: true, progress: 0 }));
 
+        const uploadController = beginRemoteUploadSession();
+        const uploadSignal = uploadController.signal;
+        let startedIngestId: string | null = null;
+
         try {
             const selectedFormat = getLogFormatById(format);
             const parserPattern = selectedFormat?.patterns?.[0]?.source;
@@ -421,12 +436,24 @@ export const useViewLogsController = () => {
                 formatId: format || undefined,
                 parserPattern,
             });
+            startedIngestId = started.ingest_id;
+            setActiveRemoteUploadIngestId(startedIngestId);
+
+            if (uploadSignal.aborted) {
+                await deleteRemoteIngest(startedIngestId);
+                return;
+            }
 
             let offset = 0;
             while (offset < file.size) {
+                if (uploadSignal.aborted) {
+                    await deleteRemoteIngest(started.ingest_id);
+                    return;
+                }
+
                 const nextEnd = Math.min(file.size, offset + REMOTE_INGEST_CHUNK_BYTES);
                 const chunk = await file.slice(offset, nextEnd).arrayBuffer();
-                await uploadRemoteIngestChunk(started.ingest_id, chunk);
+                await uploadRemoteIngestChunk(started.ingest_id, chunk, { signal: uploadSignal });
                 offset = nextEnd;
 
                 const percent = file.size > 0
@@ -436,8 +463,37 @@ export const useViewLogsController = () => {
                 dispatch(setIndexingState({ isIndexing: true, progress: percent }));
             }
 
+            if (uploadSignal.aborted) {
+                await deleteRemoteIngest(started.ingest_id);
+                return;
+            }
+
             await finishRemoteIngest(started.ingest_id);
             setServerUploadProgress(100);
+
+            if (uploadSignal.aborted) {
+                await deleteRemoteIngest(started.ingest_id);
+                return;
+            }
+
+            const remoteSessionId = `remote:${started.ingest_id}`;
+            await upsertSession({
+                sessionId: remoteSessionId,
+                fileName,
+                fileSize,
+                lastModified,
+                formatId: format || 'unknown',
+                createdAt: Date.now(),
+                lastOpenedAt: Date.now(),
+                isIndexed: true,
+                lineCount: 0,
+                previewText: content.slice(0, PREVIEW_BYTES),
+            });
+
+            if (uploadSignal.aborted) {
+                await deleteRemoteIngest(started.ingest_id);
+                return;
+            }
 
             dispatch(setLogFile({
                 name: fileName,
@@ -447,13 +503,24 @@ export const useViewLogsController = () => {
                 lastModified,
                 hasFileHandle,
                 isLargeFile,
-                analyticsSessionId: `remote:${started.ingest_id}`,
+                analyticsSessionId: remoteSessionId,
             }));
         } catch (error) {
-            console.error('Failed to upload large file to server:', error);
+            if ((error as Error).name !== 'AbortError') {
+                console.error('Failed to upload large file to server:', error);
+            }
+
+            if (startedIngestId) {
+                try {
+                    await deleteRemoteIngest(startedIngestId);
+                } catch (cleanupError) {
+                    console.error('Failed to cleanup remote ingest after upload interruption:', cleanupError);
+                }
+            }
         } finally {
             dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
             setServerUploadInProgress(false);
+            endRemoteUploadSession(uploadController);
         }
     }, [
         content,
@@ -468,6 +535,13 @@ export const useViewLogsController = () => {
         requiresServerUpload,
         serverUploadInProgress,
     ]);
+
+    const handleCancelUploadToServer = useCallback(() => {
+        cancelActiveRemoteUploadSession();
+        setServerUploadInProgress(false);
+        setServerUploadProgress(0);
+        dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+    }, [dispatch]);
 
     const buildLineIndex = useCallback(async (file: File): Promise<LineIndex> => {
         const offsets = createLineIndex();
@@ -540,6 +614,7 @@ export const useViewLogsController = () => {
         }
 
         const endOffset = effectiveEnd + 1 < offsets.length ? getOffsetAt(offsets, effectiveEnd + 1) : file.size;
+
         const buffer = await file.slice(startOffset, endOffset).arrayBuffer();
         const text = new TextDecoder('utf-8').decode(buffer);
         const lines = text.split(/\r?\n/);
@@ -661,6 +736,18 @@ export const useViewLogsController = () => {
             dbLineCacheRef.current = new Map();
             dbCacheBytesRef.current = 0;
             setDbLineCacheVersion((version) => version + 1);
+            setDbVirtualWindowStart(0);
+            dbRebaseAnchorRef.current = null;
+            return;
+        }
+
+        if (isIndexing && !isRemoteLargeSession) {
+            setDbLineCount(0);
+            dbLineCacheRef.current = new Map();
+            dbCacheBytesRef.current = 0;
+            setDbLineCacheVersion((version) => version + 1);
+            setDbVirtualWindowStart(0);
+            dbRebaseAnchorRef.current = null;
             return;
         }
 
@@ -682,7 +769,7 @@ export const useViewLogsController = () => {
         return () => {
             cancelled = true;
         };
-    }, [analyticsSessionId, dispatch, isDbView]);
+    }, [analyticsSessionId, dispatch, isDbView, isIndexing, isRemoteLargeSession]);
 
     useEffect(() => {
         if (isStreamView || !analyticsSessionId || !hasActiveFilters(filters)) {
@@ -692,6 +779,7 @@ export const useViewLogsController = () => {
 
         let cancelled = false;
         const controller = new AbortController();
+        const isRemoteFilterSession = analyticsSessionId.startsWith('remote:');
         let bufferedRows: ViewRow[] = [];
         setIndexedFilteredRows([]);
 
@@ -703,40 +791,80 @@ export const useViewLogsController = () => {
             const chunk = bufferedRows;
             bufferedRows = [];
             setIndexedFilteredRows((prev) => {
-                if (prev.length >= MAX_INDEXED_FILTER_ROWS) {
-                    return prev;
+                if (!isRemoteFilterSession) {
+                    if (prev.length >= MAX_INDEXED_FILTER_ROWS) {
+                        return prev;
+                    }
+                    const available = MAX_INDEXED_FILTER_ROWS - prev.length;
+                    if (available <= 0) {
+                        return prev;
+                    }
+                    const toAppend = chunk.slice(0, available);
+                    if (toAppend.length === 0) {
+                        return prev;
+                    }
+                    return [...prev, ...toAppend];
                 }
-                const available = MAX_INDEXED_FILTER_ROWS - prev.length;
-                if (available <= 0) {
-                    return prev;
-                }
-                const toAppend = chunk.slice(0, available);
-                if (toAppend.length === 0) {
-                    return prev;
-                }
-                return [...prev, ...toAppend];
+                return [...prev, ...chunk];
             });
         };
 
         const run = async () => {
             try {
-                const result = await queryFilteredLines(analyticsSessionId, filters, {
-                    limit: MAX_INDEXED_FILTER_ROWS,
-                    signal: controller.signal,
-                    onProgress: (partial) => {
-                        if (cancelled) return;
-                        if (partial.lines.length === 0) return;
-                        bufferedRows.push(...partial.lines);
-                        if (bufferedRows.length >= FILTER_PROGRESS_UI_BATCH_ROWS) {
-                            flushBufferedRows();
-                        }
-                    },
-                });
+                let afterLine: number | undefined;
+                let done = false;
+
+                while (!done && !cancelled) {
+                    const previousAfterLine = afterLine;
+                    const result = await queryFilteredLines(analyticsSessionId, filters, {
+                        limit: MAX_INDEXED_FILTER_ROWS,
+                        afterLine: isRemoteFilterSession ? afterLine : undefined,
+                        signal: controller.signal,
+                        onProgress: isRemoteFilterSession
+                            ? undefined
+                            : (partial) => {
+                                if (cancelled) return;
+                                if (partial.lines.length === 0) return;
+                                bufferedRows.push(...partial.lines);
+                                if (bufferedRows.length >= FILTER_PROGRESS_UI_BATCH_ROWS) {
+                                    flushBufferedRows();
+                                }
+                            },
+                    });
+
+                    if (cancelled) return;
+
+                    const pageLastLine = result.lines.length > 0
+                        ? result.lines[result.lines.length - 1].lineNumber
+                        : undefined;
+
+                    if (pageLastLine === undefined) {
+                        done = true;
+                        break;
+                    }
+
+                    if (!isRemoteFilterSession) {
+                        done = true;
+                        break;
+                    }
+
+                    const nextAfterLine = result.nextAfterLine ?? pageLastLine;
+                    if (previousAfterLine !== undefined && nextAfterLine <= previousAfterLine) {
+                        done = true;
+                        break;
+                    }
+
+                    bufferedRows.push(...result.lines);
+                    if (bufferedRows.length >= FILTER_PROGRESS_UI_BATCH_ROWS) {
+                        flushBufferedRows();
+                    }
+
+                    afterLine = nextAfterLine;
+                    done = !(result.hasMore ?? (result.lines.length >= MAX_INDEXED_FILTER_ROWS));
+                }
+
                 if (cancelled) return;
                 flushBufferedRows();
-                setIndexedFilteredRows((prev) => (
-                    prev.length === result.lines.length ? prev : result.lines
-                ));
             } catch (error) {
                 if ((error as Error).name !== 'AbortError') {
                     console.error('Indexed filter query failed:', error);
@@ -889,16 +1017,18 @@ export const useViewLogsController = () => {
     const getDbLineAtIndex = useCallback((displayIndex: number) => {
         if (!isDbView || dbLineCount === 0) return null;
 
+        const globalDisplayIndex = dbVirtualWindowStart + displayIndex;
+
         const fileIndex = viewMode === ViewModeEnum.FromEnd
-            ? dbLineCount - 1 - displayIndex
-            : displayIndex;
+            ? dbLineCount - 1 - globalDisplayIndex
+            : globalDisplayIndex;
 
         if (fileIndex < 0 || fileIndex >= dbLineCount) return null;
 
         const rawEntry = dbLineCacheRef.current.get(fileIndex);
 
         const displayLineNumber = viewMode === ViewModeEnum.FromEnd
-            ? dbLineCount - displayIndex
+            ? dbLineCount - globalDisplayIndex
             : fileIndex + 1;
 
         return {
@@ -909,7 +1039,7 @@ export const useViewLogsController = () => {
                 ? (anomalyLineSet.has(fileIndex + 1) ? 'anomaly' as const : 'normal' as const)
                 : undefined,
         };
-    }, [anomalyLineSet, dbLineCount, hasAnomalyResults, isDbView, viewMode, dbLineCacheVersion]);
+    }, [anomalyLineSet, dbLineCount, dbVirtualWindowStart, hasAnomalyResults, isDbView, viewMode, dbLineCacheVersion]);
 
     const getLineAtIndex = useCallback((displayIndex: number) => {
         if (!isStreamView) {
@@ -983,8 +1113,8 @@ export const useViewLogsController = () => {
     }, [
         clampWindowStart,
         getVirtualWindowSize,
-        lineCount,
         requestRangeLoad,
+        lineCount,
         viewMode,
         virtualWindowStart,
         isStreamView,
@@ -992,31 +1122,81 @@ export const useViewLogsController = () => {
 
     const handleDbRangeChange = useCallback((startIndex: number, endIndex: number) => {
         if (!isDbView || hasActiveFilters(filters) || dbLineCount === 0) return;
-        const safeStart = Math.max(0, startIndex);
-        const safeEnd = Math.max(0, Math.min(endIndex, Math.max(0, dbLineCount - 1)));
+
+        const virtualCount = getVirtualWindowSize(dbVirtualWindowStart, dbLineCount);
+        const safeStart = Math.max(0, Math.min(startIndex, Math.max(0, virtualCount - 1)));
+        const safeEnd = Math.max(0, Math.min(endIndex, Math.max(0, virtualCount - 1)));
+        const globalStart = dbVirtualWindowStart + safeStart;
+        const globalEnd = dbVirtualWindowStart + safeEnd;
+
         if (viewMode === ViewModeEnum.FromEnd) {
-            const mappedStart = dbLineCount - 1 - safeEnd;
-            const mappedEnd = dbLineCount - 1 - safeStart;
+            const mappedStart = dbLineCount - 1 - globalEnd;
+            const mappedEnd = dbLineCount - 1 - globalStart;
             requestDbRangeLoad(mappedStart, mappedEnd);
         } else {
-            requestDbRangeLoad(safeStart, safeEnd);
+            requestDbRangeLoad(globalStart, globalEnd);
         }
-    }, [dbLineCount, filters, requestDbRangeLoad, isDbView, viewMode]);
+
+        if (dbLineCount <= MAX_VIRTUAL_ROWS) return;
+
+        const nearTop = safeStart < WINDOW_REBASE_MARGIN;
+        const nearBottom = safeEnd > Math.max(0, virtualCount - 1 - WINDOW_REBASE_MARGIN);
+
+        if (!nearTop && !nearBottom) return;
+
+        const globalAnchor = Math.floor((globalStart + globalEnd) / 2);
+        const nextWindowStart = clampWindowStart(
+            globalAnchor - Math.floor(MAX_VIRTUAL_ROWS / 2),
+            dbLineCount,
+        );
+
+        if (nextWindowStart === dbVirtualWindowStart) return;
+
+        dbRebaseAnchorRef.current = Math.max(0, globalAnchor - nextWindowStart);
+        setDbVirtualWindowStart(nextWindowStart);
+    }, [clampWindowStart, dbLineCount, dbVirtualWindowStart, filters, getVirtualWindowSize, requestDbRangeLoad, isDbView, viewMode]);
+
+    useEffect(() => {
+        if (!isDbView || hasActiveFilters(filters)) {
+            setDbVirtualWindowStart(0);
+            dbRebaseAnchorRef.current = null;
+            return;
+        }
+
+        setDbVirtualWindowStart((current) => clampWindowStart(current, dbLineCount));
+    }, [clampWindowStart, dbLineCount, filters, isDbView]);
 
     useEffect(() => {
         if (!isDbView || hasActiveFilters(filters) || dbLineCount === 0) {
             return;
         }
 
-        const end = Math.min(DB_RANGE_LOAD_PADDING, dbLineCount - 1);
+        const virtualCount = getVirtualWindowSize(dbVirtualWindowStart, dbLineCount);
+        const preloadEndLocal = Math.min(DB_RANGE_LOAD_PADDING, Math.max(0, virtualCount - 1));
+        const globalStart = dbVirtualWindowStart;
+        const globalEnd = dbVirtualWindowStart + preloadEndLocal;
+
         if (viewMode === ViewModeEnum.FromEnd) {
-            const mappedStart = Math.max(0, dbLineCount - 1 - end);
-            const mappedEnd = dbLineCount - 1;
+            const mappedStart = Math.max(0, dbLineCount - 1 - globalEnd);
+            const mappedEnd = dbLineCount - 1 - globalStart;
             requestDbRangeLoad(mappedStart, mappedEnd);
         } else {
-            requestDbRangeLoad(0, end);
+            requestDbRangeLoad(globalStart, globalEnd);
         }
-    }, [dbLineCount, filters, requestDbRangeLoad, isDbView, viewMode]);
+    }, [dbLineCount, dbVirtualWindowStart, filters, getVirtualWindowSize, requestDbRangeLoad, isDbView, viewMode]);
+
+    useEffect(() => {
+        if (!isDbView || hasActiveFilters(filters)) return;
+        if (dbRebaseAnchorRef.current === null) return;
+        if (!virtuosoRef.current) return;
+
+        const virtualCount = getVirtualWindowSize(dbVirtualWindowStart, dbLineCount);
+        if (virtualCount <= 0) return;
+
+        const anchor = Math.max(0, Math.min(dbRebaseAnchorRef.current, virtualCount - 1));
+        virtuosoRef.current.scrollToIndex({ index: anchor, align: 'center', behavior: 'auto' });
+        dbRebaseAnchorRef.current = null;
+    }, [dbLineCount, dbVirtualWindowStart, filters, getVirtualWindowSize, isDbView]);
 
     useEffect(() => {
         if (isStreamView || !analyticsSessionId || isIndexing) {
@@ -1031,7 +1211,67 @@ export const useViewLogsController = () => {
         const loadHistogramSample = async () => {
             const snapshot = await getDashboardSnapshot(analyticsSessionId);
             if (cancelled) return;
-            setIndexedHistogramLines(snapshot?.sampledLines ?? []);
+
+            const normalized = (snapshot?.sampledLines ?? []).flatMap((line) => {
+                const raw = typeof line.raw === 'string' ? line.raw : '';
+                const lineNumber = Number(line.lineNumber);
+                if (!Number.isFinite(lineNumber) || lineNumber <= 0) {
+                    return [];
+                }
+
+                let parsed = line.parsed;
+                if (!parsed || Object.keys(parsed.fields ?? {}).length === 0) {
+                    const reparsed = raw.trim().length > 0 ? parseLogLineAuto(raw) : null;
+                    if (reparsed) {
+                        parsed = reparsed;
+                    }
+                }
+
+                if (parsed && !parsed.fields.timestamp) {
+                    const sourceTimestamp = (line as unknown as { timestamp_iso?: unknown }).timestamp_iso;
+                    if (typeof sourceTimestamp === 'string' && sourceTimestamp.trim()) {
+                        parsed = {
+                            ...parsed,
+                            fields: {
+                                ...parsed.fields,
+                                timestamp: sourceTimestamp,
+                            },
+                        };
+                    }
+                }
+
+                return [{
+                    lineNumber,
+                    raw,
+                    parsed,
+                }];
+            });
+
+            const hasAnyTimestamp = normalized.some((line) => Boolean(line.parsed?.fields.timestamp));
+            if (hasAnyTimestamp) {
+                setIndexedHistogramLines(normalized);
+                return;
+            }
+
+            const syntheticBaseMs = Date.now();
+            setIndexedHistogramLines(
+                normalized.map((line, index) => {
+                    if (!line.parsed) {
+                        return line;
+                    }
+
+                    return {
+                        ...line,
+                        parsed: {
+                            ...line.parsed,
+                            fields: {
+                                ...line.parsed.fields,
+                                timestamp: new Date(syntheticBaseMs + index * 1000).toISOString(),
+                            },
+                        },
+                    };
+                }),
+            );
         };
 
         void loadHistogramSample().finally(() => {
@@ -1449,6 +1689,7 @@ export const useViewLogsController = () => {
         autoRefresh,
         onToggleAutoRefresh: handleToggleAutoRefresh,
         onUploadToServer: requiresServerUpload ? () => void handleUploadToServer() : undefined,
+        onCancelUploadToServer: isServerUploadActive ? handleCancelUploadToServer : undefined,
         viewMode,
         onViewModeChange: setViewMode,
         newLinesCount,
@@ -1462,14 +1703,18 @@ export const useViewLogsController = () => {
         requestFileForAnomalyAnalysis,
         remoteIngestId: isRemoteLargeSession ? analyticsSessionId.replace('remote:', '') : undefined,
         showUploadToServer: requiresServerUpload,
-        uploadInProgress: serverUploadInProgress,
-        uploadProgress: serverUploadProgress,
+        uploadInProgress: isServerUploadActive,
+        uploadProgress: isServerUploadActive
+            ? (serverUploadInProgress ? serverUploadProgress : indexingProgress)
+            : 0,
         fileActionsDisabled: requiresServerUpload,
     };
 
     const totalCount = isStreamView
         ? getVirtualWindowSize(virtualWindowStart, lineCount)
-        : (isDbView && !hasActiveFilters(filters) ? dbLineCount : displayLines.length);
+        : (isDbView && !hasActiveFilters(filters)
+            ? getVirtualWindowSize(dbVirtualWindowStart, dbLineCount)
+            : displayLines.length);
 
     const listProps = {
         displayLines,

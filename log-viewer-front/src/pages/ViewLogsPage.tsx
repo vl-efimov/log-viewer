@@ -1,4 +1,6 @@
 import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import { FileSelectionView } from '../components/FileSelectionView';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
@@ -14,6 +16,10 @@ const ViewLogsPage: React.FC = () => {
         toolbarProps,
         listProps,
     } = useViewLogsController();
+
+    const showTablePreparing = histogram.isLargeFile
+        && toolbarProps.isStreamView
+        && toolbarProps.lineCount === 0;
 
     if (fileSelection.show) {
         return (
@@ -66,7 +72,31 @@ const ViewLogsPage: React.FC = () => {
                     overflow: 'hidden',
                 }}
             >
-                <LogLinesList {...listProps} />
+                {showTablePreparing ? (
+                    <Box
+                        sx={{
+                            height: '100%',
+                            width: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 1,
+                            px: 2,
+                        }}
+                    >
+                        <CircularProgress size={26} />
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            align="center"
+                        >
+                            Подготавливаем таблицу для большого файла. Это может занять некоторое время.
+                        </Typography>
+                    </Box>
+                ) : (
+                    <LogLinesList {...listProps} />
+                )}
             </Box>
         </Box>
     );

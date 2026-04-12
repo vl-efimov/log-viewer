@@ -298,9 +298,16 @@ def log_lines(ingest_id: str, start_line: int, end_line: int) -> dict[str, Any]:
 def log_filter(ingest_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     filters = payload.get("filters") if isinstance(payload, dict) else {}
     limit = int(payload.get("limit", 50000)) if isinstance(payload, dict) else 50000
+    after_line_raw = payload.get("after_line") if isinstance(payload, dict) else None
+    after_line = int(after_line_raw) if after_line_raw is not None else None
     return {
         "ok": True,
-        **query_filtered_lines(ingest_id, filters=filters or {}, limit=max(1, min(limit, 100000))),
+        **query_filtered_lines(
+            ingest_id,
+            filters=filters or {},
+            limit=max(1, min(limit, 100000)),
+            after_line=after_line,
+        ),
     }
 
 

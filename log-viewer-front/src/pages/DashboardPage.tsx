@@ -94,6 +94,99 @@ type NormalDashboardSnapshot = {
     facets: Facet[];
 };
 
+const normalizeDashboardSampledLines = (input: unknown): ParsedRow[] => {
+    if (!Array.isArray(input)) {
+        return [];
+    }
+
+    const normalizedRows = input
+        .map((item): ParsedRow | null => {
+            if (!item || typeof item !== 'object') {
+                return null;
+            }
+
+            const source = item as {
+                lineNumber?: unknown;
+                raw?: unknown;
+                parsed?: {
+                    formatId?: unknown;
+                    fields?: unknown;
+                    timestamp?: unknown;
+                } | null;
+                timestamp_iso?: unknown;
+            };
+
+            const lineNumber = typeof source.lineNumber === 'number' ? source.lineNumber : null;
+            const raw = typeof source.raw === 'string' ? source.raw : '';
+            if (!lineNumber || lineNumber <= 0) {
+                return null;
+            }
+
+            const parsedFields = source.parsed?.fields && typeof source.parsed.fields === 'object'
+                ? { ...(source.parsed.fields as Record<string, string>) }
+                : {};
+
+            let formatId = typeof source.parsed?.formatId === 'string'
+                ? source.parsed.formatId
+                : 'remote-dashboard';
+
+            if (Object.keys(parsedFields).length === 0 && raw.trim().length > 0) {
+                const reparsed = parseLogLineAuto(raw);
+                if (reparsed) {
+                    Object.assign(parsedFields, reparsed.fields);
+                    formatId = reparsed.formatId;
+                }
+            }
+
+            if (!parsedFields.timestamp) {
+                const nestedTimestamp = source.parsed?.timestamp;
+                if (typeof nestedTimestamp === 'string' && nestedTimestamp.trim()) {
+                    parsedFields.timestamp = nestedTimestamp;
+                }
+            }
+
+            if (!parsedFields.timestamp && typeof source.timestamp_iso === 'string' && source.timestamp_iso.trim()) {
+                parsedFields.timestamp = source.timestamp_iso;
+            }
+
+            return {
+                lineNumber,
+                raw,
+                parsed: {
+                    formatId,
+                    fields: parsedFields,
+                    raw,
+                },
+            };
+        })
+        .filter((row): row is ParsedRow => row !== null);
+
+    const hasAnyTimestamp = normalizedRows.some((row) => Boolean(row.parsed?.fields.timestamp));
+    if (hasAnyTimestamp) {
+        return normalizedRows;
+    }
+
+    const syntheticBaseMs = Date.now();
+    return normalizedRows.map((row, index) => {
+        const parsed = row.parsed;
+        if (!parsed) {
+            return row;
+        }
+
+        return {
+            ...row,
+            parsed: {
+                ...parsed,
+                fields: {
+                    ...parsed.fields,
+                    // Fallback timeline for remote snapshots without timestamp parsing.
+                    timestamp: new Date(syntheticBaseMs + index * 1000).toISOString(),
+                },
+            },
+        };
+    });
+};
+
 const resolveLocale = (language: string): string => {
     if (language === 'cz') return 'cs-CZ';
     if (language === 'ru') return 'ru-RU';
@@ -233,6 +326,7 @@ const DashboardPage: React.FC = () => {
         size: fileSize,
         lastModified,
         loaded,
+        isIndexing,
     } = useSelector((state: RootState) => state.logFile);
     const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [histogramProgress, setHistogramProgress] = useState<number>(0);
@@ -241,7 +335,8 @@ const DashboardPage: React.FC = () => {
     const [normalSnapshot, setNormalSnapshot] = useState<NormalDashboardSnapshot | null>(null);
     const [isNormalSnapshotLoading, setIsNormalSnapshotLoading] = useState<boolean>(false);
     const isRemoteLargeSession = isLargeFile && analyticsSessionId.startsWith('remote:');
-    const useLocalLargeMode = isLargeFile && !isRemoteLargeSession;
+    const requiresServerUploadForDashboard = isLargeFile && !isRemoteLargeSession;
+    const useLocalLargeMode = false;
     const largeFileCacheKey = useMemo(() => {
         return getLargeFileDashboardCacheKey(analyticsSessionId, fileName, fileSize, lastModified);
     }, [analyticsSessionId, fileName, fileSize, lastModified]);
@@ -250,6 +345,22 @@ const DashboardPage: React.FC = () => {
     }, [analyticsSessionId, fileName, fileSize, lastModified]);
 
     const analytics = useMemo(() => {
+        if (requiresServerUploadForDashboard) {
+            return {
+                totalLines: 0,
+                analyzedLines: 0,
+                nonEmptyLines: 0,
+                parsedLines: 0,
+                unparsedLines: 0,
+                parseRate: 0,
+                parsedRows: [] as HistogramLine[],
+                levelValues: [] as Array<{ label: string; count: number }>,
+                statusValues: [] as Array<{ label: string; count: number }>,
+                methodValues: [] as Array<{ label: string; count: number }>,
+                facets: [] as Facet[],
+            };
+        }
+
         const toSortedValues = (counter?: Map<string, number>) => {
             if (!counter) {
                 return [];
@@ -389,12 +500,25 @@ const DashboardPage: React.FC = () => {
         };
         setNormalDashboardCache(normalFileCacheKey, snapshot);
         return snapshot;
-    }, [content, largeFileHistogramLines, largeFileStats, normalFileCacheKey, normalSnapshot, useLocalLargeMode]);
+    }, [
+        content,
+        largeFileHistogramLines,
+        largeFileStats,
+        normalFileCacheKey,
+        normalSnapshot,
+        requiresServerUploadForDashboard,
+        useLocalLargeMode,
+    ]);
 
     useEffect(() => {
-        if (useLocalLargeMode || !analyticsSessionId) {
+        if (requiresServerUploadForDashboard || useLocalLargeMode || !analyticsSessionId) {
             setNormalSnapshot(null);
             setIsNormalSnapshotLoading(false);
+            return;
+        }
+
+        if (isIndexing) {
+            setIsNormalSnapshotLoading(true);
             return;
         }
 
@@ -460,7 +584,7 @@ const DashboardPage: React.FC = () => {
                         parseRate: snapshot.stats.nonEmptyLines > 0
                             ? Math.round((snapshot.stats.parsedLines / snapshot.stats.nonEmptyLines) * 100)
                             : 0,
-                        parsedRows: snapshot.sampledLines,
+                        parsedRows: normalizeDashboardSampledLines(snapshot.sampledLines),
                         levelValues: toSortedValues(fieldValueCounters.get('level')),
                         statusValues: toSortedValues(fieldValueCounters.get('status')),
                         methodValues: toSortedValues(fieldValueCounters.get('method')),
@@ -483,7 +607,7 @@ const DashboardPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [analyticsSessionId, useLocalLargeMode]);
+    }, [analyticsSessionId, isIndexing, requiresServerUploadForDashboard, useLocalLargeMode]);
 
     useEffect(() => {
         if (!isMonitoring || !useLocalLargeMode) {
@@ -551,6 +675,21 @@ const DashboardPage: React.FC = () => {
                 title={t('dashboard.title')}
                 description={t('dashboard.selectFileDescription')}
             />
+        );
+    }
+
+    if (requiresServerUploadForDashboard) {
+        return (
+            <Box>
+                <Stack spacing={2}>
+                    <Typography variant="h5">
+                        {t('dashboard.title')}
+                    </Typography>
+                    <Alert severity="info">
+                        Для больших файлов дашборд строится только после загрузки файла на сервер. Перейдите на страницу просмотра логов и нажмите "Загрузить на сервер".
+                    </Alert>
+                </Stack>
+            </Box>
         );
     }
 

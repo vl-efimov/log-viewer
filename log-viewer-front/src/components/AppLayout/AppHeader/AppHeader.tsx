@@ -22,7 +22,11 @@ import { clearLogFile, setFileHandle, setFileObject } from '../../../redux/slice
 import { clearAnomalyResults, requestAnomalyCancel } from '../../../redux/slices/anomalySlice';
 import { deleteAllLogData } from '../../../utils/logIndexedDb';
 import { cancelIndexing } from '../../../utils/logIndexer';
-import { cancelBglAnomalyPrediction, deleteRemoteIngest } from '../../../services/bglAnomalyApi';
+import {
+    cancelActiveRemoteUploadSession,
+    cancelBglAnomalyPrediction,
+    deleteRemoteIngest,
+} from '../../../services/bglAnomalyApi';
 
 import {
     appBarSx,
@@ -59,6 +63,8 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const { isRunning: anomalyIsRunning, runningModelId: anomalyRunningModelId, lastModelId: anomalyLastModelId } = useSelector((state: RootState) => state.anomaly);
 
     const handleClearFile = async () => {
+        const pendingUploadIngestId = cancelActiveRemoteUploadSession();
+
         if (anomalyIsRunning) {
             dispatch(requestAnomalyCancel());
             const modelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
@@ -73,9 +79,14 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
             ? analyticsSessionId.slice('remote:'.length)
             : null;
 
-        if (remoteIngestId) {
+        const ingestIdsToDelete = Array.from(new Set([
+            remoteIngestId,
+            pendingUploadIngestId,
+        ].filter((value): value is string => Boolean(value))));
+
+        for (const ingestId of ingestIdsToDelete) {
             try {
-                await deleteRemoteIngest(remoteIngestId);
+                await deleteRemoteIngest(ingestId);
             } catch (error) {
                 console.error('Failed to delete remote ingest data:', error);
             }

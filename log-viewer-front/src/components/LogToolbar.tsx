@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import Badge from '@mui/material/Badge';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Popover from '@mui/material/Popover';
 import Tooltip from '@mui/material/Tooltip';
@@ -13,6 +14,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import { ViewModeEnum } from '../constants/ViewModeEnum';
 import AnomalySettingsDialog from './AnomalySettingsDialog';
@@ -30,6 +32,7 @@ interface LogToolbarProps {
     autoRefresh: boolean;
     onToggleAutoRefresh: () => void;
     onUploadToServer?: () => void;
+    onCancelUploadToServer?: () => void;
     viewMode: ViewModeEnum;
     onViewModeChange: (mode: ViewModeEnum) => void;
     newLinesCount: number;
@@ -53,6 +56,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     autoRefresh,
     onToggleAutoRefresh,
     onUploadToServer,
+    onCancelUploadToServer,
     viewMode,
     onViewModeChange,
     newLinesCount,
@@ -197,17 +201,35 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 }
                                 arrow
                             >
-                                <span>
-                                    <Button
-                                        size="small"
-                                        variant="contained"
-                                        onClick={onUploadToServer}
-                                        disabled={uploadInProgress || !onUploadToServer}
-                                        sx={compactButtonSx}
-                                    >
-                                        {uploadInProgress ? `Загрузка ${uploadProgress}%` : 'Загрузить на сервер'}
-                                    </Button>
-                                </span>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <span>
+                                        <Button
+                                            size="small"
+                                            variant="contained"
+                                            onClick={onUploadToServer}
+                                            disabled={uploadInProgress || filtersDisabled || !onUploadToServer}
+                                            sx={compactButtonSx}
+                                        >
+                                            {uploadInProgress ? `Идет загрузка ${uploadProgress}%` : 'Загрузить на сервер'}
+                                        </Button>
+                                    </span>
+
+                                    {uploadInProgress && onCancelUploadToServer && (
+                                        <Tooltip
+                                            title="Отменить загрузку"
+                                            arrow
+                                        >
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={onCancelUploadToServer}
+                                                sx={{ p: 0.5 }}
+                                            >
+                                                <CloseIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
+                                </Box>
                             </Tooltip>
                         </Box>
 
@@ -393,6 +415,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     filters={filters}
                     onFiltersChange={onFiltersChange}
                     fieldDefinitions={fieldDefinitions}
+                    onCloseRequested={() => setFiltersAnchorEl(null)}
                 />
             </Popover>
 

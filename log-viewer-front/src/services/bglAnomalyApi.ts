@@ -129,6 +129,41 @@ interface ModelsStatusResponse {
 const backendBaseUrl = (import.meta.env.VITE_BGL_API_URL as string | undefined)?.replace(/\/$/, '')
     || 'http://127.0.0.1:8001';
 
+type ActiveRemoteUploadState = {
+    controller: AbortController;
+    ingestId: string | null;
+};
+
+let activeRemoteUploadState: ActiveRemoteUploadState | null = null;
+
+export function beginRemoteUploadSession(): AbortController {
+    const controller = new AbortController();
+    activeRemoteUploadState = {
+        controller,
+        ingestId: null,
+    };
+    return controller;
+}
+
+export function setActiveRemoteUploadIngestId(ingestId: string): void {
+    if (!activeRemoteUploadState) return;
+    activeRemoteUploadState.ingestId = ingestId;
+}
+
+export function cancelActiveRemoteUploadSession(): string | null {
+    if (!activeRemoteUploadState) return null;
+    activeRemoteUploadState.controller.abort();
+    return activeRemoteUploadState.ingestId;
+}
+
+export function endRemoteUploadSession(controller?: AbortController): void {
+    if (!activeRemoteUploadState) return;
+    if (controller && activeRemoteUploadState.controller !== controller) {
+        return;
+    }
+    activeRemoteUploadState = null;
+}
+
 function statusFromModel(model: ModelStatus): PretrainedModelInfo['status'] {
     if (model.model_ready) {
         return 'ready';
@@ -392,13 +427,18 @@ export async function queryRemoteFilteredLines(
     ingestId: string,
     filters: Record<string, unknown>,
     limit: number,
-): Promise<{ totalMatches: number; lines: Array<{ lineNumber: number; raw: string }> }> {
+    options?: { afterLine?: number },
+): Promise<{ totalMatches: number; lines: Array<{ lineNumber: number; raw: string }>; nextAfterLine?: number | null; hasMore?: boolean }> {
     const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/filter`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ filters, limit }),
+        body: JSON.stringify({
+            filters,
+            limit,
+            after_line: options?.afterLine,
+        }),
     });
     if (!response.ok) {
         const text = await response.text();

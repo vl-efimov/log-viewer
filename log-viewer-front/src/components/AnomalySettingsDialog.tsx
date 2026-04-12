@@ -1,4 +1,3 @@
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -22,7 +21,6 @@ import type { RootState } from '../redux/store';
 import {
     clearAnomalyResults,
     setAnomalyError,
-    setAnomalyLastDurationSec,
     setAnomalyResults,
     setAnomalyRunning,
     setAnomalyStopped,
@@ -46,6 +44,117 @@ type AnomalySourceRow = {
     raw: string;
 };
 
+type AnomalyEtaHistorySample = {
+    modelId: 'bgl' | 'hdfs';
+    rows: number;
+    bytes: number | null;
+    durationSec: number;
+    createdAt: number;
+};
+
+const ANOMALY_ETA_HISTORY_STORAGE_KEY = 'logViewer.anomalyEtaHistory.v1';
+const ANOMALY_ETA_HISTORY_MAX_SAMPLES = 120;
+
+function loadAnomalyEtaHistory(): AnomalyEtaHistorySample[] {
+    if (typeof window === 'undefined') {
+        return [];
+    }
+
+    try {
+        const raw = window.localStorage.getItem(ANOMALY_ETA_HISTORY_STORAGE_KEY);
+        if (!raw) {
+            return [];
+        }
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed.filter((sample): sample is AnomalyEtaHistorySample => (
+            sample
+            && (sample.modelId === 'bgl' || sample.modelId === 'hdfs')
+            && typeof sample.rows === 'number'
+            && Number.isFinite(sample.rows)
+            && sample.rows > 0
+            && typeof sample.durationSec === 'number'
+            && Number.isFinite(sample.durationSec)
+            && sample.durationSec > 0
+            && (sample.bytes === null || (typeof sample.bytes === 'number' && Number.isFinite(sample.bytes) && sample.bytes >= 0))
+            && typeof sample.createdAt === 'number'
+            && Number.isFinite(sample.createdAt)
+        ));
+    } catch {
+        return [];
+    }
+}
+
+function saveAnomalyEtaHistory(samples: AnomalyEtaHistorySample[]): void {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    try {
+        window.localStorage.setItem(ANOMALY_ETA_HISTORY_STORAGE_KEY, JSON.stringify(samples));
+    } catch {
+        // Best-effort cache; ignore quota or serialization errors.
+    }
+}
+
+function addAnomalyEtaHistorySample(sample: AnomalyEtaHistorySample): void {
+    const current = loadAnomalyEtaHistory();
+    const next = [...current, sample]
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .slice(-ANOMALY_ETA_HISTORY_MAX_SAMPLES);
+    saveAnomalyEtaHistory(next);
+}
+
+function estimateExpectedDurationFromHistory(params: {
+    modelId: 'bgl' | 'hdfs';
+    rowsToAnalyze: number;
+    bytesToAnalyze: number | null;
+}): number | null {
+    const { modelId, rowsToAnalyze, bytesToAnalyze } = params;
+    if (rowsToAnalyze <= 0) {
+        return null;
+    }
+
+    const history = loadAnomalyEtaHistory()
+        .filter((sample) => sample.modelId === modelId);
+    if (history.length < 3) {
+        return null;
+    }
+
+    const currentBytesPerRow = bytesToAnalyze && bytesToAnalyze > 0
+        ? bytesToAnalyze / Math.max(1, rowsToAnalyze)
+        : null;
+
+    const projectedDurations = history
+        .map((sample) => {
+            const rowScale = rowsToAnalyze / Math.max(1, sample.rows);
+            const sampleBytesPerRow = sample.bytes && sample.bytes > 0
+                ? sample.bytes / Math.max(1, sample.rows)
+                : null;
+            const complexityScale = currentBytesPerRow && sampleBytesPerRow
+                ? Math.max(0.65, Math.min(2.4, currentBytesPerRow / sampleBytesPerRow))
+                : 1;
+            const recencyDays = Math.max(0, (Date.now() - sample.createdAt) / (24 * 60 * 60 * 1000));
+            const recencyScale = recencyDays > 21 ? 1.08 : recencyDays > 7 ? 1.04 : 1;
+
+            return sample.durationSec * rowScale * complexityScale * recencyScale;
+        })
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .sort((a, b) => a - b);
+
+    if (projectedDurations.length < 3) {
+        return null;
+    }
+
+    // Use upper quantile to stay slightly conservative for user-facing ETA.
+    const q75Index = Math.floor((projectedDurations.length - 1) * 0.75);
+    const q75 = projectedDurations[q75Index];
+    return Math.max(1, Math.round(q75 * 1.08));
+}
+
 interface AnomalySettingsDialogProps {
     open: boolean;
     onClose: () => void;
@@ -66,7 +175,13 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     remoteIngestId,
 }) => {
     const dispatch = useDispatch();
-    const { isMonitoring } = useSelector((state: RootState) => state.logFile);
+    const {
+        isMonitoring,
+        isIndexing,
+        isLargeFile,
+        hasFileHandle,
+        size: logFileSize,
+    } = useSelector((state: RootState) => state.logFile);
     const {
         isRunning: anomalyIsRunning,
         cancelRequestSeq,
@@ -77,6 +192,104 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
     const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
+
+    const estimateExpectedDurationSec = useCallback((params: {
+        rowsToAnalyze: number;
+        modelId: 'bgl' | 'hdfs';
+        rowsPerSecondHint: number | null;
+        bytesToAnalyze: number | null;
+    }): number | null => {
+        const { rowsToAnalyze, modelId, rowsPerSecondHint, bytesToAnalyze } = params;
+        if (rowsToAnalyze <= 0) {
+            return null;
+        }
+
+        const largeFileThresholdBytes = 80 * 1024 * 1024;
+        const hugeFileThresholdBytes = 300 * 1024 * 1024;
+        const largeRowsThreshold = 400_000;
+        const hugeRowsThreshold = 1_200_000;
+        const isLargeDataset = (bytesToAnalyze ?? 0) >= largeFileThresholdBytes || rowsToAnalyze >= largeRowsThreshold;
+        const isHugeDataset = (bytesToAnalyze ?? 0) >= hugeFileThresholdBytes || rowsToAnalyze >= hugeRowsThreshold;
+
+        const safeRowsPerSecondHint = rowsPerSecondHint && rowsPerSecondHint > 0 ? rowsPerSecondHint : null;
+        const fallbackBaseRowsPerSecond = modelId === 'hdfs'
+            ? (isHugeDataset ? 780 : isLargeDataset ? 620 : 520)
+            : (isHugeDataset ? 950 : isLargeDataset ? 1200 : 1600);
+        const fallbackBytesPerSecond = modelId === 'hdfs'
+            ? (isHugeDataset ? 520_000 : isLargeDataset ? 430_000 : 360_000)
+            : (isHugeDataset ? 500_000 : isLargeDataset ? 700_000 : 900_000);
+
+        let averageBytesPerRow: number | null = null;
+        if (bytesToAnalyze && bytesToAnalyze > 0) {
+            averageBytesPerRow = bytesToAnalyze / Math.max(1, rowsToAnalyze);
+        } else if (normalRows.length > 0) {
+            const sampleSize = Math.min(normalRows.length, 300);
+            const sampleBytes = normalRows
+                .slice(0, sampleSize)
+                .reduce((sum, row) => sum + row.raw.length, 0);
+            averageBytesPerRow = sampleBytes / Math.max(1, sampleSize);
+        }
+
+        const complexityFactor = averageBytesPerRow
+            ? Math.max(0.9, Math.min(7, averageBytesPerRow / 140))
+            : 1.15;
+
+        const rowsPerKiB = bytesToAnalyze && bytesToAnalyze > 0
+            ? rowsToAnalyze / Math.max(1, bytesToAnalyze / 1024)
+            : null;
+        const densityPenalty = rowsPerKiB
+            ? Math.max(1, Math.min(2.2, 1 + ((rowsPerKiB - 180) / 220)))
+            : 1;
+
+        const conservativeRowsPerSecondHint = safeRowsPerSecondHint
+            ? safeRowsPerSecondHint * (modelId === 'hdfs'
+                ? (isHugeDataset ? 0.5 : isLargeDataset ? 0.45 : 0.4)
+                : (isHugeDataset ? 0.68 : isLargeDataset ? 0.74 : 0.82))
+            : null;
+
+        const rawRowsPerSecond = conservativeRowsPerSecondHint ?? fallbackBaseRowsPerSecond;
+        const adjustedRowsPerSecond = rawRowsPerSecond / Math.max(0.75, complexityFactor * densityPenalty);
+        const maxRowsPerSecondForecast = modelId === 'hdfs'
+            ? (isHugeDataset ? 650 : isLargeDataset ? 520 : 430)
+            : (isHugeDataset ? 750 : isLargeDataset ? 1000 : 1400);
+        const estimatedRowsPerSecond = Math.min(adjustedRowsPerSecond, maxRowsPerSecondForecast);
+
+        const estimatedByRows = rowsToAnalyze / Math.max(1, estimatedRowsPerSecond);
+        const estimatedByBytes = bytesToAnalyze && bytesToAnalyze > 0
+            ? bytesToAnalyze / fallbackBytesPerSecond
+            : 0;
+
+        const fixedInferenceOverheadBaseSec = modelId === 'bgl' ? 16 : 14;
+        const overheadWeightByRows = Math.max(0.35, Math.min(1, 12_000 / Math.max(1, rowsToAnalyze)));
+
+        const isSmallDataset = rowsToAnalyze <= 20_000 && ((bytesToAnalyze ?? 0) <= 2 * 1024 * 1024 || bytesToAnalyze == null);
+        const smallDatasetWeight = isSmallDataset
+            ? Math.max(0, Math.min(1, (20_000 - rowsToAnalyze) / 18_000))
+            : 0;
+        const smallDatasetColdStartSec = modelId === 'bgl' ? 18 : 22;
+        const adaptiveFixedOverheadSec = (fixedInferenceOverheadBaseSec * overheadWeightByRows)
+            + (smallDatasetColdStartSec * smallDatasetWeight);
+
+        const startupOverheadSec = conservativeRowsPerSecondHint
+            ? (isHugeDataset ? 8 : isLargeDataset ? 5 : 4)
+            : (isHugeDataset ? 12 : isLargeDataset ? 8 : 6);
+        const sizeOverheadSec = bytesToAnalyze && bytesToAnalyze > 0
+            ? Math.min(
+                isHugeDataset ? 36 : isLargeDataset ? 24 : 12,
+                Math.ceil(bytesToAnalyze / ((isHugeDataset ? 8 : isLargeDataset ? 12 : 18) * 1024 * 1024)),
+            )
+            : 0;
+        const safetyMultiplier = conservativeRowsPerSecondHint
+            ? (isHugeDataset ? 1.25 : isLargeDataset ? 1.18 : 1.12)
+            : (isHugeDataset ? 1.45 : isLargeDataset ? 1.35 : 1.28);
+        const baselineSec = Math.max(estimatedByRows, estimatedByBytes)
+            + startupOverheadSec
+            + adaptiveFixedOverheadSec
+            + sizeOverheadSec;
+        const lowerBoundSec = isHugeDataset ? 18 : isLargeDataset ? 8 : rowsToAnalyze >= 10_000 ? 3 : 1;
+
+        return Math.max(lowerBoundSec, Math.round(baselineSec * safetyMultiplier));
+    }, [normalRows]);
 
     useEffect(() => {
         if (isMonitoring) {
@@ -192,6 +405,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         }
 
         const runStartedAt = Date.now();
+        let runBytesToAnalyze: number | null = null;
         dispatch(setAnomalyError(''));
         const abortController = new AbortController();
         setActiveAbortController(abortController);
@@ -208,9 +422,25 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 : normalRows.length;
 
             const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
-            const expectedDurationSec = rowsPerSecond && rowsPerSecond > 0
-                ? Math.max(1, Math.round(rowsToAnalyze / rowsPerSecond))
-                : null;
+            const bytesToAnalyze = (remoteIngestId
+                ? logFileSize
+                : activeFile?.size ?? logFileSize) || null;
+            runBytesToAnalyze = bytesToAnalyze;
+
+            const heuristicExpectedDurationSec = estimateExpectedDurationSec({
+                rowsToAnalyze,
+                modelId: selectedModelId,
+                rowsPerSecondHint: rowsPerSecond,
+                bytesToAnalyze,
+            });
+            const historyExpectedDurationSec = estimateExpectedDurationFromHistory({
+                modelId: selectedModelId,
+                rowsToAnalyze,
+                bytesToAnalyze,
+            });
+            const expectedDurationSec = historyExpectedDurationSec != null && heuristicExpectedDurationSec != null
+                ? Math.max(historyExpectedDurationSec, heuristicExpectedDurationSec)
+                : (historyExpectedDurationSec ?? heuristicExpectedDurationSec);
 
             dispatch(setAnomalyRunning({
                 running: true,
@@ -218,6 +448,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 startedAt: runStartedAt,
                 expectedDurationSec,
             }));
+            onClose();
 
             const requestPayload = {
                 model_id: selectedModelId,
@@ -276,7 +507,6 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         } finally {
             setActiveAbortController((current) => (current === abortController ? null : current));
             const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
-            dispatch(setAnomalyLastDurationSec(elapsedSec));
 
             const analyzedRows = isStreamView ? Math.max(0, lineCount) : normalRows.length;
             if (analyzedRows > 0) {
@@ -285,6 +515,14 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     modelId: selectedModelId,
                     rowsPerSecond: measuredRowsPerSecond,
                 }));
+
+                addAnomalyEtaHistorySample({
+                    modelId: selectedModelId,
+                    rows: analyzedRows,
+                    bytes: runBytesToAnalyze,
+                    durationSec: elapsedSec,
+                    createdAt: Date.now(),
+                });
             }
 
             dispatch(setAnomalyRunning({ running: false }));
@@ -296,9 +534,12 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         isModelReady,
         isStreamView,
         lineCount,
+        logFileSize,
         normalRows.length,
+        estimateExpectedDurationSec,
         requestFileForAnomalyAnalysis,
         remoteIngestId,
+        onClose,
         selectedModelId,
     ]);
 
@@ -333,14 +574,24 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     };
 
     const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
-    const canRunAnomalyAnalysis = hasAnalyzableRows && !isModelReadyLoading && isModelReady;
-    const anomalyDisabledReason = !hasAnalyzableRows
-        ? 'No log rows to analyze. Load or attach a log file first.'
-        : isModelReadyLoading
-            ? 'Checking model readiness...'
-            : isModelReady
-                ? undefined
-                : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
+    const isSmallFileIndexing = isIndexing && !isLargeFile;
+    const requiresMonitoringReattach = !isStreamView && !remoteIngestId && !hasFileHandle;
+    const canRunAnomalyAnalysis = hasAnalyzableRows
+        && !isModelReadyLoading
+        && isModelReady
+        && !isSmallFileIndexing
+        && !requiresMonitoringReattach;
+    const anomalyDisabledReason = isSmallFileIndexing
+        ? 'Дождитесь загрузки данных в базу.'
+        : requiresMonitoringReattach
+            ? 'Выберите файл для мониторинга.'
+        : !hasAnalyzableRows
+            ? 'No log rows to analyze. Load or attach a log file first.'
+            : isModelReadyLoading
+                ? 'Checking model readiness...'
+                : isModelReady
+                    ? undefined
+                    : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
     const isAnalyzeDisabled = anomalyIsRunning || !canRunAnomalyAnalysis;
     const analyzeTooltip = isAnalyzeDisabled && anomalyDisabledReason
         ? anomalyDisabledReason
@@ -409,16 +660,6 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             </span>
                         </Tooltip>
                     </Stack>
-
-                    {!anomalyIsRunning && !canRunAnomalyAnalysis && anomalyDisabledReason && (
-                        <Alert
-                            severity="info"
-                            variant="outlined"
-                            sx={{ py: 0.25 }}
-                        >
-                            {anomalyDisabledReason}
-                        </Alert>
-                    )}
 
                     <Stack spacing={0.5}>
                         <Stack

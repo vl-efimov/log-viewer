@@ -28,12 +28,14 @@ interface LogFiltersBarProps {
     filters: LogFilters;
     onFiltersChange: (filters: LogFilters) => void;
     fieldDefinitions: LogFormatField[]; // Ordered field definitions from the detected format
+    onCloseRequested?: () => void;
 }
 
 export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     filters,
     onFiltersChange,
     fieldDefinitions,
+    onCloseRequested,
 }) => {
     const [pendingFilters, setPendingFilters] = useState<LogFilters>(filters);
 
@@ -97,10 +99,13 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
     const handleClearFilters = () => {
         setPendingFilters({});
+        onFiltersChange({});
+        onCloseRequested?.();
     };
 
     const handleApplyFilters = () => {
         onFiltersChange(pendingFilters);
+        onCloseRequested?.();
     };
 
     const hasActiveFilters = () => {

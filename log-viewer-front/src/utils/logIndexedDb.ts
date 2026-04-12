@@ -84,6 +84,7 @@ export type FilteredLinesResult = {
 
 type QueryFilteredLinesOptions = {
     limit?: number;
+    afterLine?: number;
     signal?: AbortSignal;
     onProgress?: (partial: FilteredLinesResult) => void;
 };
@@ -554,17 +555,20 @@ export const queryFilteredLines = async (
     sessionId: string,
     filters: LogFilters,
     options: QueryFilteredLinesOptions = {}
-): Promise<FilteredLinesResult> => {
+): Promise<FilteredLinesResult & { nextAfterLine?: number | null; hasMore?: boolean }> => {
     if (isRemoteSessionId(sessionId)) {
         const limit = options.limit ?? MAX_FILTER_LINES_DEFAULT;
         const remoteResult = await queryRemoteFilteredLines(
             toRemoteIngestId(sessionId),
             serializeFiltersForApi(filters),
             limit,
+            { afterLine: options.afterLine },
         );
         return {
             totalMatches: remoteResult.totalMatches,
             lines: remoteResult.lines,
+            nextAfterLine: remoteResult.nextAfterLine,
+            hasMore: remoteResult.hasMore,
         };
     }
 

@@ -487,7 +487,7 @@ def _parse_filter_payload(filters: dict[str, Any]) -> tuple[str | None, str | No
     return message_q, level, method, start_ms, end_ms
 
 
-def query_filtered_lines(ingest_id: str, filters: dict[str, Any], limit: int) -> dict[str, Any]:
+def query_filtered_lines(ingest_id: str, filters: dict[str, Any], limit: int, after_line: int | None = None) -> dict[str, Any]:
     message_q, level, method, start_ms, end_ms = _parse_filter_payload(filters)
 
     where = ["ingest_id = {ingest_id:String}"]
@@ -508,6 +508,9 @@ def query_filtered_lines(ingest_id: str, filters: dict[str, Any], limit: int) ->
     if end_ms is not None:
         where.append("ifNull(timestamp_ms, 9223372036854775807) <= {end_ms:Int64}")
         params["end_ms"] = int(end_ms)
+    if after_line is not None and int(after_line) > 0:
+        where.append("line_number > {after_line:UInt64}")
+        params["after_line"] = int(after_line)
 
     where_sql = " AND ".join(where)
     params_with_limit = {**params, "limit": int(limit)}
@@ -530,14 +533,18 @@ def query_filtered_lines(ingest_id: str, filters: dict[str, Any], limit: int) ->
 
     total = int(total_row[0]) if total_row else 0
 
+    lines = [{"lineNumber": int(row[0]), "raw": str(row[1])} for row in rows]
+
     return {
         "totalMatches": total,
-        "lines": [{"lineNumber": int(row[0]), "raw": str(row[1])} for row in rows],
+        "lines": lines,
+        "nextAfterLine": lines[-1]["lineNumber"] if lines else None,
+        "hasMore": len(lines) >= int(limit),
     }
 
 
 def build_dashboard_snapshot(ingest_id: str, sample_limit: int = 2000) -> dict[str, Any]:
-    client = _get_client()
+    client = _default_client(CLICKHOUSE_DB)
 
     total_row = client.query(
         "SELECT COUNT(*) FROM log_events WHERE ingest_id = {ingest_id:String}",
@@ -561,49 +568,63 @@ def build_dashboard_snapshot(ingest_id: str, sample_limit: int = 2000) -> dict[s
         SELECT COUNT(*)
         FROM log_events
         WHERE ingest_id = {ingest_id:String}
-          AND (level IS NOT NULL OR method IS NOT NULL OR status IS NOT NULL)
+          AND lengthUTF8(fields_json) > 2
         """,
         parameters={"ingest_id": ingest_id},
     ).first_row
     parsed_lines = int(parsed_row[0]) if parsed_row else 0
 
-    level_counts_rows = client.query(
-        """
-        SELECT ifNull(level, 'UNKNOWN') AS key, COUNT(*)
-        FROM log_events
-        WHERE ingest_id = {ingest_id:String}
-        GROUP BY key
-        """,
-        parameters={"ingest_id": ingest_id},
-    ).result_rows
-    level_counts = {str(row[0]): int(row[1]) for row in level_counts_rows}
+    priority_fields = [
+        "level",
+        "status",
+        "method",
+        "queue",
+        "type",
+        "component",
+        "host",
+        "user",
+        "class",
+        "ip",
+        "date",
+        "time",
+    ]
+    field_value_counts: dict[str, dict[str, int]] = {}
 
-    status_counts_rows = client.query(
-        """
-        SELECT ifNull(status, 'UNKNOWN') AS key, COUNT(*)
-        FROM log_events
-        WHERE ingest_id = {ingest_id:String}
-        GROUP BY key
-        """,
-        parameters={"ingest_id": ingest_id},
-    ).result_rows
-    status_counts = {str(row[0]): int(row[1]) for row in status_counts_rows}
+    for field in priority_fields:
+        rows = client.query(
+            """
+            SELECT value, COUNT(*) AS cnt
+            FROM (
+                SELECT trim(BOTH ' ' FROM ifNull(JSONExtractString(fields_json, {field:String}), '')) AS value
+                FROM log_events
+                WHERE ingest_id = {ingest_id:String}
+            )
+            WHERE value != ''
+              AND lowerUTF8(value) NOT IN ('null', 'undefined')
+              AND value != '-'
+            GROUP BY value
+            ORDER BY cnt DESC
+            LIMIT 500
+            """,
+            parameters={
+                "ingest_id": ingest_id,
+                "field": field,
+            },
+        ).result_rows
 
-    method_counts_rows = client.query(
-        """
-        SELECT ifNull(method, 'UNKNOWN') AS key, COUNT(*)
-        FROM log_events
-        WHERE ingest_id = {ingest_id:String}
-        GROUP BY key
-        """,
-        parameters={"ingest_id": ingest_id},
-    ).result_rows
-    method_counts = {str(row[0]): int(row[1]) for row in method_counts_rows}
+        if not rows:
+            continue
+
+        field_value_counts[field] = {
+            str(row[0]): int(row[1])
+            for row in rows
+            if row[0] is not None and str(row[0]).strip() != ""
+        }
 
     stride = max(1, total_lines // max(1, sample_limit))
     sampled = client.query(
         """
-        SELECT line_number, raw, timestamp_iso
+                SELECT line_number, raw, timestamp_iso, fields_json, level, status, method
         FROM log_events
         WHERE ingest_id = {ingest_id:String}
           AND modulo(line_number - 1, {stride:UInt64}) = 0
@@ -617,17 +638,48 @@ def build_dashboard_snapshot(ingest_id: str, sample_limit: int = 2000) -> dict[s
         },
     ).result_rows
 
-    sampled_lines = [
-        {
-            "lineNumber": int(row[0]),
-            "raw": str(row[1]),
-            "parsed": {
-                "timestamp": row[2],
-                "fields": {},
-            },
-        }
-        for row in sampled
-    ]
+    sampled_lines: list[dict[str, Any]] = []
+    for row in sampled:
+        raw = str(row[1])
+        fields: dict[str, str] = {}
+
+        raw_fields = row[3]
+        if isinstance(raw_fields, str) and raw_fields:
+            try:
+                parsed_fields = json.loads(raw_fields)
+                if isinstance(parsed_fields, dict):
+                    for key, value in parsed_fields.items():
+                        if value is None:
+                            continue
+                        text = str(value).strip()
+                        if text:
+                            fields[str(key)] = text
+            except Exception:
+                pass
+
+        for value, name in ((row[4], "level"), (row[5], "status"), (row[6], "method")):
+            if value is None:
+                continue
+            text = str(value).strip()
+            if text and name not in fields:
+                fields[name] = text
+
+        if row[2] is not None:
+            timestamp_text = str(row[2]).strip()
+            if timestamp_text and "timestamp" not in fields and "datetime" not in fields:
+                fields["timestamp"] = timestamp_text
+
+        sampled_lines.append(
+            {
+                "lineNumber": int(row[0]),
+                "raw": raw,
+                "parsed": {
+                    "formatId": "remote-dashboard",
+                    "fields": fields,
+                    "raw": raw,
+                },
+            }
+        )
 
     return {
         "sessionId": f"remote:{ingest_id}",
@@ -638,11 +690,7 @@ def build_dashboard_snapshot(ingest_id: str, sample_limit: int = 2000) -> dict[s
             "totalLines": total_lines,
             "nonEmptyLines": non_empty_lines,
             "parsedLines": parsed_lines,
-            "fieldValueCounts": {
-                "level": level_counts,
-                "status": status_counts,
-                "method": method_counts,
-            },
+            "fieldValueCounts": field_value_counts,
         },
     }
 
