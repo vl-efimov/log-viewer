@@ -64,6 +64,87 @@ export interface ParsedLogLine {
     raw: string;
 }
 
+const CANONICAL_FIELD_ALIASES: Record<string, string> = {
+    hostname: 'host',
+    node: 'host',
+    node2: 'host',
+    logger: 'class',
+    source: 'class',
+    client: 'ip',
+};
+
+function applyCanonicalFieldAliases(fields: Record<string, string>): Record<string, string> {
+    const next = { ...fields };
+    const keysByLower = new Map<string, string>();
+
+    Object.keys(next).forEach((key) => {
+        keysByLower.set(key.toLowerCase(), key);
+    });
+
+    Object.entries(CANONICAL_FIELD_ALIASES).forEach(([alias, canonical]) => {
+        const canonicalExistingKey = keysByLower.get(canonical);
+        if (canonicalExistingKey) {
+            const existingValue = next[canonicalExistingKey];
+            if (typeof existingValue === 'string' && existingValue.trim()) {
+                return;
+            }
+        }
+
+        const aliasKey = keysByLower.get(alias);
+        if (!aliasKey) {
+            return;
+        }
+
+        const aliasValue = next[aliasKey];
+        if (typeof aliasValue !== 'string' || !aliasValue.trim()) {
+            return;
+        }
+
+        next[canonical] = aliasValue.trim();
+    });
+
+    return next;
+}
+
+function normalizeParsedFields(formatId: string, rawFields: Record<string, string>): Record<string, string> {
+    const fields = { ...rawFields };
+
+    // Special handling for syslog: combine month, day, time into timestamp.
+    if (formatId === 'syslog' && fields.month && fields.day && fields.time) {
+        const currentYear = new Date().getFullYear();
+        const monthMap: Record<string, string> = {
+            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+            'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+            'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+        };
+        const month = monthMap[fields.month] || '01';
+        const day = fields.day.padStart(2, '0');
+        fields.timestamp = `${currentYear}-${month}-${day} ${fields.time}`;
+    }
+
+    // Special handling for HDFS v1: combine date (YYMMDD), time (HHMMSS), optional milliseconds.
+    if (formatId === 'hdfs-v1' && fields.date && fields.time) {
+        const yy = fields.date.substring(0, 2);
+        const mm = fields.date.substring(2, 4);
+        const dd = fields.date.substring(4, 6);
+        const year = parseInt(yy, 10) < 50 ? `20${yy}` : `19${yy}`;
+
+        const hh = fields.time.substring(0, 2);
+        const min = fields.time.substring(2, 4);
+        const ss = fields.time.substring(4, 6);
+
+        const msRaw = (fields.milliseconds || fields.ms || '').trim();
+        if (msRaw) {
+            const ms = msRaw.padStart(3, '0').slice(0, 3);
+            fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}.${ms}`;
+        } else {
+            fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}`;
+        }
+    }
+
+    return applyCanonicalFieldAliases(fields);
+}
+
 /**
  * Predefined log format patterns
  * Ordered by priority (higher priority formats are checked first)
@@ -308,38 +389,7 @@ export function parseLogLine(line: string, formatId: string): ParsedLogLine | nu
     for (const pattern of format.patterns) {
         const match = line.match(pattern);
         if (match && match.groups) {
-            const fields = { ...match.groups };
-            
-            // Special handling for syslog: combine month, day, time into timestamp
-            if (formatId === 'syslog' && fields.month && fields.day && fields.time) {
-                const currentYear = new Date().getFullYear();
-                const monthMap: Record<string, string> = {
-                    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-                    'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
-                    'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-                };
-                const month = monthMap[fields.month] || '01';
-                const day = fields.day.padStart(2, '0');
-                fields.timestamp = `${currentYear}-${month}-${day} ${fields.time}`;
-            }
-            
-            // Special handling for HDFS v1: combine date (YYMMDD), time (HHMMSS), milliseconds
-            if (formatId === 'hdfs-v1' && fields.date && fields.time && fields.milliseconds) {
-                // Parse YYMMDD
-                const yy = fields.date.substring(0, 2);
-                const mm = fields.date.substring(2, 4);
-                const dd = fields.date.substring(4, 6);
-                const year = parseInt(yy) < 50 ? `20${yy}` : `19${yy}`; // 00-49 = 2000-2049, 50-99 = 1950-1999
-                
-                // Parse HHMMSS
-                const hh = fields.time.substring(0, 2);
-                const min = fields.time.substring(2, 4);
-                const ss = fields.time.substring(4, 6);
-                
-                // Create ISO timestamp with milliseconds
-                const ms = fields.milliseconds.padStart(3, '0');
-                fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}.${ms}`;
-            }
+            const fields = normalizeParsedFields(formatId, { ...match.groups });
             
             return {
                 formatId,
@@ -364,38 +414,7 @@ export function parseLogLineAuto(line: string): ParsedLogLine | null {
         for (const pattern of format.patterns) {
             const match = line.match(pattern);
             if (match && match.groups) {
-                const fields = { ...match.groups };
-                
-                // Special handling for syslog: combine month, day, time into timestamp
-                if (format.id === 'syslog' && fields.month && fields.day && fields.time) {
-                    const currentYear = new Date().getFullYear();
-                    const monthMap: Record<string, string> = {
-                        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-                        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
-                        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-                    };
-                    const month = monthMap[fields.month] || '01';
-                    const day = fields.day.padStart(2, '0');
-                    fields.timestamp = `${currentYear}-${month}-${day} ${fields.time}`;
-                }
-                
-                // Special handling for HDFS v1: combine date (YYMMDD), time (HHMMSS), milliseconds
-                if (format.id === 'hdfs-v1' && fields.date && fields.time && fields.milliseconds) {
-                    // Parse YYMMDD
-                    const yy = fields.date.substring(0, 2);
-                    const mm = fields.date.substring(2, 4);
-                    const dd = fields.date.substring(4, 6);
-                    const year = parseInt(yy) < 50 ? `20${yy}` : `19${yy}`; // 00-49 = 2000-2049, 50-99 = 1950-1999
-                    
-                    // Parse HHMMSS
-                    const hh = fields.time.substring(0, 2);
-                    const min = fields.time.substring(2, 4);
-                    const ss = fields.time.substring(4, 6);
-                    
-                    // Create ISO timestamp with milliseconds
-                    const ms = fields.milliseconds.padStart(3, '0');
-                    fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}.${ms}`;
-                }
+                const fields = normalizeParsedFields(format.id, { ...match.groups });
                 
                 return {
                     formatId: format.id,

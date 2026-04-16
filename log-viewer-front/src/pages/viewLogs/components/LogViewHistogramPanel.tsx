@@ -73,6 +73,7 @@ const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
                 anomalyRegions={anomalyRegions}
                 anomalyLineNumbers={anomalyLineNumbers}
                 onAnomalyRangeSelect={onAnomalyRangeSelect}
+                showQuickRangeButtons={false}
             />
         );
     }

@@ -13,6 +13,7 @@ interface AnomalyState {
     lineNumbers: number[];
     hasResults: boolean;
     rowsCount: number;
+    totalRows: number;
     error: string;
     isStopped: boolean;
     stoppedAt: number | null;
@@ -41,6 +42,7 @@ const initialAnomalyState: AnomalyState = {
     lineNumbers: [],
     hasResults: false,
     rowsCount: 0,
+    totalRows: 0,
     error: '',
     isStopped: false,
     stoppedAt: null,
@@ -64,16 +66,18 @@ const anomalySlice = createSlice({
     reducers: {
         setAnomalyResults: (state, action: PayloadAction<{
             regions: AnomalyState['regions'];
-            lineNumbers: number[];
+            lineNumbers?: number[];
             rowsCount: number;
+            totalRows: number;
             analyzedAt: number;
             modelId: 'bgl' | 'hdfs';
             params: NonNullable<AnomalyState['lastRunParams']>;
         }>) => {
             state.regions = action.payload.regions;
-            state.lineNumbers = action.payload.lineNumbers;
+            state.lineNumbers = action.payload.lineNumbers ?? [];
             state.hasResults = true;
             state.rowsCount = action.payload.rowsCount;
+            state.totalRows = action.payload.totalRows;
             state.error = '';
             state.isStopped = false;
             state.stoppedAt = null;
@@ -131,6 +135,7 @@ const anomalySlice = createSlice({
             state.lineNumbers = [];
             state.hasResults = false;
             state.rowsCount = 0;
+            state.totalRows = 0;
             state.error = '';
             state.isStopped = false;
             state.stoppedAt = null;

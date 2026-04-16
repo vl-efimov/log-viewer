@@ -14,7 +14,7 @@ from typing import Any
 import clickhouse_connect
 from clickhouse_connect.driver.client import Client
 
-from .preprocessing import extract_timestamp_iso
+from .preprocessing import extract_timestamp_iso, _try_parse_datetime
 
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "127.0.0.1")
 CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", "8123"))
@@ -23,6 +23,15 @@ CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
 CLICKHOUSE_SECURE = os.getenv("CLICKHOUSE_SECURE", "false").strip().lower() in {"1", "true", "yes"}
 CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "log_viewer")
 PARSER_VERSION = "v1"
+
+CANONICAL_FIELD_ALIASES: dict[str, str] = {
+    "hostname": "host",
+    "node": "host",
+    "node2": "host",
+    "logger": "class",
+    "source": "class",
+    "client": "ip",
+}
 
 
 @dataclass
@@ -177,7 +186,28 @@ def _extract_fields(raw: str) -> tuple[str | None, str | None, str | None, dict[
     if method:
         fields.setdefault("method", method)
 
+    _apply_canonical_field_aliases(fields)
+
     return level, status, method, fields
+
+
+def _apply_canonical_field_aliases(fields: dict[str, str]) -> dict[str, str]:
+    for alias, canonical in CANONICAL_FIELD_ALIASES.items():
+        existing = fields.get(canonical)
+        if existing is not None and str(existing).strip():
+            continue
+
+        alias_value = fields.get(alias)
+        if alias_value is None:
+            continue
+
+        alias_text = str(alias_value).strip()
+        if not alias_text:
+            continue
+
+        fields[canonical] = alias_text
+
+    return fields
 
 
 def _compile_parser_regex(parser_pattern: str | None) -> re.Pattern[str] | None:
@@ -194,8 +224,16 @@ def _compile_parser_regex(parser_pattern: str | None) -> re.Pattern[str] | None:
 def _to_timestamp_ms(timestamp_iso: str | None) -> int | None:
     if not timestamp_iso:
         return None
+
+    parsed = _try_parse_datetime(timestamp_iso)
+    if parsed is not None:
+        try:
+            return int(parsed.timestamp() * 1000)
+        except Exception:
+            return None
+
     try:
-        timestamp = datetime.fromisoformat(timestamp_iso)
+        timestamp = datetime.fromisoformat(timestamp_iso.replace("Z", "+00:00"))
         return int(timestamp.timestamp() * 1000)
     except Exception:
         return None
@@ -215,6 +253,7 @@ def _line_to_event_from_regex(
             for key, value in match.groupdict().items()
             if value is not None and str(value).strip()
         }
+        _apply_canonical_field_aliases(extracted)
 
     message = extracted.get("message") or raw
     timestamp_iso = extract_timestamp_iso(extracted)
@@ -451,10 +490,10 @@ def get_lines_range(ingest_id: str, start_line: int, end_line: int) -> list[dict
     return [{"lineNumber": int(row[0]), "raw": str(row[1])} for row in rows]
 
 
-def _parse_filter_payload(filters: dict[str, Any]) -> tuple[str | None, str | None, str | None, int | None, int | None]:
+def _parse_filter_payload(filters: dict[str, Any]) -> tuple[str | None, list[str] | None, list[str] | None, int | None, int | None]:
     message_q: str | None = None
-    level: str | None = None
-    method: str | None = None
+    levels: list[str] | None = None
+    methods: list[str] | None = None
     start_ms: int | None = None
     end_ms: int | None = None
 
@@ -463,9 +502,11 @@ def _parse_filter_payload(filters: dict[str, Any]) -> tuple[str | None, str | No
             continue
         if isinstance(value, list) and value:
             if key == "level":
-                level = str(value[0]).upper()
+                normalized = [str(item).strip().upper() for item in value if str(item).strip()]
+                levels = list(dict.fromkeys(normalized)) or None
             elif key == "method":
-                method = str(value[0]).upper()
+                normalized = [str(item).strip().upper() for item in value if str(item).strip()]
+                methods = list(dict.fromkeys(normalized)) or None
         elif isinstance(value, dict):
             if "value" in value and value.get("value"):
                 if key in {"message", "raw", "content", "text"}:
@@ -484,11 +525,61 @@ def _parse_filter_payload(filters: dict[str, Any]) -> tuple[str | None, str | No
                     except Exception:
                         end_ms = None
 
-    return message_q, level, method, start_ms, end_ms
+    return message_q, levels, methods, start_ms, end_ms
 
 
-def query_filtered_lines(ingest_id: str, filters: dict[str, Any], limit: int, after_line: int | None = None) -> dict[str, Any]:
-    message_q, level, method, start_ms, end_ms = _parse_filter_payload(filters)
+def _hdfs_time_key_from_ms(value_ms: int) -> str:
+    dt = datetime.fromtimestamp(value_ms / 1000)
+    return dt.strftime("%y%m%d%H%M%S")
+
+
+def _append_time_filters(
+    where: list[str],
+    params: dict[str, Any],
+    start_ms: int | None,
+    end_ms: int | None,
+) -> None:
+    hdfs_date_expr = "ifNull(JSONExtractString(fields_json, 'date'), '')"
+    hdfs_time_expr = "ifNull(JSONExtractString(fields_json, 'time'), '')"
+    hdfs_key_expr = f"concat({hdfs_date_expr}, substring({hdfs_time_expr}, 1, 6))"
+
+    if start_ms is not None:
+        params["start_ms"] = int(start_ms)
+        params["start_hdfs_key"] = _hdfs_time_key_from_ms(int(start_ms))
+        where.append(
+            "(" 
+            "ifNull(timestamp_ms, -9223372036854775808) >= {start_ms:Int64} "
+            "OR (timestamp_ms IS NULL "
+            f"AND length({hdfs_date_expr}) = 6 "
+            f"AND length({hdfs_time_expr}) >= 6 "
+            f"AND {hdfs_key_expr} >= {{start_hdfs_key:String}})"
+            ")"
+        )
+
+    if end_ms is not None:
+        params["end_ms"] = int(end_ms)
+        params["end_hdfs_key"] = _hdfs_time_key_from_ms(int(end_ms))
+        where.append(
+            "(" 
+            "ifNull(timestamp_ms, 9223372036854775807) <= {end_ms:Int64} "
+            "OR (timestamp_ms IS NULL "
+            f"AND length({hdfs_date_expr}) = 6 "
+            f"AND length({hdfs_time_expr}) >= 6 "
+            f"AND {hdfs_key_expr} <= {{end_hdfs_key:String}})"
+            ")"
+        )
+
+
+def query_filtered_lines(
+    ingest_id: str,
+    filters: dict[str, Any],
+    limit: int,
+    after_line: int | None = None,
+    before_line: int | None = None,
+    order: str = "asc",
+) -> dict[str, Any]:
+    message_q, levels, methods, start_ms, end_ms = _parse_filter_payload(filters)
+    direction = "desc" if str(order).strip().lower() == "desc" else "asc"
 
     where = ["ingest_id = {ingest_id:String}"]
     params: dict[str, Any] = {"ingest_id": ingest_id}
@@ -496,50 +587,186 @@ def query_filtered_lines(ingest_id: str, filters: dict[str, Any], limit: int, af
     if message_q:
         where.append("positionCaseInsensitiveUTF8(raw, {message_q:String}) > 0")
         params["message_q"] = message_q
-    if level:
-        where.append("upper(ifNull(level, '')) = {level:String}")
-        params["level"] = level
-    if method:
-        where.append("upper(ifNull(method, '')) = {method:String}")
-        params["method"] = method
-    if start_ms is not None:
-        where.append("ifNull(timestamp_ms, -9223372036854775808) >= {start_ms:Int64}")
-        params["start_ms"] = int(start_ms)
-    if end_ms is not None:
-        where.append("ifNull(timestamp_ms, 9223372036854775807) <= {end_ms:Int64}")
-        params["end_ms"] = int(end_ms)
-    if after_line is not None and int(after_line) > 0:
+    if levels:
+        where.append("upper(ifNull(level, '')) IN {levels:Array(String)}")
+        params["levels"] = levels
+    if methods:
+        where.append("upper(ifNull(method, '')) IN {methods:Array(String)}")
+        params["methods"] = methods
+    _append_time_filters(where, params, start_ms, end_ms)
+    if direction == "asc" and after_line is not None and int(after_line) > 0:
         where.append("line_number > {after_line:UInt64}")
         params["after_line"] = int(after_line)
+    if direction == "desc" and before_line is not None and int(before_line) > 0:
+        where.append("line_number < {before_line:UInt64}")
+        params["before_line"] = int(before_line)
 
     where_sql = " AND ".join(where)
-    params_with_limit = {**params, "limit": int(limit)}
-
-    total_row = _get_client().query(
-        f"SELECT COUNT(*) FROM log_events WHERE {where_sql}",
-        parameters=params,
-    ).first_row
+    safe_limit = max(1, int(limit))
+    query_limit = safe_limit + 1
+    params_with_limit = {**params, "limit": query_limit}
 
     rows = _get_client().query(
         f"""
         SELECT line_number, raw
         FROM log_events
         WHERE {where_sql}
-        ORDER BY line_number ASC
+        ORDER BY line_number {"DESC" if direction == "desc" else "ASC"}
         LIMIT {{limit:UInt64}}
         """,
         parameters=params_with_limit,
     ).result_rows
 
-    total = int(total_row[0]) if total_row else 0
-
-    lines = [{"lineNumber": int(row[0]), "raw": str(row[1])} for row in rows]
+    has_more = len(rows) > safe_limit
+    page_rows = rows[:safe_limit]
+    lines = [{"lineNumber": int(row[0]), "raw": str(row[1])} for row in page_rows]
 
     return {
-        "totalMatches": total,
+        # Exact total per-page is expensive on huge datasets; keep this as page size hint.
+        "totalMatches": len(lines),
         "lines": lines,
-        "nextAfterLine": lines[-1]["lineNumber"] if lines else None,
-        "hasMore": len(lines) >= int(limit),
+        "nextAfterLine": lines[-1]["lineNumber"] if lines and direction == "asc" else None,
+        "nextBeforeLine": lines[-1]["lineNumber"] if lines and direction == "desc" else None,
+        "hasMore": has_more,
+    }
+
+
+def _dashboard_field_value_expr(field: str) -> str:
+    if field in {"level", "status", "method"}:
+        return (
+            f"trim(BOTH ' ' FROM if(ifNull({field}, '') != '', "
+            f"ifNull({field}, ''), ifNull(JSONExtractString(fields_json, '{field}'), '')))"
+        )
+    return "trim(BOTH ' ' FROM ifNull(JSONExtractString(fields_json, {field:String}), ''))"
+
+
+def _build_dashboard_where_clause(
+    ingest_id: str,
+    start_ms: int | None = None,
+    end_ms: int | None = None,
+    category_field: str | None = None,
+    category_values: list[str] | None = None,
+) -> tuple[str, dict[str, Any]]:
+    where = ["ingest_id = {ingest_id:String}"]
+    params: dict[str, Any] = {"ingest_id": ingest_id}
+    _append_time_filters(where, params, start_ms, end_ms)
+
+    normalized_field = (category_field or "").strip()
+    normalized_values = list(
+        dict.fromkeys(
+            str(value).strip().upper()
+            for value in (category_values or [])
+            if str(value).strip()
+        )
+    )
+
+    if normalized_field and normalized_values:
+        if normalized_field in {"level", "status", "method"}:
+            category_expr = _dashboard_field_value_expr(normalized_field)
+        else:
+            category_expr = "trim(BOTH ' ' FROM ifNull(JSONExtractString(fields_json, {category_field:String}), ''))"
+            params["category_field"] = normalized_field
+
+        where.append(
+            f"upper(if({category_expr} = '', 'UNKNOWN', {category_expr})) "
+            "IN {category_values:Array(String)}"
+        )
+        params["category_values"] = normalized_values
+
+    return " AND ".join(where), params
+
+
+def build_dashboard_exact_snapshot(
+    ingest_id: str,
+    start_ms: int | None = None,
+    end_ms: int | None = None,
+    category_field: str | None = None,
+    category_values: list[str] | None = None,
+) -> dict[str, Any]:
+    client = _default_client(CLICKHOUSE_DB)
+    where_sql, params = _build_dashboard_where_clause(
+        ingest_id=ingest_id,
+        start_ms=start_ms,
+        end_ms=end_ms,
+        category_field=category_field,
+        category_values=category_values,
+    )
+
+    totals_row = client.query(
+        f"""
+        SELECT
+            COUNT(*) AS total_lines,
+            COUNTIf(length(trim(raw)) > 0) AS non_empty_lines,
+            COUNTIf(lengthUTF8(fields_json) > 2) AS parsed_lines
+        FROM log_events
+        WHERE {where_sql}
+        """,
+        parameters=params,
+    ).first_row
+
+    total_lines = int(totals_row[0]) if totals_row else 0
+    non_empty_lines = int(totals_row[1]) if totals_row else 0
+    parsed_lines = int(totals_row[2]) if totals_row else 0
+
+    priority_fields = [
+        "level",
+        "status",
+        "method",
+        "queue",
+        "type",
+        "component",
+        "host",
+        "user",
+        "class",
+        "ip",
+        "date",
+        "time",
+    ]
+    field_value_counts: dict[str, dict[str, int]] = {}
+
+    for field in priority_fields:
+        value_expr = _dashboard_field_value_expr(field)
+        query_params = dict(params)
+        if "{field:String}" in value_expr:
+            query_params["field"] = field
+
+        rows = client.query(
+            f"""
+            SELECT value, COUNT(*) AS cnt
+            FROM (
+                SELECT {value_expr} AS value
+                FROM log_events
+                WHERE {where_sql}
+            )
+            WHERE value != ''
+              AND lowerUTF8(value) NOT IN ('null', 'undefined')
+              AND value != '-'
+            GROUP BY value
+            ORDER BY cnt DESC
+            LIMIT 500
+            """,
+            parameters=query_params,
+        ).result_rows
+
+        if not rows:
+            continue
+
+        field_value_counts[field] = {
+            str(row[0]): int(row[1])
+            for row in rows
+            if row[0] is not None and str(row[0]).strip() != ""
+        }
+
+    return {
+        "sessionId": f"remote:{ingest_id}",
+        "kind": "dashboard-filtered",
+        "updatedAt": int(time.time() * 1000),
+        "stats": {
+            "totalLines": total_lines,
+            "nonEmptyLines": non_empty_lines,
+            "parsedLines": parsed_lines,
+            "fieldValueCounts": field_value_counts,
+        },
     }
 
 

@@ -10,9 +10,11 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { getPretrainedModels, warmupBglModel, type PretrainedModelInfo } from '../services/bglAnomalyApi';
 
+let cachedPretrainedModels: PretrainedModelInfo[] | null = null;
+
 const PretrainedModelsPage: React.FC = () => {
-    const [models, setModels] = useState<PretrainedModelInfo[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [models, setModels] = useState<PretrainedModelInfo[]>(() => cachedPretrainedModels ?? []);
+    const [loading, setLoading] = useState<boolean>(() => cachedPretrainedModels == null);
     const [installing, setInstalling] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
 
@@ -20,12 +22,14 @@ const PretrainedModelsPage: React.FC = () => {
         let cancelled = false;
 
         const loadModels = async () => {
-            setLoading(true);
+            const hasCachedModels = cachedPretrainedModels != null;
+            setLoading(!hasCachedModels);
             setError('');
             try {
                 const items = await getPretrainedModels();
                 if (!cancelled) {
                     setModels(items);
+                    cachedPretrainedModels = items;
                 }
             } catch (err) {
                 if (!cancelled) {
@@ -62,6 +66,7 @@ const PretrainedModelsPage: React.FC = () => {
     const refreshModels = async () => {
         const items = await getPretrainedModels();
         setModels(items);
+        cachedPretrainedModels = items;
     };
 
     const handlePrepareModel = async (modelId: string) => {

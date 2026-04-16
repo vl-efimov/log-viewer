@@ -54,6 +54,26 @@ type AnomalyEtaHistorySample = {
 
 const ANOMALY_ETA_HISTORY_STORAGE_KEY = 'logViewer.anomalyEtaHistory.v1';
 const ANOMALY_ETA_HISTORY_MAX_SAMPLES = 120;
+const ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC = 7 * 24 * 60 * 60;
+
+function normalizeHistoryDurationSec(value: unknown): number | null {
+    const raw = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) {
+        return null;
+    }
+
+    if (raw <= ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC) {
+        return raw;
+    }
+
+    // Backward compatibility: older versions could persist milliseconds in durationSec.
+    const maybeSeconds = raw / 1000;
+    if (maybeSeconds >= 1 && maybeSeconds <= ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC) {
+        return maybeSeconds;
+    }
+
+    return null;
+}
 
 function loadAnomalyEtaHistory(): AnomalyEtaHistorySample[] {
     if (typeof window === 'undefined') {
@@ -70,19 +90,38 @@ function loadAnomalyEtaHistory(): AnomalyEtaHistorySample[] {
             return [];
         }
 
-        return parsed.filter((sample): sample is AnomalyEtaHistorySample => (
-            sample
-            && (sample.modelId === 'bgl' || sample.modelId === 'hdfs')
-            && typeof sample.rows === 'number'
-            && Number.isFinite(sample.rows)
-            && sample.rows > 0
-            && typeof sample.durationSec === 'number'
-            && Number.isFinite(sample.durationSec)
-            && sample.durationSec > 0
-            && (sample.bytes === null || (typeof sample.bytes === 'number' && Number.isFinite(sample.bytes) && sample.bytes >= 0))
-            && typeof sample.createdAt === 'number'
-            && Number.isFinite(sample.createdAt)
-        ));
+        return parsed.flatMap((sample): AnomalyEtaHistorySample[] => {
+            if (!sample || (sample.modelId !== 'bgl' && sample.modelId !== 'hdfs')) {
+                return [];
+            }
+
+            const rows = typeof sample.rows === 'number' ? sample.rows : Number(sample.rows);
+            if (!Number.isFinite(rows) || rows <= 0) {
+                return [];
+            }
+
+            const durationSec = normalizeHistoryDurationSec(sample.durationSec);
+            if (durationSec == null) {
+                return [];
+            }
+
+            const createdAt = typeof sample.createdAt === 'number' ? sample.createdAt : Number(sample.createdAt);
+            if (!Number.isFinite(createdAt)) {
+                return [];
+            }
+
+            const bytes = sample.bytes === null
+                ? null
+                : (typeof sample.bytes === 'number' && Number.isFinite(sample.bytes) && sample.bytes >= 0 ? sample.bytes : null);
+
+            return [{
+                modelId: sample.modelId,
+                rows,
+                bytes,
+                durationSec,
+                createdAt,
+            }];
+        });
     } catch {
         return [];
     }
@@ -131,6 +170,10 @@ function estimateExpectedDurationFromHistory(params: {
     const projectedDurations = history
         .map((sample) => {
             const rowScale = rowsToAnalyze / Math.max(1, sample.rows);
+            // Avoid extreme extrapolation from tiny/huge unrelated runs.
+            if (rowScale > 25 || rowScale < (1 / 25)) {
+                return null;
+            }
             const sampleBytesPerRow = sample.bytes && sample.bytes > 0
                 ? sample.bytes / Math.max(1, sample.rows)
                 : null;
@@ -140,9 +183,14 @@ function estimateExpectedDurationFromHistory(params: {
             const recencyDays = Math.max(0, (Date.now() - sample.createdAt) / (24 * 60 * 60 * 1000));
             const recencyScale = recencyDays > 21 ? 1.08 : recencyDays > 7 ? 1.04 : 1;
 
-            return sample.durationSec * rowScale * complexityScale * recencyScale;
+            const projected = sample.durationSec * rowScale * complexityScale * recencyScale;
+            if (!Number.isFinite(projected) || projected <= 0 || projected > ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC) {
+                return null;
+            }
+
+            return projected;
         })
-        .filter((value) => Number.isFinite(value) && value > 0)
+        .filter((value): value is number => value != null)
         .sort((a, b) => a - b);
 
     if (projectedDurations.length < 3) {
@@ -159,7 +207,7 @@ interface AnomalySettingsDialogProps {
     open: boolean;
     onClose: () => void;
     isStreamView: boolean;
-    lineCount: number;
+    totalRowsHint: number;
     normalRows: AnomalySourceRow[];
     requestFileForAnomalyAnalysis: () => Promise<File | null>;
     remoteIngestId?: string;
@@ -169,7 +217,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     open,
     onClose,
     isStreamView,
-    lineCount,
+    totalRowsHint,
     normalRows,
     requestFileForAnomalyAnalysis,
     remoteIngestId,
@@ -183,6 +231,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         size: logFileSize,
     } = useSelector((state: RootState) => state.logFile);
     const {
+        hasResults: anomalyHasResults,
         isRunning: anomalyIsRunning,
         cancelRequestSeq,
         rowsPerSecondByModel: anomalyRowsPerSecondByModel,
@@ -292,25 +341,29 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     }, [normalRows]);
 
     useEffect(() => {
+        if (anomalyIsRunning) {
+            return;
+        }
+
+        if (anomalyHasResults) {
+            return;
+        }
+
         if (isMonitoring) {
             return;
         }
 
-        if (!isStreamView && normalRows.length > 0) {
-            return;
-        }
-
-        if (isStreamView && lineCount > 0) {
+        if (totalRowsHint > 0) {
             return;
         }
 
         dispatch(clearAnomalyResults());
         dispatch(setAnomalyRunning({ running: false }));
-    }, [dispatch, isMonitoring, isStreamView, lineCount, normalRows.length]);
+    }, [anomalyHasResults, anomalyIsRunning, dispatch, isMonitoring, totalRowsHint]);
 
     useEffect(() => {
         if (!open) return;
-        const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
+        const hasAnalyzableRows = totalRowsHint > 0;
         if (!hasAnalyzableRows) {
             setIsModelReady(false);
             setIsModelReadyLoading(false);
@@ -358,7 +411,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         return () => {
             cancelled = true;
         };
-    }, [open, isStreamView, lineCount, normalRows.length, selectedModelId]);
+    }, [open, selectedModelId, totalRowsHint]);
 
     useEffect(() => {
         setAnomalySettings(loadAnomalySettings(selectedModelId));
@@ -417,9 +470,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 return;
             }
 
-            const rowsToAnalyze = isStreamView
-                ? Math.max(0, lineCount)
-                : normalRows.length;
+            const rowsToAnalyze = Math.max(0, totalRowsHint);
 
             const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
             const bytesToAnalyze = (remoteIngestId
@@ -438,9 +489,23 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 rowsToAnalyze,
                 bytesToAnalyze,
             });
-            const expectedDurationSec = historyExpectedDurationSec != null && heuristicExpectedDurationSec != null
-                ? Math.max(historyExpectedDurationSec, heuristicExpectedDurationSec)
-                : (historyExpectedDurationSec ?? heuristicExpectedDurationSec);
+            const expectedDurationSec = (() => {
+                if (heuristicExpectedDurationSec == null) {
+                    return historyExpectedDurationSec;
+                }
+                if (historyExpectedDurationSec == null) {
+                    return heuristicExpectedDurationSec;
+                }
+
+                // Keep history only when it is plausibly close to heuristic forecast.
+                const lowerBound = Math.floor(heuristicExpectedDurationSec * 0.25);
+                const upperBound = Math.ceil(heuristicExpectedDurationSec * 6);
+                if (historyExpectedDurationSec < lowerBound || historyExpectedDurationSec > upperBound) {
+                    return heuristicExpectedDurationSec;
+                }
+
+                return Math.max(historyExpectedDurationSec, heuristicExpectedDurationSec);
+            })();
 
             dispatch(setAnomalyRunning({
                 running: true,
@@ -469,19 +534,14 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     signal: abortController.signal,
                 });
 
-            const anomalyRowLines = Array.isArray(result.anomaly_lines)
-                ? result.anomaly_lines
-                : (result.rows ?? [])
-                    .filter((row) => row.is_anomaly)
-                    .map((row) => row.line);
-
-            const anomalyLineNumbers = anomalyRowLines
-                .filter((lineNumber): lineNumber is number => typeof lineNumber === 'number' && Number.isFinite(lineNumber));
+            const totalRows = rowsToAnalyze > 0
+                ? rowsToAnalyze
+                : Math.max(0, result.meta.total_rows);
 
             dispatch(setAnomalyResults({
                 regions: result.anomaly_regions,
-                lineNumbers: anomalyLineNumbers,
                 rowsCount: result.meta.anomaly_rows,
+                totalRows,
                 analyzedAt: Date.now(),
                 modelId: selectedModelId,
                 params: {
@@ -508,7 +568,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
             setActiveAbortController((current) => (current === abortController ? null : current));
             const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
 
-            const analyzedRows = isStreamView ? Math.max(0, lineCount) : normalRows.length;
+            const analyzedRows = Math.max(0, totalRowsHint);
             if (analyzedRows > 0) {
                 const measuredRowsPerSecond = analyzedRows / elapsedSec;
                 dispatch(updateAnomalyRowsPerSecond({
@@ -532,10 +592,8 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         anomalySettings,
         dispatch,
         isModelReady,
-        isStreamView,
-        lineCount,
         logFileSize,
-        normalRows.length,
+        totalRowsHint,
         estimateExpectedDurationSec,
         requestFileForAnomalyAnalysis,
         remoteIngestId,
@@ -573,7 +631,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         }
     };
 
-    const hasAnalyzableRows = isStreamView ? lineCount > 0 : normalRows.length > 0;
+    const hasAnalyzableRows = totalRowsHint > 0;
     const isSmallFileIndexing = isIndexing && !isLargeFile;
     const requiresMonitoringReattach = !isStreamView && !remoteIngestId && !hasFileHandle;
     const canRunAnomalyAnalysis = hasAnalyzableRows
@@ -581,17 +639,18 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         && isModelReady
         && !isSmallFileIndexing
         && !requiresMonitoringReattach;
-    const anomalyDisabledReason = isSmallFileIndexing
-        ? 'Дождитесь загрузки данных в базу.'
-        : requiresMonitoringReattach
-            ? 'Выберите файл для мониторинга.'
-        : !hasAnalyzableRows
-            ? 'No log rows to analyze. Load or attach a log file first.'
-            : isModelReadyLoading
-                ? 'Checking model readiness...'
-                : isModelReady
-                    ? undefined
-                    : `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
+    let anomalyDisabledReason: string | undefined;
+    if (isSmallFileIndexing) {
+        anomalyDisabledReason = 'Дождитесь загрузки данных в базу.';
+    } else if (requiresMonitoringReattach) {
+        anomalyDisabledReason = 'Выберите файл для мониторинга.';
+    } else if (!hasAnalyzableRows) {
+        anomalyDisabledReason = 'No log rows to analyze. Load or attach a log file first.';
+    } else if (isModelReadyLoading) {
+        anomalyDisabledReason = 'Checking model readiness...';
+    } else if (!isModelReady) {
+        anomalyDisabledReason = `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
+    }
     const isAnalyzeDisabled = anomalyIsRunning || !canRunAnomalyAnalysis;
     const analyzeTooltip = isAnalyzeDisabled && anomalyDisabledReason
         ? anomalyDisabledReason

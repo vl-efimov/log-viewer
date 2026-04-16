@@ -9,8 +9,13 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import Typography from '@mui/material/Typography';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
-import { useEffect, useState } from 'react';
-import type { LogFilters, DateRangeFilter, TextFilter } from '../types/filters';
+import { useEffect, useMemo, useState } from 'react';
+import type {
+    LogFilters,
+    DateRangeFilter,
+    TextFilter,
+    AnomalyStatusFilterValue,
+} from '../types/filters';
 import type { LogFormatField } from '../utils/logFormatDetector';
 
 const LOG_LEVEL_OPTIONS = [
@@ -24,10 +29,20 @@ const LOG_LEVEL_OPTIONS = [
     'CRITICAL',
 ] as const;
 
+const SECONDARY_DATE_FILTER_FIELDS = new Set([
+    'date',
+    'time',
+    'milliseconds',
+    'millisecond',
+    'msec',
+    'ms',
+]);
+
 interface LogFiltersBarProps {
     filters: LogFilters;
     onFiltersChange: (filters: LogFilters) => void;
     fieldDefinitions: LogFormatField[]; // Ordered field definitions from the detected format
+    anomalyFilterEnabled: boolean;
     onCloseRequested?: () => void;
 }
 
@@ -35,6 +50,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     filters,
     onFiltersChange,
     fieldDefinitions,
+    anomalyFilterEnabled,
     onCloseRequested,
 }) => {
     const [pendingFilters, setPendingFilters] = useState<LogFilters>(filters);
@@ -58,6 +74,33 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     const isLevelField = (field: LogFormatField) => {
         // Check if field has enum values (for select dropdown)
         return field.enum !== undefined && field.enum.length > 0;
+    };
+
+    const visibleFieldDefinitions = useMemo(() => {
+        const hasPrimaryTimestampFilter = fieldDefinitions.some((field) => isDateTimeField(field));
+        if (!hasPrimaryTimestampFilter) {
+            return fieldDefinitions;
+        }
+
+        return fieldDefinitions.filter((field) => {
+            return !SECONDARY_DATE_FILTER_FIELDS.has(field.name.toLowerCase());
+        });
+    }, [fieldDefinitions]);
+
+    const sanitizeFilters = (source: LogFilters): LogFilters => {
+        const allowedFields = new Set(visibleFieldDefinitions.map((field) => field.name));
+        if (anomalyFilterEnabled) {
+            allowedFields.add('anomalyStatus');
+        }
+
+        const next: LogFilters = {};
+        Object.entries(source).forEach(([key, value]) => {
+            if (allowedFields.has(key) && value !== undefined) {
+                next[key] = value;
+            }
+        });
+
+        return next;
     };
 
     const handleTimestampStartChange = (field: string, value: string) => {
@@ -97,6 +140,13 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         });
     };
 
+    const handleAnomalyStatusChange = (values: string[]) => {
+        setPendingFilters({
+            ...pendingFilters,
+            anomalyStatus: values.length > 0 ? values as AnomalyStatusFilterValue[] : undefined,
+        });
+    };
+
     const handleClearFilters = () => {
         setPendingFilters({});
         onFiltersChange({});
@@ -104,7 +154,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     };
 
     const handleApplyFilters = () => {
-        onFiltersChange(pendingFilters);
+        onFiltersChange(sanitizeFilters(pendingFilters));
         onCloseRequested?.();
     };
 
@@ -242,6 +292,46 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         );
     };
 
+    const renderAnomalyFilter = () => {
+        const filterValue = pendingFilters.anomalyStatus as AnomalyStatusFilterValue[] | undefined;
+
+        return (
+            <FormControl
+                key="anomalyStatus"
+                size="small"
+                sx={{ minWidth: 220 }}
+                disabled={!anomalyFilterEnabled}
+            >
+                <InputLabel>Аномалии</InputLabel>
+                <Select
+                    multiple
+                    value={filterValue || []}
+                    onChange={(e) => handleAnomalyStatusChange(e.target.value as string[])}
+                    input={<OutlinedInput label="Аномалии" />}
+                    renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.map((value) => (
+                                <Chip
+                                    key={value}
+                                    label={value === 'anomaly'
+                                        ? 'Аномалии'
+                                        : value === 'normal'
+                                            ? 'Нормальные'
+                                            : 'Неопределенные'}
+                                    size="small"
+                                />
+                            ))}
+                        </Box>
+                    )}
+                >
+                    <MenuItem value="anomaly">Аномалии</MenuItem>
+                    <MenuItem value="normal">Нормальные</MenuItem>
+                    <MenuItem value="undefined">Неопределенные</MenuItem>
+                </Select>
+            </FormControl>
+        );
+    };
+
     const header = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
             <FilterListIcon />
@@ -283,7 +373,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     const content = (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
             {/* Render filters in format field order */}
-            {fieldDefinitions.length === 0 ? (
+            {visibleFieldDefinitions.length === 0 && !anomalyFilterEnabled ? (
                 <Typography
                     variant="body2"
                     color="text.secondary"
@@ -291,7 +381,10 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                     No filters available. Format detection in progress...
                 </Typography>
             ) : (
-                fieldDefinitions.map(field => renderFieldFilter(field))
+                <>
+                    {visibleFieldDefinitions.map(field => renderFieldFilter(field))}
+                    {renderAnomalyFilter()}
+                </>
             )}
             <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
                 <Chip

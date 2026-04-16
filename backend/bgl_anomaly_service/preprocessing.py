@@ -89,6 +89,10 @@ def _try_parse_datetime(value: str) -> datetime | None:
             pass
 
     patterns = (
+        "%y%m%d %H%M%S,%f",
+        "%y%m%d %H%M%S.%f",
+        "%y%m%d %H%M%S",
+        "%y%m%d",
         "%Y-%m-%d %H:%M:%S,%f",
         "%Y-%m-%d %H:%M:%S.%f",
         "%Y-%m-%d %H:%M:%S",
@@ -129,6 +133,16 @@ def extract_timestamp_iso(row: dict[str, Any], forced_column: str | None = None)
     time_key = normalized.get("time")
     if date_key and time_key:
         merged = f"{row.get(date_key, '')} {row.get(time_key, '')}".strip()
+        ms_key = (
+            normalized.get("milliseconds")
+            or normalized.get("millisecond")
+            or normalized.get("msec")
+            or normalized.get("ms")
+        )
+        if ms_key:
+            ms_raw = str(row.get(ms_key, "") or "").strip()
+            if ms_raw:
+                merged = f"{merged},{ms_raw}"
         parsed = _try_parse_datetime(merged)
         if parsed:
             return parsed.isoformat()

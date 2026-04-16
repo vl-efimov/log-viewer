@@ -15,11 +15,12 @@ const ViewLogsPage: React.FC = () => {
         histogram,
         toolbarProps,
         listProps,
+        showEmptyFilteredState,
     } = useViewLogsController();
 
     const showTablePreparing = histogram.isLargeFile
         && toolbarProps.isStreamView
-        && toolbarProps.lineCount === 0;
+        && toolbarProps.totalRowsHintForAnomaly === 0;
 
     if (fileSelection.show) {
         return (
@@ -56,7 +57,6 @@ const ViewLogsPage: React.FC = () => {
                 loadingMessage="Индексация завершится — появится график."
                 parsedLines={histogram.parsedLines}
                 anomalyRegions={histogram.anomalyRegions}
-                anomalyLineNumbers={histogram.anomalyLineNumbers}
                 onAnomalyRangeSelect={histogram.onAnomalyRangeSelect}
             />
 
@@ -92,6 +92,25 @@ const ViewLogsPage: React.FC = () => {
                             align="center"
                         >
                             Подготавливаем таблицу для большого файла. Это может занять некоторое время.
+                        </Typography>
+                    </Box>
+                ) : showEmptyFilteredState ? (
+                    <Box
+                        sx={{
+                            height: '100%',
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            px: 2,
+                        }}
+                    >
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            align="center"
+                        >
+                            По выбранным фильтрам ничего не найдено.
                         </Typography>
                     </Box>
                 ) : (

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -15,8 +15,10 @@ import { RootState } from '../redux/store';
 import NoFileSelected from '../components/common/NoFileSelected';
 import { parseLogLineAuto, type ParsedLogLine } from '../utils/logFormatDetector';
 import LogHistogram from '../components/LogHistogram';
+import { extractTimestampFromParsedLine } from '../utils/logTimestamp';
 import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
-import { getDashboardSnapshot } from '../utils/logIndexedDb';
+import { getRemoteExactDashboardSnapshot } from '../services/bglAnomalyApi';
+import { getDashboardSnapshot, getLocalExactDashboardSnapshot } from '../utils/logIndexedDb';
 import {
     countFileLines,
     sampleAndAnalyzeLargeFile,
@@ -27,8 +29,21 @@ import {
 const MAX_CATEGORY_VALUES = 8;
 const MAX_LARGE_FILE_CACHE_ENTRIES = 3;
 const MAX_NORMAL_DASHBOARD_CACHE_ENTRIES = 5;
-const PRIORITY_FIELDS = ['level', 'status', 'method', 'queue', 'type', 'component', 'host', 'user', 'class', 'ip'];
-const CORE_CHART_FIELDS = ['level', 'status', 'method'];
+const PRIORITY_FIELDS = ['level', 'status', 'method', 'componentLevel', 'queue', 'type', 'component', 'host', 'user', 'class', 'ip'];
+const CORE_CHART_FIELDS = ['level', 'status', 'method', 'componentLevel'];
+const DASHBOARD_FIELD_ALIASES: Record<string, string> = {
+    hostname: 'host',
+    node: 'host',
+    node2: 'host',
+    logger: 'class',
+    source: 'class',
+    client: 'ip',
+};
+
+const toDashboardCanonicalField = (field: string): string => {
+    const normalized = field.trim().toLowerCase();
+    return DASHBOARD_FIELD_ALIASES[normalized] ?? field;
+};
 
 type LargeFileDashboardCacheEntry = {
     sampledLines: HistogramLine[];
@@ -80,6 +95,17 @@ type Facet = {
     values: Array<{ label: string; count: number }>;
 };
 
+type TimestampedDashboardRow = {
+    row: ParsedRow;
+    timestampMs: number;
+    isParsed: boolean;
+};
+
+type HistogramCategoryFilter = {
+    field: string | null;
+    selectedCategories: string[] | null;
+};
+
 type NormalDashboardSnapshot = {
     totalLines: number;
     analyzedLines: number;
@@ -91,7 +117,107 @@ type NormalDashboardSnapshot = {
     levelValues: Array<{ label: string; count: number }>;
     statusValues: Array<{ label: string; count: number }>;
     methodValues: Array<{ label: string; count: number }>;
+    componentLevelValues: Array<{ label: string; count: number }>;
     facets: Facet[];
+};
+
+type DashboardStats = {
+    totalLines: number;
+    nonEmptyLines: number;
+    parsedLines: number;
+    fieldValueCounts: Record<string, Record<string, number>>;
+};
+
+type DashboardAnalyticsSummary = {
+    analyzedLines: number;
+    parsedLines: number;
+    unparsedLines: number;
+    parseRate: number;
+    levelValues: Array<{ label: string; count: number }>;
+    statusValues: Array<{ label: string; count: number }>;
+    methodValues: Array<{ label: string; count: number }>;
+    componentLevelValues: Array<{ label: string; count: number }>;
+    facets: Facet[];
+};
+
+type ExactFilteredDashboardSnapshot = {
+    totalLines: number;
+    analytics: DashboardAnalyticsSummary;
+};
+
+const normalizeDashboardStats = (input: unknown): DashboardStats | null => {
+    if (!input || typeof input !== 'object') {
+        return null;
+    }
+
+    const source = input as {
+        totalLines?: unknown;
+        nonEmptyLines?: unknown;
+        parsedLines?: unknown;
+        fieldValueCounts?: unknown;
+    };
+
+    const totalLines = Number(source.totalLines ?? 0);
+    const nonEmptyLines = Number(source.nonEmptyLines ?? 0);
+    const parsedLines = Number(source.parsedLines ?? 0);
+
+    const rawFieldValueCounts = source.fieldValueCounts;
+    const fieldValueCounts: Record<string, Record<string, number>> = {};
+
+    if (rawFieldValueCounts && typeof rawFieldValueCounts === 'object') {
+        Object.entries(rawFieldValueCounts as Record<string, unknown>).forEach(([field, values]) => {
+            if (!values || typeof values !== 'object') {
+                return;
+            }
+
+            const canonicalField = toDashboardCanonicalField(field);
+
+            const normalizedValues: Record<string, number> = {};
+            Object.entries(values as Record<string, unknown>).forEach(([label, count]) => {
+                const numeric = Number(count ?? 0);
+                if (!Number.isFinite(numeric) || numeric <= 0) {
+                    return;
+                }
+                normalizedValues[label] = numeric;
+            });
+
+            if (Object.keys(normalizedValues).length > 0) {
+                if (!fieldValueCounts[canonicalField]) {
+                    fieldValueCounts[canonicalField] = {};
+                }
+
+                Object.entries(normalizedValues).forEach(([label, count]) => {
+                    fieldValueCounts[canonicalField][label] = (fieldValueCounts[canonicalField][label] || 0) + count;
+                });
+            }
+        });
+    }
+
+    return {
+        totalLines: Number.isFinite(totalLines) ? Math.max(0, Math.round(totalLines)) : 0,
+        nonEmptyLines: Number.isFinite(nonEmptyLines) ? Math.max(0, Math.round(nonEmptyLines)) : 0,
+        parsedLines: Number.isFinite(parsedLines) ? Math.max(0, Math.round(parsedLines)) : 0,
+        fieldValueCounts,
+    };
+};
+
+const buildDashboardAnalyticsFromStats = (stats: DashboardStats, locale: string): DashboardAnalyticsSummary => {
+    const fieldValueCounters = toFieldCounterMap(stats.fieldValueCounts);
+    const analyzedLines = stats.totalLines;
+    const parsedLines = Math.min(stats.parsedLines, analyzedLines);
+    const unparsedLines = Math.max(analyzedLines - parsedLines, 0);
+
+    return {
+        analyzedLines,
+        parsedLines,
+        unparsedLines,
+        parseRate: analyzedLines > 0 ? Math.round((parsedLines / analyzedLines) * 100) : 0,
+        levelValues: toSortedCounterValues('level', fieldValueCounters.get('level'), locale),
+        statusValues: toSortedCounterValues('status', fieldValueCounters.get('status'), locale),
+        methodValues: toSortedCounterValues('method', fieldValueCounters.get('method'), locale),
+        componentLevelValues: toSortedCounterValues('componentLevel', fieldValueCounters.get('componentLevel'), locale),
+        facets: buildFacetValues(fieldValueCounters, locale),
+    };
 };
 
 const normalizeDashboardSampledLines = (input: unknown): ParsedRow[] => {
@@ -135,6 +261,18 @@ const normalizeDashboardSampledLines = (input: unknown): ParsedRow[] => {
                 if (reparsed) {
                     Object.assign(parsedFields, reparsed.fields);
                     formatId = reparsed.formatId;
+                }
+            }
+
+            // Remote snapshots may contain date/time fields without a normalized
+            // timestamp field; reparse to recover canonical timestamp for timeline filters.
+            if (!parsedFields.timestamp && raw.trim().length > 0) {
+                const reparsed = parseLogLineAuto(raw);
+                if (reparsed?.fields.timestamp) {
+                    parsedFields.timestamp = reparsed.fields.timestamp;
+                    if (formatId === 'remote-dashboard') {
+                        formatId = reparsed.formatId;
+                    }
                 }
             }
 
@@ -198,6 +336,7 @@ const getFieldTitle = (field: string, t: (key: string, options?: Record<string, 
         level: t('dashboard.charts.levels'),
         status: t('dashboard.charts.httpStatus'),
         method: t('dashboard.charts.httpMethods'),
+        componentLevel: t('dashboard.dynamicFields.component'),
         queue: t('dashboard.dynamicFields.queue'),
         type: t('dashboard.dynamicFields.type'),
         component: t('dashboard.dynamicFields.component'),
@@ -219,6 +358,141 @@ const normalizeFieldValue = (value: string | undefined): string | null => {
     return normalized;
 };
 
+const TIME_ONLY_FIELD_NAMES = new Set(['time']);
+const DATE_ONLY_FIELD_NAMES = new Set(['date']);
+const DATE_TIME_FIELD_NAMES = new Set(['timestamp', 'datetime', 'event_time', 'created_at']);
+
+const EXCLUDED_DISTRIBUTION_FIELDS = new Set([
+    'raw',
+    'message',
+    'msg',
+    'content',
+    'text',
+    'log',
+    'line',
+    'time',
+    'milliseconds',
+    'millisecond',
+    'msec',
+    'ms',
+    'timestamp',
+    'datetime',
+    'event_time',
+    'created_at',
+]);
+
+const stripMillisecondsFromTime = (value: string): string => {
+    return value
+        // 15:37:24.622 -> 15:37:24
+        .replace(/(\d{1,2}:\d{2}:\d{2})\.\d{1,6}/g, '$1')
+        // 15:37:24,622 -> 15:37:24
+        .replace(/(\d{1,2}:\d{2}:\d{2}),\d{1,6}/g, '$1');
+};
+
+const formatCompactDateToken = (value: string): string | null => {
+    const digitsOnly = value.replace(/[^0-9]/g, '');
+    if (/^\d{6}$/.test(digitsOnly)) {
+        return `${digitsOnly.slice(0, 2)}.${digitsOnly.slice(2, 4)}.${digitsOnly.slice(4, 6)}`;
+    }
+    return null;
+};
+
+const toValidDate = (value: string): Date | null => {
+    const normalized = value.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    // Prevent accidental parsing of short numeric tokens (e.g. 81110 -> year 81110).
+    if (/^\d+$/.test(normalized) && !/^\d{8}$/.test(normalized)) {
+        return null;
+    }
+
+    // Support compact YYYYMMDD for date fields.
+    if (/^\d{8}$/.test(normalized)) {
+        const year = Number(normalized.slice(0, 4));
+        const month = Number(normalized.slice(4, 6));
+        const day = Number(normalized.slice(6, 8));
+        if (year >= 1970 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            const parsed = new Date(Date.UTC(year, month - 1, day));
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed;
+            }
+        }
+    }
+
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+
+    const year = parsed.getUTCFullYear();
+    if (year < 1970 || year > 2100) {
+        return null;
+    }
+
+    return parsed;
+};
+
+const formatFieldLabelForDisplay = (field: string, value: string, locale: string): string => {
+    const normalizedField = field.trim().toLowerCase();
+    const normalizedValue = value.trim();
+
+    if (TIME_ONLY_FIELD_NAMES.has(normalizedField)) {
+        const timeWithoutMs = stripMillisecondsFromTime(normalizedValue);
+        const digitsOnly = timeWithoutMs.replace(/[^0-9]/g, '');
+        // Handle HHMMSS and HHMMSSmmm formats by taking the first 6 digits.
+        if (digitsOnly.length >= 6) {
+            const hhmmss = digitsOnly.slice(0, 6);
+            return `${hhmmss.slice(0, 2)}:${hhmmss.slice(2, 4)}:${hhmmss.slice(4, 6)}`;
+        }
+
+        // Already looks like HH:mm[:ss[.ms]]: keep as is.
+        if (/^\d{1,2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(normalizedValue)) {
+            return timeWithoutMs;
+        }
+
+        return normalizedValue;
+    }
+
+    if (DATE_ONLY_FIELD_NAMES.has(normalizedField)) {
+        const compact = formatCompactDateToken(normalizedValue);
+        if (compact) {
+            return compact;
+        }
+
+        const parsed = toValidDate(normalizedValue);
+        if (parsed) {
+            return new Intl.DateTimeFormat(locale, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            }).format(parsed);
+        }
+
+        return normalizedValue;
+    }
+
+    if (DATE_TIME_FIELD_NAMES.has(normalizedField)) {
+        const parsed = toValidDate(normalizedValue);
+        if (parsed) {
+            return new Intl.DateTimeFormat(locale, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+            }).format(parsed);
+        }
+
+        return normalizedValue;
+    }
+
+    return normalizedValue;
+};
+
 const shortLabel = (value: string): string => {
     if (value.length <= 36) return value;
     return `${value.slice(0, 33)}...`;
@@ -236,12 +510,244 @@ const formatCompactNumber = (value: number, locale: string): string => {
 };
 
 const toFieldCounterMap = (record: Record<string, Record<string, number>>): Map<string, Map<string, number>> => {
-    return new Map(
-        Object.entries(record).map(([field, values]) => [
+    const result = new Map<string, Map<string, number>>();
+
+    Object.entries(record).forEach(([field, values]) => {
+        const canonicalField = toDashboardCanonicalField(field);
+        if (!result.has(canonicalField)) {
+            result.set(canonicalField, new Map<string, number>());
+        }
+
+        const target = result.get(canonicalField)!;
+        Object.entries(values).forEach(([label, count]) => {
+            target.set(label, (target.get(label) || 0) + count);
+        });
+    });
+
+    return result;
+};
+
+const toSortedCounterValues = (field: string, counter: Map<string, number> | undefined, locale: string) => {
+    if (!counter) {
+        return [];
+    }
+
+    return Array.from(counter.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, MAX_CATEGORY_VALUES)
+        .map(([label, count]) => ({
+            label: shortLabel(formatFieldLabelForDisplay(field, label, locale)),
+            count,
+        }));
+};
+
+const buildFacetValues = (fieldValueCounters: Map<string, Map<string, number>>, locale: string): Facet[] => {
+    const preferredFacetFields = PRIORITY_FIELDS.filter((field) => {
+        const counter = fieldValueCounters.get(field);
+        return Boolean(
+            counter
+            && counter.size > 1
+            && !CORE_CHART_FIELDS.includes(field)
+            && !EXCLUDED_DISTRIBUTION_FIELDS.has(field)
+        );
+    });
+
+    const fallbackFacetFields = Array.from(fieldValueCounters.entries())
+        .filter(([field, counter]) => {
+            return counter.size > 1
+                && !preferredFacetFields.includes(field)
+                && !CORE_CHART_FIELDS.includes(field)
+                && !EXCLUDED_DISTRIBUTION_FIELDS.has(field);
+        })
+        .sort(([, a], [, b]) => {
+            const sumA = Array.from(a.values()).reduce((acc, curr) => acc + curr, 0);
+            const sumB = Array.from(b.values()).reduce((acc, curr) => acc + curr, 0);
+            if (sumA !== sumB) {
+                return sumB - sumA;
+            }
+            return b.size - a.size;
+        })
+        .map(([field]) => field);
+
+    const selectedFacetFields = [...preferredFacetFields, ...fallbackFacetFields].slice(0, 3);
+
+    return selectedFacetFields.map((field) => {
+        const values = fieldValueCounters.get(field);
+        return {
             field,
-            new Map(Object.entries(values)),
-        ])
-    );
+            values: toSortedCounterValues(field, values, locale),
+        };
+    });
+};
+
+const buildDistributionsFromRows = (rows: ParsedRow[], locale: string): Pick<NormalDashboardSnapshot, 'levelValues' | 'statusValues' | 'methodValues' | 'componentLevelValues' | 'facets'> => {
+    const fieldValueCounters = new Map<string, Map<string, number>>();
+
+    rows.forEach((row) => {
+        if (!row.parsed) {
+            return;
+        }
+
+        Object.entries(row.parsed.fields).forEach(([field, value]) => {
+            const canonicalField = toDashboardCanonicalField(field);
+            if (EXCLUDED_DISTRIBUTION_FIELDS.has(canonicalField)) {
+                return;
+            }
+
+            const normalized = normalizeFieldValue(value);
+            if (!normalized) {
+                return;
+            }
+
+            if (!fieldValueCounters.has(canonicalField)) {
+                fieldValueCounters.set(canonicalField, new Map<string, number>());
+            }
+            const counter = fieldValueCounters.get(canonicalField);
+            if (!counter) {
+                return;
+            }
+            counter.set(normalized, (counter.get(normalized) || 0) + 1);
+        });
+    });
+
+    return {
+        levelValues: toSortedCounterValues('level', fieldValueCounters.get('level'), locale),
+        statusValues: toSortedCounterValues('status', fieldValueCounters.get('status'), locale),
+        methodValues: toSortedCounterValues('method', fieldValueCounters.get('method'), locale),
+        componentLevelValues: toSortedCounterValues('componentLevel', fieldValueCounters.get('componentLevel'), locale),
+        facets: buildFacetValues(fieldValueCounters, locale),
+    };
+};
+
+const createStableSyntheticBaseMs = (seed: string): number => {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+        hash = ((hash * 31) + seed.charCodeAt(i)) >>> 0;
+    }
+
+    const dayMs = 24 * 60 * 60 * 1000;
+    const anchorMs = Date.UTC(2020, 0, 1);
+    return anchorMs + ((hash % 365) * dayMs);
+};
+
+const ensureTimelineTimestamps = (rows: ParsedRow[], seed: string): ParsedRow[] => {
+    const hasRealTimestamps = rows.some((row) => row.parsed && extractTimestampFromParsedLine(row.parsed) !== null);
+    if (hasRealTimestamps) {
+        return rows;
+    }
+
+    const parsedCount = rows.reduce((acc, row) => acc + (row.parsed ? 1 : 0), 0);
+    if (parsedCount === 0) {
+        return rows;
+    }
+
+    const syntheticBaseMs = createStableSyntheticBaseMs(seed);
+    let parsedIndex = 0;
+
+    return rows.map((row) => {
+        if (!row.parsed) {
+            return row;
+        }
+
+        const existingTimestamp = row.parsed.fields.timestamp;
+        if (existingTimestamp && existingTimestamp.trim()) {
+            parsedIndex += 1;
+            return row;
+        }
+
+        const timestamp = new Date(syntheticBaseMs + (parsedIndex * 1000)).toISOString();
+        parsedIndex += 1;
+
+        return {
+            ...row,
+            parsed: {
+                ...row.parsed,
+                fields: {
+                    ...row.parsed.fields,
+                    timestamp,
+                },
+            },
+        };
+    });
+};
+
+const buildTimestampedRowsForWindow = (rows: ParsedRow[], seed: string): TimestampedDashboardRow[] => {
+    if (rows.length === 0) {
+        return [];
+    }
+
+    const explicitTimestamps = rows
+        .map((row, index) => {
+            if (!row.parsed) {
+                return null;
+            }
+
+            const ts = extractTimestampFromParsedLine(row.parsed);
+            if (ts === null) {
+                return null;
+            }
+
+            return { index, lineNumber: row.lineNumber, ts };
+        })
+        .filter((item): item is { index: number; lineNumber: number; ts: number } => item !== null)
+        .sort((a, b) => a.lineNumber - b.lineNumber);
+
+    if (explicitTimestamps.length === 0) {
+        const syntheticBaseMs = createStableSyntheticBaseMs(seed);
+        return rows.map((row, index) => ({
+            row,
+            timestampMs: syntheticBaseMs + (index * 1000),
+            isParsed: Boolean(row.parsed),
+        }));
+    }
+
+    const lowerBound = (lineNumber: number): number => {
+        let left = 0;
+        let right = explicitTimestamps.length;
+        while (left < right) {
+            const mid = Math.floor((left + right) / 2);
+            if (explicitTimestamps[mid].lineNumber < lineNumber) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        return left;
+    };
+
+    return rows.map((row) => {
+        const parsedTimestamp = row.parsed ? extractTimestampFromParsedLine(row.parsed) : null;
+        if (parsedTimestamp !== null) {
+            return {
+                row,
+                timestampMs: parsedTimestamp,
+                isParsed: true,
+            };
+        }
+
+        const rightIdx = lowerBound(row.lineNumber);
+        const left = rightIdx > 0 ? explicitTimestamps[rightIdx - 1] : null;
+        const right = rightIdx < explicitTimestamps.length ? explicitTimestamps[rightIdx] : null;
+
+        let estimatedTs: number;
+        if (left && right && right.lineNumber !== left.lineNumber) {
+            const ratio = (row.lineNumber - left.lineNumber) / (right.lineNumber - left.lineNumber);
+            estimatedTs = left.ts + ((right.ts - left.ts) * ratio);
+        } else if (left) {
+            estimatedTs = left.ts + ((row.lineNumber - left.lineNumber) * 1000);
+        } else if (right) {
+            estimatedTs = right.ts - ((right.lineNumber - row.lineNumber) * 1000);
+        } else {
+            const syntheticBaseMs = createStableSyntheticBaseMs(seed);
+            estimatedTs = syntheticBaseMs;
+        }
+
+        return {
+            row,
+            timestampMs: estimatedTs,
+            isParsed: Boolean(row.parsed),
+        };
+    });
 };
 
 const toChartOption = (
@@ -250,6 +756,7 @@ const toChartOption = (
     locale: string
 ) => {
     return {
+        animation: false,
         title: {
             text: title,
             left: 'left',
@@ -334,7 +841,23 @@ const DashboardPage: React.FC = () => {
     const [largeFileStats, setLargeFileStats] = useState<LargeFileAggregateStats | null>(null);
     const [normalSnapshot, setNormalSnapshot] = useState<NormalDashboardSnapshot | null>(null);
     const [isNormalSnapshotLoading, setIsNormalSnapshotLoading] = useState<boolean>(false);
+    const [exactFilteredSnapshot, setExactFilteredSnapshot] = useState<ExactFilteredDashboardSnapshot | null>(null);
+    const [isExactFilteredLoading, setIsExactFilteredLoading] = useState<boolean>(false);
+    const [selectedTimeRange, setSelectedTimeRange] = useState<{ start: number | null; end: number | null }>({
+        start: null,
+        end: null,
+    });
+    const [histogramCategoryFilter, setHistogramCategoryFilter] = useState<HistogramCategoryFilter>({
+        field: null,
+        selectedCategories: null,
+    });
     const isRemoteLargeSession = isLargeFile && analyticsSessionId.startsWith('remote:');
+    const remoteIngestId = useMemo(() => {
+        if (!isRemoteLargeSession) {
+            return null;
+        }
+        return analyticsSessionId.slice('remote:'.length);
+    }, [analyticsSessionId, isRemoteLargeSession]);
     const requiresServerUploadForDashboard = isLargeFile && !isRemoteLargeSession;
     const useLocalLargeMode = false;
     const largeFileCacheKey = useMemo(() => {
@@ -343,6 +866,20 @@ const DashboardPage: React.FC = () => {
     const normalFileCacheKey = useMemo(() => {
         return `${analyticsSessionId}|${fileName}|${fileSize}|${lastModified}`;
     }, [analyticsSessionId, fileName, fileSize, lastModified]);
+
+    const hasActiveTimeRange = (
+        selectedTimeRange.start !== null
+        && selectedTimeRange.end !== null
+        && Number.isFinite(selectedTimeRange.start)
+        && Number.isFinite(selectedTimeRange.end)
+    );
+
+    useEffect(() => {
+        setSelectedTimeRange({ start: null, end: null });
+        setHistogramCategoryFilter({ field: null, selectedCategories: null });
+        setExactFilteredSnapshot(null);
+        setIsExactFilteredLoading(false);
+    }, [normalFileCacheKey]);
 
     const analytics = useMemo(() => {
         if (requiresServerUploadForDashboard) {
@@ -357,53 +894,10 @@ const DashboardPage: React.FC = () => {
                 levelValues: [] as Array<{ label: string; count: number }>,
                 statusValues: [] as Array<{ label: string; count: number }>,
                 methodValues: [] as Array<{ label: string; count: number }>,
+                componentLevelValues: [] as Array<{ label: string; count: number }>,
                 facets: [] as Facet[],
             };
         }
-
-        const toSortedValues = (counter?: Map<string, number>) => {
-            if (!counter) {
-                return [];
-            }
-
-            return Array.from(counter.entries())
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, MAX_CATEGORY_VALUES)
-                .map(([label, count]) => ({ label: shortLabel(label), count }));
-        };
-
-        const buildFacets = (fieldValueCounters: Map<string, Map<string, number>>): Facet[] => {
-            const preferredFacetFields = PRIORITY_FIELDS.filter((field) => {
-                const counter = fieldValueCounters.get(field);
-                return Boolean(counter && counter.size > 1 && !CORE_CHART_FIELDS.includes(field));
-            });
-
-            const fallbackFacetFields = Array.from(fieldValueCounters.entries())
-                .filter(([field, counter]) => {
-                    return counter.size > 1
-                        && !preferredFacetFields.includes(field)
-                        && !CORE_CHART_FIELDS.includes(field);
-                })
-                .sort(([, a], [, b]) => {
-                    const sumA = Array.from(a.values()).reduce((acc, curr) => acc + curr, 0);
-                    const sumB = Array.from(b.values()).reduce((acc, curr) => acc + curr, 0);
-                    if (sumA !== sumB) {
-                        return sumB - sumA;
-                    }
-                    return b.size - a.size;
-                })
-                .map(([field]) => field);
-
-            const selectedFacetFields = [...preferredFacetFields, ...fallbackFacetFields].slice(0, 3);
-
-            return selectedFacetFields.map((field) => {
-                const values = fieldValueCounters.get(field);
-                return {
-                    field,
-                    values: toSortedValues(values),
-                };
-            });
-        };
 
         if (useLocalLargeMode && !largeFileStats) {
             return {
@@ -417,6 +911,7 @@ const DashboardPage: React.FC = () => {
                 levelValues: [] as Array<{ label: string; count: number }>,
                 statusValues: [] as Array<{ label: string; count: number }>,
                 methodValues: [] as Array<{ label: string; count: number }>,
+                componentLevelValues: [] as Array<{ label: string; count: number }>,
                 facets: [] as Facet[],
             };
         }
@@ -434,10 +929,11 @@ const DashboardPage: React.FC = () => {
                     ? Math.round((largeFileStats.parsedLines / largeFileStats.nonEmptyLines) * 100)
                     : 0,
                 parsedRows: largeFileHistogramLines,
-                levelValues: toSortedValues(fieldValueCounters.get('level')),
-                statusValues: toSortedValues(fieldValueCounters.get('status')),
-                methodValues: toSortedValues(fieldValueCounters.get('method')),
-                facets: buildFacets(fieldValueCounters),
+                levelValues: toSortedCounterValues('level', fieldValueCounters.get('level'), locale),
+                statusValues: toSortedCounterValues('status', fieldValueCounters.get('status'), locale),
+                methodValues: toSortedCounterValues('method', fieldValueCounters.get('method'), locale),
+                componentLevelValues: toSortedCounterValues('componentLevel', fieldValueCounters.get('componentLevel'), locale),
+                facets: buildFacetValues(fieldValueCounters, locale),
             };
         }
 
@@ -472,15 +968,16 @@ const DashboardPage: React.FC = () => {
             parsedLines += 1;
 
             Object.entries(parsed.fields).forEach(([field, value]) => {
+                const canonicalField = toDashboardCanonicalField(field);
                 const normalized = normalizeFieldValue(value);
                 if (!normalized) {
                     return;
                 }
 
-                if (!fieldValueCounters.has(field)) {
-                    fieldValueCounters.set(field, new Map<string, number>());
+                if (!fieldValueCounters.has(canonicalField)) {
+                    fieldValueCounters.set(canonicalField, new Map<string, number>());
                 }
-                const fieldCounter = fieldValueCounters.get(field)!;
+                const fieldCounter = fieldValueCounters.get(canonicalField)!;
                 fieldCounter.set(normalized, (fieldCounter.get(normalized) || 0) + 1);
             });
         }
@@ -493,10 +990,11 @@ const DashboardPage: React.FC = () => {
             unparsedLines: Math.max(nonEmptyLines - parsedLines, 0),
             parseRate: nonEmptyLines > 0 ? Math.round((parsedLines / nonEmptyLines) * 100) : 0,
             parsedRows,
-            levelValues: toSortedValues(fieldValueCounters.get('level')),
-            statusValues: toSortedValues(fieldValueCounters.get('status')),
-            methodValues: toSortedValues(fieldValueCounters.get('method')),
-            facets: buildFacets(fieldValueCounters),
+            levelValues: toSortedCounterValues('level', fieldValueCounters.get('level'), locale),
+            statusValues: toSortedCounterValues('status', fieldValueCounters.get('status'), locale),
+            methodValues: toSortedCounterValues('method', fieldValueCounters.get('method'), locale),
+            componentLevelValues: toSortedCounterValues('componentLevel', fieldValueCounters.get('componentLevel'), locale),
+            facets: buildFacetValues(fieldValueCounters, locale),
         };
         setNormalDashboardCache(normalFileCacheKey, snapshot);
         return snapshot;
@@ -506,6 +1004,7 @@ const DashboardPage: React.FC = () => {
         largeFileStats,
         normalFileCacheKey,
         normalSnapshot,
+        locale,
         requiresServerUploadForDashboard,
         useLocalLargeMode,
     ]);
@@ -530,65 +1029,26 @@ const DashboardPage: React.FC = () => {
                 const snapshot = await getDashboardSnapshot(analyticsSessionId);
                 if (cancelled) return;
                 if (snapshot) {
-                    const fieldValueCounters = toFieldCounterMap(snapshot.stats.fieldValueCounts);
-                    const toSortedValues = (counter?: Map<string, number>) => {
-                        if (!counter) {
-                            return [];
-                        }
+                    const stats = normalizeDashboardStats(snapshot.stats);
+                    if (!stats) {
+                        setNormalSnapshot(null);
+                        return;
+                    }
 
-                        return Array.from(counter.entries())
-                            .sort((a, b) => b[1] - a[1])
-                            .slice(0, MAX_CATEGORY_VALUES)
-                            .map(([label, count]) => ({ label: shortLabel(label), count }));
-                    };
-
-                    const buildFacets = (fieldCounters: Map<string, Map<string, number>>): Facet[] => {
-                        const preferredFacetFields = PRIORITY_FIELDS.filter((field) => {
-                            const counter = fieldCounters.get(field);
-                            return Boolean(counter && counter.size > 1 && !CORE_CHART_FIELDS.includes(field));
-                        });
-
-                        const fallbackFacetFields = Array.from(fieldCounters.entries())
-                            .filter(([field, counter]) => {
-                                return counter.size > 1
-                                    && !preferredFacetFields.includes(field)
-                                    && !CORE_CHART_FIELDS.includes(field);
-                            })
-                            .sort(([, a], [, b]) => {
-                                const sumA = Array.from(a.values()).reduce((acc, curr) => acc + curr, 0);
-                                const sumB = Array.from(b.values()).reduce((acc, curr) => acc + curr, 0);
-                                if (sumA !== sumB) {
-                                    return sumB - sumA;
-                                }
-                                return b.size - a.size;
-                            })
-                            .map(([field]) => field);
-
-                        const selectedFacetFields = [...preferredFacetFields, ...fallbackFacetFields].slice(0, 3);
-
-                        return selectedFacetFields.map((field) => {
-                            const values = fieldCounters.get(field);
-                            return {
-                                field,
-                                values: toSortedValues(values),
-                            };
-                        });
-                    };
-
+                    const summary = buildDashboardAnalyticsFromStats(stats, locale);
                     const snapshotData: NormalDashboardSnapshot = {
-                        totalLines: snapshot.stats.totalLines,
-                        analyzedLines: snapshot.stats.totalLines,
-                        nonEmptyLines: snapshot.stats.nonEmptyLines,
-                        parsedLines: snapshot.stats.parsedLines,
-                        unparsedLines: Math.max(snapshot.stats.nonEmptyLines - snapshot.stats.parsedLines, 0),
-                        parseRate: snapshot.stats.nonEmptyLines > 0
-                            ? Math.round((snapshot.stats.parsedLines / snapshot.stats.nonEmptyLines) * 100)
-                            : 0,
+                        totalLines: stats.totalLines,
+                        analyzedLines: summary.analyzedLines,
+                        nonEmptyLines: stats.nonEmptyLines,
+                        parsedLines: summary.parsedLines,
+                        unparsedLines: summary.unparsedLines,
+                        parseRate: summary.parseRate,
                         parsedRows: normalizeDashboardSampledLines(snapshot.sampledLines),
-                        levelValues: toSortedValues(fieldValueCounters.get('level')),
-                        statusValues: toSortedValues(fieldValueCounters.get('status')),
-                        methodValues: toSortedValues(fieldValueCounters.get('method')),
-                        facets: buildFacets(fieldValueCounters),
+                        levelValues: summary.levelValues,
+                        statusValues: summary.statusValues,
+                        methodValues: summary.methodValues,
+                        componentLevelValues: summary.componentLevelValues,
+                        facets: summary.facets,
                     };
 
                     setNormalSnapshot(snapshotData);
@@ -607,7 +1067,7 @@ const DashboardPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [analyticsSessionId, isIndexing, requiresServerUploadForDashboard, useLocalLargeMode]);
+    }, [analyticsSessionId, isIndexing, locale, requiresServerUploadForDashboard, useLocalLargeMode]);
 
     useEffect(() => {
         if (!isMonitoring || !useLocalLargeMode) {
@@ -664,10 +1124,365 @@ const DashboardPage: React.FC = () => {
     }, [isMonitoring, largeFileCacheKey, useLocalLargeMode]);
 
     const histogramSourceLines = useMemo(() => {
-        return useLocalLargeMode ? largeFileHistogramLines : analytics.parsedRows;
-    }, [analytics.parsedRows, largeFileHistogramLines, useLocalLargeMode]);
+        const sourceRows = useLocalLargeMode ? largeFileHistogramLines : analytics.parsedRows;
+        return ensureTimelineTimestamps(sourceRows, normalFileCacheKey);
+    }, [analytics.parsedRows, largeFileHistogramLines, normalFileCacheKey, useLocalLargeMode]);
+
+    const timestampedRowsAll = useMemo(() => {
+        return buildTimestampedRowsForWindow(histogramSourceLines, normalFileCacheKey);
+    }, [histogramSourceLines, normalFileCacheKey]);
+
+    const timelineBounds = useMemo(() => {
+        if (timestampedRowsAll.length === 0) {
+            return null;
+        }
+
+        let min = timestampedRowsAll[0].timestampMs;
+        let max = timestampedRowsAll[0].timestampMs;
+
+        for (let i = 1; i < timestampedRowsAll.length; i += 1) {
+            const ts = timestampedRowsAll[i].timestampMs;
+            if (ts < min) {
+                min = ts;
+            }
+            if (ts > max) {
+                max = ts;
+            }
+        }
+
+        return { min, max };
+    }, [timestampedRowsAll]);
+
+    const applyTimeRangeSelection = useCallback((startTime: number | null, endTime: number | null) => {
+        if (
+            startTime === null
+            || endTime === null
+            || !Number.isFinite(startTime)
+            || !Number.isFinite(endTime)
+            || !timelineBounds
+        ) {
+            setSelectedTimeRange({ start: null, end: null });
+            return;
+        }
+
+        const requestedStart = Math.min(startTime, endTime);
+        const requestedEnd = Math.max(startTime, endTime);
+
+        // Preserve fully out-of-bounds ranges to allow true empty-window filters.
+        if (requestedEnd < timelineBounds.min || requestedStart > timelineBounds.max) {
+            setSelectedTimeRange({
+                start: Math.floor(requestedStart),
+                end: Math.ceil(requestedEnd),
+            });
+            return;
+        }
+
+        let start = Math.max(timelineBounds.min, Math.floor(requestedStart));
+        let end = Math.min(timelineBounds.max, Math.ceil(requestedEnd));
+
+        const totalWindow = Math.max(1, timelineBounds.max - timelineBounds.min);
+        const minWindowMs = Math.max(1000, Math.min(60_000, Math.floor(totalWindow / 250)));
+
+        if (end <= start) {
+            const center = Math.max(timelineBounds.min, Math.min(timelineBounds.max, start));
+            const half = Math.floor(minWindowMs / 2);
+            start = Math.max(timelineBounds.min, center - half);
+            end = Math.min(timelineBounds.max, start + minWindowMs);
+
+            if (end <= start) {
+                setSelectedTimeRange({ start: null, end: null });
+                return;
+            }
+        }
+
+        if (!Number.isFinite(start) || !Number.isFinite(end)) {
+            setSelectedTimeRange({ start: null, end: null });
+            return;
+        }
+
+        setSelectedTimeRange({ start, end });
+    }, [timelineBounds]);
+
+    const windowRows = useMemo(() => {
+        const timestampedRows = timestampedRowsAll;
+
+        if (!hasActiveTimeRange) {
+            return timestampedRows;
+        }
+
+        const rangeStart = selectedTimeRange.start;
+        const rangeEnd = selectedTimeRange.end;
+        if (rangeStart === null || rangeEnd === null) {
+            return timestampedRows;
+        }
+
+        return timestampedRows.filter((item) => item.timestampMs >= rangeStart && item.timestampMs <= rangeEnd);
+    }, [hasActiveTimeRange, selectedTimeRange.end, selectedTimeRange.start, timestampedRowsAll]);
+
+    const selectedCategoriesSet = useMemo(() => {
+        if (!histogramCategoryFilter.selectedCategories || histogramCategoryFilter.selectedCategories.length === 0) {
+            return null;
+        }
+
+        return new Set(histogramCategoryFilter.selectedCategories.map((value) => value.trim().toUpperCase()));
+    }, [histogramCategoryFilter.selectedCategories]);
+
+    const hasActiveCategoryFilter = selectedCategoriesSet !== null;
+
+    const categoryFilteredRows = useMemo(() => {
+        if (!selectedCategoriesSet) {
+            return windowRows;
+        }
+
+        const categoryField = histogramCategoryFilter.field;
+
+        return windowRows.filter((item) => {
+            if (!item.row.parsed) {
+                return false;
+            }
+
+            const rawCategory = categoryField
+                ? item.row.parsed.fields[categoryField]
+                : 'UNKNOWN';
+            const normalized = rawCategory && rawCategory.trim().length > 0
+                ? rawCategory.trim().toUpperCase()
+                : 'UNKNOWN';
+
+            return selectedCategoriesSet.has(normalized);
+        });
+    }, [histogramCategoryFilter.field, selectedCategoriesSet, windowRows]);
+
+    const shouldUseExactFiltered = hasActiveTimeRange || hasActiveCategoryFilter;
+    const shouldUseRemoteExact = isRemoteLargeSession && shouldUseExactFiltered;
+    const shouldUseLocalExact = !isRemoteLargeSession && shouldUseExactFiltered && Boolean(analyticsSessionId);
+    const shouldUseExactFilteredSnapshot = shouldUseRemoteExact || shouldUseLocalExact;
+
+    useEffect(() => {
+        if (!shouldUseExactFilteredSnapshot) {
+            setExactFilteredSnapshot(null);
+            setIsExactFilteredLoading(false);
+            return;
+        }
+
+        const abortController = new AbortController();
+        let cancelled = false;
+        setIsExactFilteredLoading(true);
+
+        const timer = window.setTimeout(() => {
+            const loadExactFilteredSnapshot = async () => {
+                try {
+                    const snapshot = shouldUseRemoteExact
+                        ? await getRemoteExactDashboardSnapshot(
+                            remoteIngestId!,
+                            {
+                                startMs: hasActiveTimeRange ? selectedTimeRange.start : null,
+                                endMs: hasActiveTimeRange ? selectedTimeRange.end : null,
+                                categoryField: hasActiveCategoryFilter ? histogramCategoryFilter.field : null,
+                                categoryValues: hasActiveCategoryFilter ? histogramCategoryFilter.selectedCategories : null,
+                            },
+                            { signal: abortController.signal },
+                        )
+                        : await getLocalExactDashboardSnapshot(
+                            analyticsSessionId,
+                            {
+                                startMs: hasActiveTimeRange ? selectedTimeRange.start : null,
+                                endMs: hasActiveTimeRange ? selectedTimeRange.end : null,
+                                categoryField: hasActiveCategoryFilter ? histogramCategoryFilter.field : null,
+                                categoryValues: hasActiveCategoryFilter ? histogramCategoryFilter.selectedCategories : null,
+                                signal: abortController.signal,
+                            },
+                        );
+
+                    if (cancelled) {
+                        return;
+                    }
+
+                    const snapshotStats = normalizeDashboardStats(
+                        (snapshot as { stats?: unknown } | null)?.stats,
+                    );
+                    if (!snapshotStats) {
+                        setExactFilteredSnapshot(null);
+                        return;
+                    }
+
+                    setExactFilteredSnapshot({
+                        totalLines: snapshotStats.totalLines,
+                        analytics: buildDashboardAnalyticsFromStats(snapshotStats, locale),
+                    });
+                } catch {
+                    if (abortController.signal.aborted || cancelled) {
+                        return;
+                    }
+                    setExactFilteredSnapshot(null);
+                } finally {
+                    if (!cancelled) {
+                        setIsExactFilteredLoading(false);
+                    }
+                }
+            };
+
+            void loadExactFilteredSnapshot();
+        }, 250);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+            abortController.abort();
+        };
+    }, [
+        hasActiveCategoryFilter,
+        hasActiveTimeRange,
+        histogramCategoryFilter.field,
+        histogramCategoryFilter.selectedCategories,
+        locale,
+        analyticsSessionId,
+        remoteIngestId,
+        selectedTimeRange.end,
+        selectedTimeRange.start,
+        shouldUseExactFilteredSnapshot,
+        shouldUseLocalExact,
+        shouldUseRemoteExact,
+    ]);
+
+    const chartAnalytics = useMemo(() => {
+        const buildApproximateFromWindow = () => {
+            const filteredParsedRows = categoryFilteredRows
+                .filter((item) => item.isParsed)
+                .map((item) => item.row);
+
+            const distributions = buildDistributionsFromRows(filteredParsedRows, locale);
+            const analyzedLines = categoryFilteredRows.length;
+            const parsedLines = filteredParsedRows.length;
+            const unparsedLines = Math.max(analyzedLines - parsedLines, 0);
+            const parseRate = analyzedLines > 0
+                ? Math.round((parsedLines / analyzedLines) * 100)
+                : 0;
+
+            return {
+                analyzedLines,
+                parsedLines,
+                unparsedLines,
+                parseRate,
+                levelValues: distributions.levelValues,
+                statusValues: distributions.statusValues,
+                methodValues: distributions.methodValues,
+                componentLevelValues: distributions.componentLevelValues,
+                facets: distributions.facets,
+            };
+        };
+
+        if (!hasActiveTimeRange && !hasActiveCategoryFilter) {
+            return {
+                analyzedLines: analytics.analyzedLines,
+                parsedLines: analytics.parsedLines,
+                unparsedLines: analytics.unparsedLines,
+                parseRate: analytics.parseRate,
+                levelValues: analytics.levelValues,
+                statusValues: analytics.statusValues,
+                methodValues: analytics.methodValues,
+                componentLevelValues: analytics.componentLevelValues,
+                facets: analytics.facets,
+            };
+        }
+
+        if (shouldUseExactFilteredSnapshot) {
+            if (!exactFilteredSnapshot) {
+                return {
+                    analyzedLines: analytics.analyzedLines,
+                    parsedLines: analytics.parsedLines,
+                    unparsedLines: analytics.unparsedLines,
+                    parseRate: analytics.parseRate,
+                    levelValues: analytics.levelValues,
+                    statusValues: analytics.statusValues,
+                    methodValues: analytics.methodValues,
+                    componentLevelValues: analytics.componentLevelValues,
+                    facets: analytics.facets,
+                };
+            }
+
+            return exactFilteredSnapshot.analytics;
+        }
+
+        return buildApproximateFromWindow();
+    }, [
+        analytics.analyzedLines,
+        analytics.componentLevelValues,
+        analytics.facets,
+        analytics.levelValues,
+        analytics.methodValues,
+        analytics.parsedLines,
+        analytics.parseRate,
+        analytics.statusValues,
+        analytics.unparsedLines,
+        categoryFilteredRows,
+        exactFilteredSnapshot,
+        hasActiveCategoryFilter,
+        hasActiveTimeRange,
+        locale,
+        shouldUseExactFilteredSnapshot,
+    ]);
+
+    const kpiAnalytics = useMemo(() => {
+        if (!hasActiveTimeRange && !hasActiveCategoryFilter) {
+            return {
+                totalLines: analytics.totalLines,
+                parsedLines: analytics.parsedLines,
+                unparsedLines: analytics.unparsedLines,
+                parseRate: analytics.parseRate,
+            };
+        }
+
+        if (shouldUseExactFilteredSnapshot) {
+            if (!exactFilteredSnapshot) {
+                return {
+                    totalLines: analytics.totalLines,
+                    parsedLines: analytics.parsedLines,
+                    unparsedLines: analytics.unparsedLines,
+                    parseRate: analytics.parseRate,
+                };
+            }
+
+            return {
+                totalLines: exactFilteredSnapshot.totalLines,
+                parsedLines: exactFilteredSnapshot.analytics.parsedLines,
+                unparsedLines: exactFilteredSnapshot.analytics.unparsedLines,
+                parseRate: exactFilteredSnapshot.analytics.parseRate,
+            };
+        }
+
+        return {
+            totalLines: chartAnalytics.analyzedLines,
+            parsedLines: chartAnalytics.parsedLines,
+            unparsedLines: chartAnalytics.unparsedLines,
+            parseRate: chartAnalytics.parseRate,
+        };
+    }, [
+        analytics.parseRate,
+        analytics.parsedLines,
+        analytics.totalLines,
+        analytics.unparsedLines,
+        chartAnalytics.analyzedLines,
+        chartAnalytics.parseRate,
+        chartAnalytics.parsedLines,
+        chartAnalytics.unparsedLines,
+        exactFilteredSnapshot,
+        hasActiveCategoryFilter,
+        hasActiveTimeRange,
+        shouldUseExactFilteredSnapshot,
+    ]);
 
     const isLargeScanPending = useLocalLargeMode && !largeFileStats;
+    const hasLevelChartData = chartAnalytics.levelValues.length > 0;
+    const hasStatusChartData = chartAnalytics.statusValues.length > 0;
+    const hasMethodChartData = chartAnalytics.methodValues.length > 0;
+    const hasComponentLevelChartData = chartAnalytics.componentLevelValues.length > 0;
+    const hasAnyTopChartData = hasLevelChartData || hasStatusChartData || hasMethodChartData || hasComponentLevelChartData;
+    const topChartGridMd = hasComponentLevelChartData ? 3 : 4;
+    const shouldShowBottomNoDataMessage = (
+        (hasActiveTimeRange || hasActiveCategoryFilter)
+        && chartAnalytics.analyzedLines === 0
+    );
+    const isExactRebuildInProgress = isExactFilteredLoading && shouldUseExactFilteredSnapshot;
 
     if (!isMonitoring && !loaded) {
         return (
@@ -743,68 +1558,113 @@ const DashboardPage: React.FC = () => {
                 )}
 
                 {!isLargeScanPending && (
-                    <Grid
-                        container
-                        spacing={2}
-                    >
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card>
-                                <CardContent>
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >{t('dashboard.metrics.totalLines')}
-                                    </Typography>
-                                    <Typography variant="h4">{analytics.totalLines.toLocaleString(locale)}</Typography>
-                                </CardContent>
-                            </Card>
+                    <Box sx={{ position: 'relative' }}>
+                        <Grid
+                            container
+                            spacing={2}
+                        >
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >{t('dashboard.metrics.totalLines')}
+                                        </Typography>
+                                        <Typography variant="h4">{kpiAnalytics.totalLines.toLocaleString(locale)}</Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >{t('dashboard.metrics.parsedLines')}
+                                        </Typography>
+                                        <Typography variant="h4">{kpiAnalytics.parsedLines.toLocaleString(locale)}</Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >{t('dashboard.metrics.unparsedLines')}
+                                        </Typography>
+                                        <Typography variant="h4">{kpiAnalytics.unparsedLines.toLocaleString(locale)}</Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >{t('dashboard.metrics.parseRate')}
+                                        </Typography>
+                                        <Typography variant="h4">{kpiAnalytics.parseRate}%</Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card>
-                                <CardContent>
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >{t('dashboard.metrics.parsedLines')}
-                                    </Typography>
-                                    <Typography variant="h4">{analytics.parsedLines.toLocaleString(locale)}</Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card>
-                                <CardContent>
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >{t('dashboard.metrics.unparsedLines')}
-                                    </Typography>
-                                    <Typography variant="h4">{analytics.unparsedLines.toLocaleString(locale)}</Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card>
-                                <CardContent>
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >{t('dashboard.metrics.parseRate')}
-                                    </Typography>
-                                    <Typography variant="h4">{analytics.parseRate}%</Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    </Grid>
+
+                        {isExactRebuildInProgress && (
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                    backdropFilter: 'blur(1px)',
+                                    borderRadius: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    pointerEvents: 'none',
+                                    zIndex: 2,
+                                }}
+                            >
+                                <CircularProgress size={28} />
+                            </Box>
+                        )}
+                    </Box>
                 )}
 
-                {!isLargeScanPending && analytics.parsedLines === 0 && (
+                {!isLargeScanPending && isNormalSnapshotLoading && (
+                    <Card>
+                        <CardContent>
+                            <Box
+                                sx={{
+                                    minHeight: 120,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 2,
+                                }}
+                            >
+                                <CircularProgress size={24} />
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Загрузка дашборда
+                                </Typography>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {!isLargeScanPending && !isNormalSnapshotLoading && analytics.parsedLines === 0 && (
                     <Alert severity="warning">
                         {t('dashboard.noParsedWarning')}
                     </Alert>
                 )}
 
-                {!isLargeScanPending && analytics.parsedLines > 0 && (
+                {!isLargeScanPending && !isNormalSnapshotLoading && (
                     <>
                         <Card>
                             <CardContent>
@@ -830,83 +1690,177 @@ const DashboardPage: React.FC = () => {
                                         </Typography>
                                     </Box>
                                 ) : (
-                                    <LogHistogram parsedLines={histogramSourceLines} />
+                                    <LogHistogram
+                                        parsedLines={histogramSourceLines}
+                                        onTimeRangeChange={(startTime, endTime) => {
+                                            applyTimeRangeSelection(startTime, endTime);
+                                        }}
+                                        onCategoryFilterChange={(payload) => {
+                                            setHistogramCategoryFilter((prev) => {
+                                                const prevSelected = prev.selectedCategories;
+                                                const nextSelected = payload.selectedCategories;
+                                                const sameField = prev.field === payload.field;
+                                                const sameSelection = (
+                                                    (prevSelected === null && nextSelected === null)
+                                                    || (
+                                                        prevSelected !== null
+                                                        && nextSelected !== null
+                                                        && prevSelected.length === nextSelected.length
+                                                        && prevSelected.every((value, index) => value === nextSelected[index])
+                                                    )
+                                                );
+
+                                                if (sameField && sameSelection) {
+                                                    return prev;
+                                                }
+
+                                                return {
+                                                    field: payload.field,
+                                                    selectedCategories: nextSelected ? [...nextSelected] : null,
+                                                };
+                                            });
+                                        }}
+                                    />
                                 )}
                             </CardContent>
                         </Card>
 
-                        <Grid
-                            container
-                            spacing={2}
-                        >
-                            {analytics.levelValues.length > 0 && (
-                                <Grid size={{ xs: 12, md: 4 }}>
-                                    <Card>
-                                        <CardContent>
-                                            <ReactECharts
-                                                option={toChartOption(t('dashboard.charts.levels'), analytics.levelValues, locale)}
-                                                style={{ height: 260 }}
-                                            />
-                                        </CardContent>
-                                    </Card>
+                        {hasAnyTopChartData && (
+                            <Box sx={{ position: 'relative' }}>
+                                <Grid
+                                    container
+                                    spacing={2}
+                                >
+                                    {hasLevelChartData && (
+                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                            <Card>
+                                                <CardContent>
+                                                    <ReactECharts
+                                                        option={toChartOption(t('dashboard.charts.levels'), chartAnalytics.levelValues, locale)}
+                                                        style={{ height: 260 }}
+                                                    />
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    )}
+                                    {hasStatusChartData && (
+                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                            <Card>
+                                                <CardContent>
+                                                    <ReactECharts
+                                                        option={toChartOption(t('dashboard.charts.httpStatus'), chartAnalytics.statusValues, locale)}
+                                                        style={{ height: 260 }}
+                                                    />
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    )}
+                                    {hasMethodChartData && (
+                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                            <Card>
+                                                <CardContent>
+                                                    <ReactECharts
+                                                        option={toChartOption(t('dashboard.charts.httpMethods'), chartAnalytics.methodValues, locale)}
+                                                        style={{ height: 260 }}
+                                                    />
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    )}
+                                    {hasComponentLevelChartData && (
+                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                            <Card>
+                                                <CardContent>
+                                                    <ReactECharts
+                                                        option={toChartOption(getFieldTitle('componentLevel', t), chartAnalytics.componentLevelValues, locale)}
+                                                        style={{ height: 260 }}
+                                                    />
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    )}
                                 </Grid>
-                            )}
-                            {analytics.statusValues.length > 0 && (
-                                <Grid size={{ xs: 12, md: 4 }}>
-                                    <Card>
-                                        <CardContent>
-                                            <ReactECharts
-                                                option={toChartOption(t('dashboard.charts.httpStatus'), analytics.statusValues, locale)}
-                                                style={{ height: 260 }}
-                                            />
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            )}
-                            {analytics.methodValues.length > 0 && (
-                                <Grid size={{ xs: 12, md: 4 }}>
-                                    <Card>
-                                        <CardContent>
-                                            <ReactECharts
-                                                option={toChartOption(t('dashboard.charts.httpMethods'), analytics.methodValues, locale)}
-                                                style={{ height: 260 }}
-                                            />
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            )}
-                        </Grid>
 
-                        {analytics.facets.length > 0 && (
+                                {isExactRebuildInProgress && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                            backdropFilter: 'blur(1px)',
+                                            borderRadius: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            pointerEvents: 'none',
+                                            zIndex: 2,
+                                        }}
+                                    >
+                                        <CircularProgress size={28} />
+                                    </Box>
+                                )}
+                            </Box>
+                        )}
+
+                        {chartAnalytics.facets.length > 0 ? (
+                            <Box sx={{ position: 'relative' }}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography variant="subtitle1">{t('dashboard.topFieldsTitle')}</Typography>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                        >
+                                            {t('dashboard.topFieldsDescription')}
+                                        </Typography>
+                                        <Divider sx={{ my: 1.5 }} />
+                                        <Grid
+                                            container
+                                            spacing={2}
+                                        >
+                                            {chartAnalytics.facets.map((facet) => (
+                                                <Grid
+                                                    key={facet.field}
+                                                    size={{ xs: 12, md: 4 }}
+                                                >
+                                                    <ReactECharts
+                                                        option={toChartOption(getFieldTitle(facet.field, t), facet.values, locale)}
+                                                        style={{ height: 260 }}
+                                                    />
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </CardContent>
+                                </Card>
+
+                                {isExactRebuildInProgress && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                            backdropFilter: 'blur(1px)',
+                                            borderRadius: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            pointerEvents: 'none',
+                                            zIndex: 2,
+                                        }}
+                                    >
+                                        <CircularProgress size={28} />
+                                    </Box>
+                                )}
+                            </Box>
+                        ) : shouldShowBottomNoDataMessage ? (
                             <Card>
                                 <CardContent>
-                                    <Typography variant="subtitle1">{t('dashboard.topFieldsTitle')}</Typography>
-                                    <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                    >
-                                        {t('dashboard.topFieldsDescription')}
-                                    </Typography>
-                                    <Divider sx={{ my: 1.5 }} />
-                                    <Grid
-                                        container
-                                        spacing={2}
-                                    >
-                                        {analytics.facets.map((facet) => (
-                                            <Grid
-                                                key={facet.field}
-                                                size={{ xs: 12, md: 4 }}
-                                            >
-                                                <ReactECharts
-                                                    option={toChartOption(getFieldTitle(facet.field, t), facet.values, locale)}
-                                                    style={{ height: 260 }}
-                                                />
-                                            </Grid>
-                                        ))}
-                                    </Grid>
+                                    <Alert severity="info">
+                                        Нет данных для отображения
+                                    </Alert>
                                 </CardContent>
                             </Card>
-                        )}
+                        ) : null}
                     </>
                 )}
             </Stack>

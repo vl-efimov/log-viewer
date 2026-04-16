@@ -427,8 +427,14 @@ export async function queryRemoteFilteredLines(
     ingestId: string,
     filters: Record<string, unknown>,
     limit: number,
-    options?: { afterLine?: number },
-): Promise<{ totalMatches: number; lines: Array<{ lineNumber: number; raw: string }>; nextAfterLine?: number | null; hasMore?: boolean }> {
+    options?: { afterLine?: number; beforeLine?: number; order?: 'asc' | 'desc' },
+): Promise<{
+    totalMatches: number;
+    lines: Array<{ lineNumber: number; raw: string }>;
+    nextAfterLine?: number | null;
+    nextBeforeLine?: number | null;
+    hasMore?: boolean;
+}> {
     const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/filter`, {
         method: 'POST',
         headers: {
@@ -438,6 +444,8 @@ export async function queryRemoteFilteredLines(
             filters,
             limit,
             after_line: options?.afterLine,
+            before_line: options?.beforeLine,
+            order: options?.order,
         }),
     });
     if (!response.ok) {
@@ -455,6 +463,39 @@ export async function getRemoteDashboardSnapshot(ingestId: string): Promise<unkn
     }
     const payload = await response.json() as { snapshot: unknown };
     return payload.snapshot;
+}
+
+export async function getRemoteExactDashboardSnapshot(
+    ingestId: string,
+    payload: {
+        startMs?: number | null;
+        endMs?: number | null;
+        categoryField?: string | null;
+        categoryValues?: string[] | null;
+    },
+    options?: { signal?: AbortSignal },
+): Promise<unknown> {
+    const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/dashboard/exact`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            start_ms: payload.startMs ?? null,
+            end_ms: payload.endMs ?? null,
+            category_field: payload.categoryField ?? null,
+            category_values: payload.categoryValues ?? null,
+        }),
+        signal: options?.signal,
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Failed to fetch exact dashboard snapshot (${response.status})`);
+    }
+
+    const result = await response.json() as { snapshot: unknown };
+    return result.snapshot;
 }
 
 export async function getPretrainedModels(): Promise<PretrainedModelInfo[]> {

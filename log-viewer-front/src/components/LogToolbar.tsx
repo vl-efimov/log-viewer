@@ -10,6 +10,8 @@ import Typography from '@mui/material/Typography';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import VerticalAlignBottomIcon from '@mui/icons-material/VerticalAlignBottom';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
@@ -39,11 +41,16 @@ interface LogToolbarProps {
     filters: LogFilters;
     onFiltersChange: (filters: LogFilters) => void;
     fieldDefinitions: LogFormatField[];
+    hasAnomalyResults: boolean;
     isStreamView: boolean;
     filtersDisabled: boolean;
-    lineCount: number;
+    totalRowsHintForAnomaly: number;
     normalRows: AnomalySourceRow[];
     requestFileForAnomalyAnalysis: () => Promise<File | null>;
+    onNavigateToPreviousAnomaly?: () => void;
+    onNavigateToNextAnomaly?: () => void;
+    canNavigateToPreviousAnomaly?: boolean;
+    canNavigateToNextAnomaly?: boolean;
     remoteIngestId?: string;
     showUploadToServer?: boolean;
     uploadInProgress?: boolean;
@@ -63,11 +70,16 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     filters,
     onFiltersChange,
     fieldDefinitions,
+    hasAnomalyResults,
     isStreamView,
     filtersDisabled,
-    lineCount,
+    totalRowsHintForAnomaly,
     normalRows,
     requestFileForAnomalyAnalysis,
+    onNavigateToPreviousAnomaly,
+    onNavigateToNextAnomaly,
+    canNavigateToPreviousAnomaly = false,
+    canNavigateToNextAnomaly = false,
     remoteIngestId,
     showUploadToServer = false,
     uploadInProgress = false,
@@ -324,6 +336,38 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 Настройки
                             </Button>
                         </Tooltip>
+
+                        <Tooltip
+                            title="К предыдущей аномалии"
+                            arrow
+                        >
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={onNavigateToPreviousAnomaly}
+                                    disabled={controlsDisabled || !canNavigateToPreviousAnomaly || !onNavigateToPreviousAnomaly}
+                                    sx={{ p: 0.5 }}
+                                >
+                                    <KeyboardArrowUpIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Tooltip
+                            title="К следующей аномалии"
+                            arrow
+                        >
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={onNavigateToNextAnomaly}
+                                    disabled={controlsDisabled || !canNavigateToNextAnomaly || !onNavigateToNextAnomaly}
+                                    sx={{ p: 0.5 }}
+                                >
+                                    <KeyboardArrowDownIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                     </Box>
                 </Box>
 
@@ -415,6 +459,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     filters={filters}
                     onFiltersChange={onFiltersChange}
                     fieldDefinitions={fieldDefinitions}
+                    anomalyFilterEnabled={hasAnomalyResults}
                     onCloseRequested={() => setFiltersAnchorEl(null)}
                 />
             </Popover>
@@ -423,7 +468,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 open={isAnomalySettingsPanelOpen}
                 onClose={() => setIsAnomalySettingsPanelOpen(false)}
                 isStreamView={isStreamView}
-                lineCount={lineCount}
+                totalRowsHint={totalRowsHintForAnomaly}
                 normalRows={normalRows}
                 requestFileForAnomalyAnalysis={requestFileForAnomalyAnalysis}
                 remoteIngestId={remoteIngestId}

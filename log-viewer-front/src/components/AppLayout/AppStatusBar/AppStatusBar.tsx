@@ -43,6 +43,7 @@ const AppStatusBar: React.FC = () => {
     } = useSelector((state: RootState) => state.logFile);
     const {
         rowsCount: anomalyRowsCount,
+        totalRows: anomalyTotalRows,
         error: anomalyError,
         isStopped: anomalyIsStopped,
         stoppedAt: anomalyStoppedAt,
@@ -106,7 +107,8 @@ const AppStatusBar: React.FC = () => {
     };
 
     const anomalyStatus = (() => {
-        if (!loaded || !isViewLogsRoute) {
+        const allowStatusOnCurrentRoute = anomalyIsRunning || (loaded && isViewLogsRoute);
+        if (!allowStatusOnCurrentRoute) {
             return null;
         }
 
@@ -140,9 +142,15 @@ const AppStatusBar: React.FC = () => {
 
         if (anomalyLastAnalyzedAt && anomalyLastModelId && anomalyLastRunParams) {
             const time = new Date(anomalyLastAnalyzedAt).toLocaleTimeString();
+            const ratio = anomalyTotalRows > 0
+                ? (anomalyRowsCount / anomalyTotalRows) * 100
+                : 0;
+            const ratioText = anomalyTotalRows > 0
+                ? `${ratio.toFixed(2)}%`
+                : '--%';
             return {
-                compact: `Anomaly: ${anomalyRowsCount} | ${time} ${anomalyLastModelId.toUpperCase()} | th ${anomalyLastRunParams.threshold} s ${anomalyLastRunParams.stepSize} r ${anomalyLastRunParams.minRegionLines}`,
-                full: `Anomaly rows: ${anomalyRowsCount} | Last analysis: ${time} (${anomalyLastModelId.toUpperCase()}) | Params: threshold=${anomalyLastRunParams.threshold}, step=${anomalyLastRunParams.stepSize}, minRegion=${anomalyLastRunParams.minRegionLines}`,
+                compact: `Anomaly: ${anomalyRowsCount} (${ratioText}) | ${time} ${anomalyLastModelId.toUpperCase()} | th ${anomalyLastRunParams.threshold} s ${anomalyLastRunParams.stepSize} r ${anomalyLastRunParams.minRegionLines}`,
+                full: `Anomaly rows: ${anomalyRowsCount} (${ratioText} of ${anomalyTotalRows}) | Last analysis: ${time} (${anomalyLastModelId.toUpperCase()}) | Params: threshold=${anomalyLastRunParams.threshold}, step=${anomalyLastRunParams.stepSize}, minRegion=${anomalyLastRunParams.minRegionLines}`,
             };
         }
 

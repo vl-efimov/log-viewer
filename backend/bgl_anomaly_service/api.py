@@ -10,6 +10,7 @@ from .inference import NeuralLogAnomalyService, PredictionCancelledError
 from .io_utils import parse_rows_from_bytes
 from .log_db import (
     append_chunk,
+    build_dashboard_exact_snapshot,
     build_dashboard_snapshot,
     create_ingest,
     delete_ingest,
@@ -300,6 +301,10 @@ def log_filter(ingest_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     limit = int(payload.get("limit", 50000)) if isinstance(payload, dict) else 50000
     after_line_raw = payload.get("after_line") if isinstance(payload, dict) else None
     after_line = int(after_line_raw) if after_line_raw is not None else None
+    before_line_raw = payload.get("before_line") if isinstance(payload, dict) else None
+    before_line = int(before_line_raw) if before_line_raw is not None else None
+    order_raw = payload.get("order") if isinstance(payload, dict) else "asc"
+    order = "desc" if str(order_raw).strip().lower() == "desc" else "asc"
     return {
         "ok": True,
         **query_filtered_lines(
@@ -307,6 +312,8 @@ def log_filter(ingest_id: str, payload: dict[str, Any]) -> dict[str, Any]:
             filters=filters or {},
             limit=max(1, min(limit, 100000)),
             after_line=after_line,
+            before_line=before_line,
+            order=order,
         ),
     }
 
@@ -316,6 +323,34 @@ def log_dashboard(ingest_id: str) -> dict[str, Any]:
     return {
         "ok": True,
         "snapshot": build_dashboard_snapshot(ingest_id),
+    }
+
+
+@app.post("/logs/{ingest_id}/dashboard/exact")
+def log_dashboard_exact(ingest_id: str, payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+    start_ms_raw = payload.get("start_ms") if isinstance(payload, dict) else None
+    end_ms_raw = payload.get("end_ms") if isinstance(payload, dict) else None
+    category_field_raw = payload.get("category_field") if isinstance(payload, dict) else None
+    category_values_raw = payload.get("category_values") if isinstance(payload, dict) else None
+
+    start_ms = int(start_ms_raw) if start_ms_raw is not None else None
+    end_ms = int(end_ms_raw) if end_ms_raw is not None else None
+    category_field = str(category_field_raw).strip() if isinstance(category_field_raw, str) and category_field_raw.strip() else None
+    category_values = [
+        str(value).strip()
+        for value in category_values_raw
+        if str(value).strip()
+    ] if isinstance(category_values_raw, list) else None
+
+    return {
+        "ok": True,
+        "snapshot": build_dashboard_exact_snapshot(
+            ingest_id,
+            start_ms=start_ms,
+            end_ms=end_ms,
+            category_field=category_field,
+            category_values=category_values,
+        ),
     }
 
 

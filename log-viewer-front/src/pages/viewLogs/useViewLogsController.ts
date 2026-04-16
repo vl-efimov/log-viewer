@@ -11,6 +11,7 @@ import {
     setLogFile,
     updateLogContent,
 } from '../../redux/slices/logFileSlice';
+import { setAnomalyResults } from '../../redux/slices/anomalySlice';
 import {
     detectLogFormat,
     getFormatFields,
@@ -52,11 +53,15 @@ const MAX_RANGE_BYTES = 512 * 1024;
 const MAX_VIRTUAL_ROWS = 1_500_000;
 const WINDOW_REBASE_MARGIN = 200_000;
 const MAX_LARGE_FILE_VIEW_CACHE_ENTRIES = 3;
-const MAX_INDEXED_FILTER_ROWS = 100_000;
-const FILTER_PROGRESS_UI_BATCH_ROWS = 5_000;
+const REMOTE_FILTER_PAGE_ROWS = 20_000;
+const MAX_FILTER_ROWS_IN_MEMORY = 50_000;
+const REMOTE_FILTER_LOAD_EDGE_ROWS = 2_000;
 const PREVIEW_BYTES = 2 * 1024 * 1024;
 const DB_RANGE_LOAD_PADDING = 120;
 const REMOTE_INGEST_CHUNK_BYTES = 4 * 1024 * 1024;
+const REMOTE_LINE_COUNT_RETRY_ATTEMPTS = 20;
+const REMOTE_LINE_COUNT_RETRY_DELAY_MS = 500;
+const ANOMALY_FILTER_KEY = 'anomalyStatus';
 
 type ViewParsedLine = {
     lineNumber: number;
@@ -84,6 +89,34 @@ type LargeFileViewCacheEntry = {
 type DbLineCacheEntry = {
     text: string;
     size: number;
+};
+
+type AnomalyFilterSelection = {
+    includeAnomaly: boolean;
+    includeNormal: boolean;
+    includeUndefined: boolean;
+};
+
+type AnomalyLineInterval = {
+    start: number;
+    end: number;
+};
+
+type RemoteFilterPaginationState = {
+    active: boolean;
+    loadFromEnd: boolean;
+    oldestLineNumber?: number;
+    newestLineNumber?: number;
+    hasMoreOlder: boolean;
+    hasMoreNewer: boolean;
+    isLoading: boolean;
+};
+
+type RemoteFilterMergeResult = {
+    rows: ViewRow[];
+    prependedCount: number;
+    droppedFromStart: number;
+    droppedFromEnd: number;
 };
 
 const largeFileViewCache = new Map<string, LargeFileViewCacheEntry>();
@@ -172,6 +205,18 @@ const buildRowsForView = (logContent: string): ViewRow[] => {
     return rows;
 };
 
+const countPhysicalLines = (logContent: string): number => {
+    if (!logContent) {
+        return 0;
+    }
+
+    const lines = logContent.split(/\r?\n/);
+    if (lines.length > 0 && lines[lines.length - 1] === '') {
+        return lines.length - 1;
+    }
+    return lines.length;
+};
+
 const hasActiveFilters = (filters: LogFilters): boolean => {
     for (const value of Object.values(filters)) {
         if (!value) continue;
@@ -184,6 +229,32 @@ const hasActiveFilters = (filters: LogFilters): boolean => {
         }
     }
     return false;
+};
+
+const splitAnomalyFilter = (filters: LogFilters): {
+    dataFilters: LogFilters;
+    anomalySelection: AnomalyFilterSelection;
+} => {
+    const anomalyRaw = filters[ANOMALY_FILTER_KEY];
+    const values = Array.isArray(anomalyRaw)
+        ? anomalyRaw.map((item) => String(item).toLowerCase())
+        : [];
+
+    const includeAnomaly = values.includes('anomaly');
+    const includeNormal = values.includes('normal');
+    const includeUndefined = values.includes('undefined');
+
+    const dataFilters: LogFilters = { ...filters };
+    delete dataFilters[ANOMALY_FILTER_KEY];
+
+    return {
+        dataFilters,
+        anomalySelection: {
+            includeAnomaly,
+            includeNormal,
+            includeUndefined,
+        },
+    };
 };
 
 export const useViewLogsController = () => {
@@ -212,7 +283,9 @@ export const useViewLogsController = () => {
         regions: anomalyRegions,
         lineNumbers: anomalyLineNumbers,
         hasResults: hasAnomalyResults,
+        isRunning: anomalyIsRunning,
         rowsCount: anomalyRowsCount,
+        totalRows: anomalyTotalRows,
         lastAnalyzedAt: anomalyLastAnalyzedAt,
         lastModelId: anomalyLastModelId,
         lastRunParams: anomalyLastRunParams,
@@ -220,11 +293,13 @@ export const useViewLogsController = () => {
 
     const [normalRows, setNormalRows] = useState<ViewRow[]>([]);
     const [indexedFilteredRows, setIndexedFilteredRows] = useState<ViewRow[]>([]);
+    const [isFilteringRows, setIsFilteringRows] = useState<boolean>(false);
     const [indexedHistogramLines, setIndexedHistogramLines] = useState<ViewParsedLine[]>([]);
     const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [filters, setFilters] = useState<LogFilters>({});
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [newLinesCount, setNewLinesCount] = useState<number>(0);
+    const newLinesResetTimeoutRef = useRef<number | null>(null);
     const lastModifiedRef = useRef<number>(0);
     const lastSizeRef = useRef<number>(0);
     const previousLineCountRef = useRef<number>(0);
@@ -252,6 +327,18 @@ export const useViewLogsController = () => {
         pending: null,
         isLoading: false,
     });
+    const remoteFilteredRangeRef = useRef<{ start: number; end: number; previousStart: number }>({
+        start: 0,
+        end: 0,
+        previousStart: 0,
+    });
+    const remoteFilterPaginationRef = useRef<RemoteFilterPaginationState>({
+        active: false,
+        loadFromEnd: false,
+        hasMoreOlder: false,
+        hasMoreNewer: false,
+        isLoading: false,
+    });
     const {
         indexing,
         handleFileInputChange,
@@ -275,13 +362,14 @@ export const useViewLogsController = () => {
 
     useAnomalySnapshot({
         storageKey: anomalyStorageKey,
+        isRunning: anomalyIsRunning,
         hasResults: hasAnomalyResults,
         lastAnalyzedAt: anomalyLastAnalyzedAt,
         lastModelId: anomalyLastModelId,
         lastRunParams: anomalyLastRunParams,
         regions: anomalyRegions,
-        lineNumbers: anomalyLineNumbers,
         rowsCount: anomalyRowsCount,
+        totalRows: anomalyTotalRows,
     });
 
     const isRemoteLargeSession = isLargeFile && analyticsSessionId.startsWith('remote:');
@@ -289,6 +377,56 @@ export const useViewLogsController = () => {
     const requiresServerUpload = isLargeFile && !isRemoteLargeSession;
     const isServerUploadActive = requiresServerUpload && isIndexing;
     const isDbView = !isStreamView && Boolean(analyticsSessionId);
+    const smallFileTotalRows = useMemo(() => countPhysicalLines(content ?? ''), [content]);
+    const totalRowsHintForAnomaly = useMemo(() => {
+        if (isStreamView) {
+            return Math.max(0, lineCount);
+        }
+        if (isDbView) {
+            return Math.max(0, dbLineCount);
+        }
+        return Math.max(0, smallFileTotalRows);
+    }, [dbLineCount, isDbView, isStreamView, lineCount, smallFileTotalRows]);
+
+    useEffect(() => {
+        if (!hasAnomalyResults) {
+            return;
+        }
+        if (!anomalyLastAnalyzedAt || !anomalyLastModelId || !anomalyLastRunParams) {
+            return;
+        }
+        if (anomalyLastRunParams.analysisScope !== 'all') {
+            return;
+        }
+        // Legacy snapshots/results could store denominator equal to anomaly rows (shows 100%).
+        if (anomalyTotalRows !== anomalyRowsCount) {
+            return;
+        }
+        if (totalRowsHintForAnomaly <= anomalyRowsCount) {
+            return;
+        }
+
+        dispatch(setAnomalyResults({
+            regions: anomalyRegions,
+            lineNumbers: anomalyLineNumbers,
+            rowsCount: anomalyRowsCount,
+            totalRows: totalRowsHintForAnomaly,
+            analyzedAt: anomalyLastAnalyzedAt,
+            modelId: anomalyLastModelId,
+            params: anomalyLastRunParams,
+        }));
+    }, [
+        anomalyLastAnalyzedAt,
+        anomalyLastModelId,
+        anomalyLastRunParams,
+        anomalyLineNumbers,
+        anomalyRegions,
+        anomalyRowsCount,
+        anomalyTotalRows,
+        dispatch,
+        hasAnomalyResults,
+        totalRowsHintForAnomaly,
+    ]);
 
     const getActiveFile = useCallback(async (): Promise<File | null> => {
         if (hasFileHandle) {
@@ -300,6 +438,29 @@ export const useViewLogsController = () => {
 
         return getFileObject();
     }, [hasFileHandle]);
+
+    const showNewLinesBadge = useCallback((count: number) => {
+        if (count <= 0) {
+            return;
+        }
+
+        setNewLinesCount(count);
+        if (newLinesResetTimeoutRef.current !== null) {
+            window.clearTimeout(newLinesResetTimeoutRef.current);
+        }
+        newLinesResetTimeoutRef.current = window.setTimeout(() => {
+            setNewLinesCount(0);
+            newLinesResetTimeoutRef.current = null;
+        }, 3000);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (newLinesResetTimeoutRef.current !== null) {
+                window.clearTimeout(newLinesResetTimeoutRef.current);
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (loaded || fileName) {
@@ -326,6 +487,43 @@ export const useViewLogsController = () => {
 
         largeFileViewCache.clear();
     }, [fileName, loaded]);
+
+    const refreshLastDbLineCache = useCallback(async (lineCount: number) => {
+        if (!analyticsSessionId || lineCount <= 0) {
+            return;
+        }
+
+        const cacheIndex = lineCount - 1;
+        const cache = dbLineCacheRef.current;
+        const existing = cache.get(cacheIndex);
+        if (existing) {
+            cache.delete(cacheIndex);
+            dbCacheBytesRef.current -= existing.size;
+        }
+
+        try {
+            const [lastRecord] = await getLinesRange(analyticsSessionId, lineCount, lineCount);
+            if (lastRecord) {
+                const size = lastRecord.raw.length * 2;
+                cache.set(cacheIndex, { text: lastRecord.raw, size });
+                dbCacheBytesRef.current += size;
+
+                while (cache.size > MAX_CACHE_LINES || dbCacheBytesRef.current > MAX_CACHE_BYTES) {
+                    const oldestKey = cache.keys().next().value as number | undefined;
+                    if (oldestKey === undefined) break;
+                    const removed = cache.get(oldestKey);
+                    cache.delete(oldestKey);
+                    if (removed) {
+                        dbCacheBytesRef.current -= removed.size;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to refresh last DB line cache:', error);
+        } finally {
+            setDbLineCacheVersion((version) => version + 1);
+        }
+    }, [analyticsSessionId]);
 
     const handleReattachMonitoring = useCallback(async () => {
         if (!analyticsSessionId) return;
@@ -354,11 +552,10 @@ export const useViewLogsController = () => {
 
         setDbLineCount(appendResult.newLineCount);
         if (appendResult.addedLines > 0) {
-            setNewLinesCount(appendResult.addedLines);
-            setTimeout(() => setNewLinesCount(0), 3000);
-        } else if (previousDbLineCount > 0) {
-            dbLineCacheRef.current.delete(previousDbLineCount - 1);
-            setDbLineCacheVersion((version) => version + 1);
+            showNewLinesBadge(appendResult.addedLines);
+        } else if (appendResult.newLineCount > 0 || previousDbLineCount > 0) {
+            const lastLineCount = appendResult.newLineCount > 0 ? appendResult.newLineCount : previousDbLineCount;
+            void refreshLastDbLineCache(lastLineCount);
         }
     }, [
         analyticsSessionId,
@@ -370,6 +567,8 @@ export const useViewLogsController = () => {
         handleFileSystemAccessForMonitoring,
         isDbView,
         isLargeFile,
+        refreshLastDbLineCache,
+        showNewLinesBadge,
     ]);
 
     const requestFileForAnomalyAnalysis = useCallback(async (): Promise<File | null> => {
@@ -723,12 +922,11 @@ export const useViewLogsController = () => {
         clearParsedRowCache();
         setNormalRows(rows);
         if (previousLineCountRef.current > 0 && rows.length - previousLineCountRef.current > 0) {
-            setNewLinesCount(rows.length - previousLineCountRef.current);
-            setTimeout(() => setNewLinesCount(0), 3000);
+            showNewLinesBadge(rows.length - previousLineCountRef.current);
         }
         previousLineCountRef.current = rows.length;
         lastSizeRef.current = fileSize;
-    }, [clearParsedRowCache, content, fileSize, isStreamView]);
+    }, [clearParsedRowCache, content, fileSize, isStreamView, showNewLinesBadge]);
 
     useEffect(() => {
         if (!isDbView || !analyticsSessionId) {
@@ -756,7 +954,30 @@ export const useViewLogsController = () => {
         let cancelled = false;
 
         const loadDbLineCount = async () => {
-            const count = await getSessionLineCount(analyticsSessionId);
+            const isRemoteSession = analyticsSessionId.startsWith('remote:');
+            let count = await getSessionLineCount(analyticsSessionId);
+
+            if (isRemoteSession && count === 0) {
+                let attempt = 0;
+                while (!cancelled && count === 0 && attempt < REMOTE_LINE_COUNT_RETRY_ATTEMPTS) {
+                    await new Promise<void>((resolve) => {
+                        window.setTimeout(() => resolve(), REMOTE_LINE_COUNT_RETRY_DELAY_MS);
+                    });
+
+                    if (cancelled) {
+                        return;
+                    }
+
+                    try {
+                        count = await getSessionLineCount(analyticsSessionId);
+                    } catch {
+                        // Keep retrying: remote ingest metadata can lag for a short time.
+                    }
+
+                    attempt += 1;
+                }
+            }
+
             if (cancelled) return;
             setDbLineCount(count);
             dbLineCacheRef.current = new Map();
@@ -771,103 +992,456 @@ export const useViewLogsController = () => {
         };
     }, [analyticsSessionId, dispatch, isDbView, isIndexing, isRemoteLargeSession]);
 
+    const {
+        dataFilters,
+        anomalySelection,
+    } = useMemo(() => splitAnomalyFilter(filters), [filters]);
+
+    const hasActiveFiltersApplied = useMemo(() => hasActiveFilters(filters), [filters]);
+
+    const anomalyIntervals = useMemo<AnomalyLineInterval[]>(() => {
+        if (anomalyRegions.length > 0) {
+            const normalized = anomalyRegions
+                .map((region) => {
+                    const start = Math.floor(Math.min(region.start_line, region.end_line));
+                    const end = Math.floor(Math.max(region.start_line, region.end_line));
+                    return { start, end };
+                })
+                .filter((region) => Number.isFinite(region.start) && Number.isFinite(region.end) && region.start > 0 && region.end >= region.start)
+                .sort((a, b) => a.start - b.start);
+
+            if (normalized.length === 0) {
+                return [];
+            }
+
+            const merged: AnomalyLineInterval[] = [normalized[0]];
+            for (let i = 1; i < normalized.length; i += 1) {
+                const current = normalized[i];
+                const last = merged[merged.length - 1];
+                if (current.start <= last.end + 1) {
+                    last.end = Math.max(last.end, current.end);
+                } else {
+                    merged.push(current);
+                }
+            }
+
+            return merged;
+        }
+
+        if (anomalyLineNumbers.length === 0) {
+            return [];
+        }
+
+        const sorted = Array.from(new Set(anomalyLineNumbers))
+            .filter((lineNumber) => Number.isFinite(lineNumber) && lineNumber > 0)
+            .sort((a, b) => a - b);
+
+        if (sorted.length === 0) {
+            return [];
+        }
+
+        const merged: AnomalyLineInterval[] = [];
+        let start = sorted[0];
+        let end = sorted[0];
+
+        for (let i = 1; i < sorted.length; i += 1) {
+            const current = sorted[i];
+            if (current <= end + 1) {
+                end = current;
+                continue;
+            }
+            merged.push({ start, end });
+            start = current;
+            end = current;
+        }
+
+        merged.push({ start, end });
+        return merged;
+    }, [anomalyLineNumbers, anomalyRegions]);
+
+    const isAnomalyLine = useCallback((lineNumber: number): boolean => {
+        if (!Number.isFinite(lineNumber) || lineNumber <= 0 || anomalyIntervals.length === 0) {
+            return false;
+        }
+
+        let left = 0;
+        let right = anomalyIntervals.length - 1;
+        while (left <= right) {
+            const mid = Math.floor((left + right) / 2);
+            const interval = anomalyIntervals[mid];
+            if (lineNumber < interval.start) {
+                right = mid - 1;
+                continue;
+            }
+            if (lineNumber > interval.end) {
+                left = mid + 1;
+                continue;
+            }
+            return true;
+        }
+
+        return false;
+    }, [anomalyIntervals]);
+
+    const getAnomalyStatusForLine = useCallback((lineNumber: number): 'anomaly' | 'normal' | undefined => {
+        if (!hasAnomalyResults || !Number.isFinite(lineNumber) || lineNumber <= 0) {
+            return undefined;
+        }
+
+        if (anomalyLastRunParams?.analysisScope !== 'all') {
+            return undefined;
+        }
+
+        if (anomalyTotalRows > 0 && lineNumber > anomalyTotalRows) {
+            return undefined;
+        }
+
+        return isAnomalyLine(lineNumber) ? 'anomaly' : 'normal';
+    }, [anomalyLastRunParams, anomalyTotalRows, hasAnomalyResults, isAnomalyLine]);
+
+    const applyAnomalyFilterToRows = useCallback((rows: ViewRow[]): ViewRow[] => {
+        const { includeAnomaly, includeNormal, includeUndefined } = anomalySelection;
+        if (!includeAnomaly && !includeNormal && !includeUndefined) {
+            return rows;
+        }
+        if (!hasAnomalyResults) {
+            return includeUndefined ? rows : [];
+        }
+
+        return rows.filter((row) => {
+            const status = getAnomalyStatusForLine(row.lineNumber);
+            if (!status) {
+                return includeUndefined;
+            }
+
+            if (status === 'anomaly') {
+                return includeAnomaly;
+            }
+
+            return includeNormal;
+        });
+    }, [anomalySelection, getAnomalyStatusForLine, hasAnomalyResults]);
+
     useEffect(() => {
-        if (isStreamView || !analyticsSessionId || !hasActiveFilters(filters)) {
+        if (hasAnomalyResults) {
+            return;
+        }
+
+        setFilters((prev) => {
+            if (!Array.isArray(prev[ANOMALY_FILTER_KEY])) {
+                return prev;
+            }
+            const next = { ...prev };
+            delete next[ANOMALY_FILTER_KEY];
+            return next;
+        });
+    }, [hasAnomalyResults]);
+
+    const mergeRemoteFilteredRows = useCallback((
+        prev: ViewRow[],
+        chunk: ViewRow[],
+        direction: 'older' | 'newer',
+        loadFromEnd: boolean,
+    ): RemoteFilterMergeResult => {
+        if (chunk.length === 0) {
+            return {
+                rows: prev,
+                prependedCount: 0,
+                droppedFromStart: 0,
+                droppedFromEnd: 0,
+            };
+        }
+
+        const shouldPrepend = loadFromEnd
+            ? direction === 'newer'
+            : direction === 'older';
+
+        const merged = shouldPrepend
+            ? [...chunk, ...prev]
+            : [...prev, ...chunk];
+
+        if (merged.length <= MAX_FILTER_ROWS_IN_MEMORY) {
+            return {
+                rows: merged,
+                prependedCount: shouldPrepend ? chunk.length : 0,
+                droppedFromStart: 0,
+                droppedFromEnd: 0,
+            };
+        }
+
+        if (shouldPrepend) {
+            const droppedFromEnd = merged.length - MAX_FILTER_ROWS_IN_MEMORY;
+            return {
+                rows: merged.slice(0, MAX_FILTER_ROWS_IN_MEMORY),
+                prependedCount: chunk.length,
+                droppedFromStart: 0,
+                droppedFromEnd,
+            };
+        }
+
+        const droppedFromStart = merged.length - MAX_FILTER_ROWS_IN_MEMORY;
+        return {
+            rows: merged.slice(droppedFromStart),
+            prependedCount: 0,
+            droppedFromStart,
+            droppedFromEnd: 0,
+        };
+    }, []);
+
+    const loadMoreRemoteFilteredRows = useCallback(async (direction: 'older' | 'newer') => {
+        const state = remoteFilterPaginationRef.current;
+        const canLoad = direction === 'older' ? state.hasMoreOlder : state.hasMoreNewer;
+        if (!state.active || state.isLoading || !canLoad || !analyticsSessionId) {
+            return;
+        }
+
+        const cursor = direction === 'older' ? state.oldestLineNumber : state.newestLineNumber;
+        if (!cursor || cursor <= 0) {
+            return;
+        }
+
+        state.isLoading = true;
+        try {
+            const result = await queryFilteredLines(analyticsSessionId, dataFilters, {
+                limit: REMOTE_FILTER_PAGE_ROWS,
+                afterLine: direction === 'newer' ? cursor : undefined,
+                beforeLine: direction === 'older' ? cursor : undefined,
+                order: direction === 'older' ? 'desc' : 'asc',
+            });
+
+            if (!remoteFilterPaginationRef.current.active) {
+                return;
+            }
+
+            const queryIsDesc = direction === 'older';
+            const displayIsDesc = state.loadFromEnd;
+            const pageRowsDisplayRaw = queryIsDesc === displayIsDesc
+                ? result.lines
+                : result.lines.slice().reverse();
+            const pageRowsDisplay = applyAnomalyFilterToRows(pageRowsDisplayRaw);
+
+            if (pageRowsDisplay.length > 0) {
+                let prependedCount = 0;
+                let droppedFromStart = 0;
+                let droppedFromEnd = 0;
+                let mergedFirstLine: number | undefined;
+                let mergedLastLine: number | undefined;
+                const previousRangeStart = remoteFilteredRangeRef.current.start;
+                setIndexedFilteredRows((prev) => {
+                    const mergeResult = mergeRemoteFilteredRows(prev, pageRowsDisplay, direction, state.loadFromEnd);
+                    prependedCount = mergeResult.prependedCount;
+                    droppedFromStart = mergeResult.droppedFromStart;
+                    droppedFromEnd = mergeResult.droppedFromEnd;
+                    if (mergeResult.rows.length > 0) {
+                        mergedFirstLine = mergeResult.rows[0].lineNumber;
+                        mergedLastLine = mergeResult.rows[mergeResult.rows.length - 1].lineNumber;
+                    }
+                    return mergeResult.rows;
+                });
+
+                if (prependedCount > 0 || droppedFromStart > 0) {
+                    const nextAnchor = Math.max(
+                        0,
+                        previousRangeStart + prependedCount - droppedFromStart,
+                    );
+                    requestAnimationFrame(() => {
+                        virtuosoRef.current?.scrollToIndex({
+                            index: nextAnchor,
+                            align: 'start',
+                            behavior: 'auto',
+                        });
+                    });
+                }
+
+                if (droppedFromStart > 0) {
+                    if (state.loadFromEnd) {
+                        state.hasMoreNewer = true;
+                    } else {
+                        state.hasMoreOlder = true;
+                    }
+                }
+
+                if (droppedFromEnd > 0) {
+                    if (state.loadFromEnd) {
+                        state.hasMoreOlder = true;
+                    } else {
+                        state.hasMoreNewer = true;
+                    }
+                }
+
+                if (state.loadFromEnd) {
+                    if (mergedLastLine !== undefined) {
+                        state.oldestLineNumber = mergedLastLine;
+                    }
+                    if (mergedFirstLine !== undefined) {
+                        state.newestLineNumber = mergedFirstLine;
+                    }
+                } else {
+                    if (mergedFirstLine !== undefined) {
+                        state.oldestLineNumber = mergedFirstLine;
+                    }
+                    if (mergedLastLine !== undefined) {
+                        state.newestLineNumber = mergedLastLine;
+                    }
+                }
+            }
+
+            if (direction === 'older') {
+                const nextOlder = result.nextBeforeLine
+                    ?? (pageRowsDisplayRaw.length > 0 ? pageRowsDisplayRaw[pageRowsDisplayRaw.length - 1].lineNumber : undefined);
+                if (nextOlder !== undefined) {
+                    state.oldestLineNumber = nextOlder;
+                }
+            } else {
+                const nextNewer = result.nextAfterLine
+                    ?? (pageRowsDisplayRaw.length > 0 ? pageRowsDisplayRaw[pageRowsDisplayRaw.length - 1].lineNumber : undefined);
+                if (nextNewer !== undefined) {
+                    state.newestLineNumber = nextNewer;
+                }
+            }
+
+            const hasMore = Boolean(result.hasMore ?? (pageRowsDisplayRaw.length >= REMOTE_FILTER_PAGE_ROWS));
+            if (direction === 'older') {
+                state.hasMoreOlder = hasMore;
+            } else {
+                state.hasMoreNewer = hasMore;
+            }
+        } catch (error) {
+            if ((error as Error).name !== 'AbortError') {
+                console.error('Failed to load more remote filtered rows:', error);
+            }
+        } finally {
+            state.isLoading = false;
+        }
+    }, [analyticsSessionId, applyAnomalyFilterToRows, dataFilters, mergeRemoteFilteredRows]);
+
+    useEffect(() => {
+        if (isStreamView || !analyticsSessionId || !hasActiveFiltersApplied) {
+            remoteFilterPaginationRef.current = {
+                active: false,
+                loadFromEnd: false,
+                hasMoreOlder: false,
+                hasMoreNewer: false,
+                isLoading: false,
+            };
             setIndexedFilteredRows([]);
+            setIsFilteringRows(false);
             return;
         }
 
         let cancelled = false;
         const controller = new AbortController();
-        const isRemoteFilterSession = analyticsSessionId.startsWith('remote:');
-        let bufferedRows: ViewRow[] = [];
-        setIndexedFilteredRows([]);
+        const loadFromEnd = viewMode === ViewModeEnum.FromEnd;
 
-        const flushBufferedRows = () => {
-            if (cancelled || bufferedRows.length === 0) {
-                return;
-            }
-
-            const chunk = bufferedRows;
-            bufferedRows = [];
-            setIndexedFilteredRows((prev) => {
-                if (!isRemoteFilterSession) {
-                    if (prev.length >= MAX_INDEXED_FILTER_ROWS) {
-                        return prev;
-                    }
-                    const available = MAX_INDEXED_FILTER_ROWS - prev.length;
-                    if (available <= 0) {
-                        return prev;
-                    }
-                    const toAppend = chunk.slice(0, available);
-                    if (toAppend.length === 0) {
-                        return prev;
-                    }
-                    return [...prev, ...toAppend];
-                }
-                return [...prev, ...chunk];
-            });
+        remoteFilterPaginationRef.current = {
+            active: true,
+            loadFromEnd,
+            hasMoreOlder: false,
+            hasMoreNewer: false,
+            isLoading: false,
         };
+
+        setIndexedFilteredRows([]);
+        setIsFilteringRows(true);
 
         const run = async () => {
             try {
+                const initialDirection = loadFromEnd ? 'desc' : 'asc';
+                const seedRows: ViewRow[] = [];
+                let guard = 0;
+                let hasMore = false;
                 let afterLine: number | undefined;
-                let done = false;
+                let beforeLine: number | undefined;
+                let firstRawLine: number | undefined;
+                let lastRawLine: number | undefined;
 
-                while (!done && !cancelled) {
-                    const previousAfterLine = afterLine;
-                    const result = await queryFilteredLines(analyticsSessionId, filters, {
-                        limit: MAX_INDEXED_FILTER_ROWS,
-                        afterLine: isRemoteFilterSession ? afterLine : undefined,
+                while (!cancelled && guard < 50) {
+                    const result = await queryFilteredLines(analyticsSessionId, dataFilters, {
+                        limit: REMOTE_FILTER_PAGE_ROWS,
+                        order: initialDirection,
+                        afterLine,
+                        beforeLine,
                         signal: controller.signal,
-                        onProgress: isRemoteFilterSession
-                            ? undefined
-                            : (partial) => {
-                                if (cancelled) return;
-                                if (partial.lines.length === 0) return;
-                                bufferedRows.push(...partial.lines);
-                                if (bufferedRows.length >= FILTER_PROGRESS_UI_BATCH_ROWS) {
-                                    flushBufferedRows();
-                                }
-                            },
                     });
 
                     if (cancelled) return;
 
-                    const pageLastLine = result.lines.length > 0
-                        ? result.lines[result.lines.length - 1].lineNumber
-                        : undefined;
-
-                    if (pageLastLine === undefined) {
-                        done = true;
+                    const rawPage = result.lines;
+                    if (rawPage.length === 0) {
+                        hasMore = false;
                         break;
                     }
 
-                    if (!isRemoteFilterSession) {
-                        done = true;
+                    if (firstRawLine === undefined) {
+                        firstRawLine = rawPage[0].lineNumber;
+                    }
+                    lastRawLine = rawPage[rawPage.length - 1].lineNumber;
+
+                    const filteredPage = applyAnomalyFilterToRows(rawPage);
+                    if (filteredPage.length > 0) {
+                        seedRows.push(...filteredPage);
+                    }
+
+                    hasMore = Boolean(result.hasMore ?? (rawPage.length >= REMOTE_FILTER_PAGE_ROWS));
+
+                    if (initialDirection === 'desc') {
+                        beforeLine = result.nextBeforeLine ?? lastRawLine;
+                        if (!beforeLine || beforeLine <= 0) {
+                            hasMore = false;
+                            break;
+                        }
+                    } else {
+                        afterLine = result.nextAfterLine ?? lastRawLine;
+                        if (!afterLine || afterLine <= 0) {
+                            hasMore = false;
+                            break;
+                        }
+                    }
+
+                    if (!hasMore || seedRows.length > 0) {
                         break;
                     }
 
-                    const nextAfterLine = result.nextAfterLine ?? pageLastLine;
-                    if (previousAfterLine !== undefined && nextAfterLine <= previousAfterLine) {
-                        done = true;
-                        break;
-                    }
-
-                    bufferedRows.push(...result.lines);
-                    if (bufferedRows.length >= FILTER_PROGRESS_UI_BATCH_ROWS) {
-                        flushBufferedRows();
-                    }
-
-                    afterLine = nextAfterLine;
-                    done = !(result.hasMore ?? (result.lines.length >= MAX_INDEXED_FILTER_ROWS));
+                    guard += 1;
                 }
 
                 if (cancelled) return;
-                flushBufferedRows();
+
+                setIndexedFilteredRows(seedRows);
+
+                const pagination = remoteFilterPaginationRef.current;
+                pagination.active = true;
+                pagination.loadFromEnd = loadFromEnd;
+                pagination.oldestLineNumber = undefined;
+                pagination.newestLineNumber = undefined;
+
+                if (firstRawLine !== undefined) {
+                    pagination.newestLineNumber = firstRawLine;
+                }
+                if (lastRawLine !== undefined) {
+                    pagination.oldestLineNumber = lastRawLine;
+                }
+
+                if (loadFromEnd) {
+                    if (beforeLine !== undefined && beforeLine > 0) {
+                        pagination.oldestLineNumber = beforeLine;
+                    }
+                    pagination.hasMoreOlder = hasMore;
+                    pagination.hasMoreNewer = false;
+                } else {
+                    if (afterLine !== undefined && afterLine > 0) {
+                        pagination.newestLineNumber = afterLine;
+                    }
+                    pagination.hasMoreOlder = false;
+                    pagination.hasMoreNewer = hasMore;
+                }
             } catch (error) {
                 if ((error as Error).name !== 'AbortError') {
                     console.error('Indexed filter query failed:', error);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsFilteringRows(false);
                 }
             }
         };
@@ -876,17 +1450,30 @@ export const useViewLogsController = () => {
 
         return () => {
             cancelled = true;
-            bufferedRows = [];
+            remoteFilterPaginationRef.current = {
+                active: false,
+                loadFromEnd: false,
+                hasMoreOlder: false,
+                hasMoreNewer: false,
+                isLoading: false,
+            };
             controller.abort();
         };
-    }, [analyticsSessionId, filters, isStreamView]);
+    }, [
+        analyticsSessionId,
+        applyAnomalyFilterToRows,
+        dataFilters,
+        hasActiveFiltersApplied,
+        isStreamView,
+        viewMode,
+    ]);
 
     const filteredRows = useMemo(() => {
         if (isStreamView) {
             return [];
         }
 
-        if (!hasActiveFilters(filters)) {
+        if (!hasActiveFiltersApplied) {
             if (isDbView) {
                 return [];
             }
@@ -898,20 +1485,35 @@ export const useViewLogsController = () => {
         }
 
         const parsedRows = normalRows.map((row) => getParsedRow(row));
-        const filteredParsed = applyLogFilters(parsedRows, filters);
-        return filteredParsed.map((row) => ({ lineNumber: row.lineNumber, raw: row.raw }));
-    }, [analyticsSessionId, filters, getParsedRow, indexedFilteredRows, isDbView, isStreamView, normalRows]);
-
-    const anomalyLineSet = useMemo(() => {
-        return new Set(anomalyLineNumbers);
-    }, [anomalyLineNumbers]);
+        const filteredParsed = applyLogFilters(parsedRows, dataFilters);
+        const baseRows = filteredParsed.map((row) => ({ lineNumber: row.lineNumber, raw: row.raw }));
+        return applyAnomalyFilterToRows(baseRows);
+    }, [
+        analyticsSessionId,
+        applyAnomalyFilterToRows,
+        dataFilters,
+        hasActiveFiltersApplied,
+        getParsedRow,
+        indexedFilteredRows,
+        isDbView,
+        isStreamView,
+        normalRows,
+    ]);
 
     const displayLines = useMemo(() => {
         if (isStreamView) {
             return [];
         }
 
-        if (isDbView && !hasActiveFilters(filters)) {
+        if (isDbView && !hasActiveFiltersApplied) {
+            return [];
+        }
+
+        if (isRemoteLargeSession && hasActiveFiltersApplied) {
+            return [];
+        }
+
+        if (isDbView && hasActiveFiltersApplied) {
             return [];
         }
 
@@ -920,9 +1522,7 @@ export const useViewLogsController = () => {
                 raw: row.raw,
                 displayLineNumber: row.lineNumber,
                 sourceLineNumber: row.lineNumber,
-                anomalyStatus: hasAnomalyResults
-                    ? (anomalyLineSet.has(row.lineNumber) ? 'anomaly' as const : 'normal' as const)
-                    : undefined,
+                anomalyStatus: getAnomalyStatusForLine(row.lineNumber),
             }));
         }
 
@@ -930,11 +1530,9 @@ export const useViewLogsController = () => {
             raw: row.raw,
             displayLineNumber: row.lineNumber,
             sourceLineNumber: row.lineNumber,
-            anomalyStatus: hasAnomalyResults
-                ? (anomalyLineSet.has(row.lineNumber) ? 'anomaly' as const : 'normal' as const)
-                : undefined,
+            anomalyStatus: getAnomalyStatusForLine(row.lineNumber),
         }));
-    }, [anomalyLineSet, filteredRows, hasAnomalyResults, isDbView, isStreamView, viewMode, filters]);
+    }, [filteredRows, getAnomalyStatusForLine, hasActiveFiltersApplied, isDbView, isRemoteLargeSession, isStreamView, viewMode]);
 
     const loadDbLinesForRange = useCallback(async (startIndex: number, endIndex: number) => {
         if (!analyticsSessionId) return;
@@ -1035,15 +1633,23 @@ export const useViewLogsController = () => {
             raw: rawEntry?.text ?? 'Loading... ',
             displayLineNumber,
             sourceLineNumber: fileIndex + 1,
-            anomalyStatus: hasAnomalyResults
-                ? (anomalyLineSet.has(fileIndex + 1) ? 'anomaly' as const : 'normal' as const)
-                : undefined,
+            anomalyStatus: getAnomalyStatusForLine(fileIndex + 1),
         };
-    }, [anomalyLineSet, dbLineCount, dbVirtualWindowStart, hasAnomalyResults, isDbView, viewMode, dbLineCacheVersion]);
+    }, [dbLineCount, dbVirtualWindowStart, getAnomalyStatusForLine, isDbView, viewMode, dbLineCacheVersion]);
 
     const getLineAtIndex = useCallback((displayIndex: number) => {
         if (!isStreamView) {
-            if (isDbView && !hasActiveFilters(filters)) {
+            if (isDbView && hasActiveFiltersApplied) {
+                const row = indexedFilteredRows[displayIndex];
+                if (!row) return null;
+                return {
+                    raw: row.raw,
+                    displayLineNumber: row.lineNumber,
+                    sourceLineNumber: row.lineNumber,
+                    anomalyStatus: getAnomalyStatusForLine(row.lineNumber),
+                };
+            }
+            if (isDbView && !hasActiveFiltersApplied) {
                 return getDbLineAtIndex(displayIndex);
             }
             return displayLines[displayIndex] ?? null;
@@ -1069,11 +1675,9 @@ export const useViewLogsController = () => {
             raw: rawEntry?.text ?? 'Loading...',
             displayLineNumber,
             sourceLineNumber: fileIndex + 1,
-            anomalyStatus: hasAnomalyResults
-                ? (anomalyLineSet.has(fileIndex + 1) ? 'anomaly' as const : 'normal' as const)
-                : undefined,
+            anomalyStatus: getAnomalyStatusForLine(fileIndex + 1),
         };
-    }, [anomalyLineSet, displayLines, hasAnomalyResults, lineCount, viewMode, lineCacheVersion, virtualWindowStart, isStreamView, filters, getDbLineAtIndex, isDbView]);
+    }, [displayLines, getAnomalyStatusForLine, indexedFilteredRows, lineCount, viewMode, lineCacheVersion, virtualWindowStart, isStreamView, hasActiveFiltersApplied, getDbLineAtIndex, isDbView]);
 
     const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
         if (!isStreamView || lineCount === 0) return;
@@ -1155,6 +1759,51 @@ export const useViewLogsController = () => {
         dbRebaseAnchorRef.current = Math.max(0, globalAnchor - nextWindowStart);
         setDbVirtualWindowStart(nextWindowStart);
     }, [clampWindowStart, dbLineCount, dbVirtualWindowStart, filters, getVirtualWindowSize, requestDbRangeLoad, isDbView, viewMode]);
+
+    const handleRemoteFilteredRangeChange = useCallback((startIndex: number, endIndex: number) => {
+        if (!isDbView || !hasActiveFiltersApplied) {
+            return;
+        }
+
+        const previousStart = remoteFilteredRangeRef.current.start;
+        remoteFilteredRangeRef.current = {
+            start: startIndex,
+            end: endIndex,
+            previousStart,
+        };
+
+        const count = indexedFilteredRows.length;
+        if (count === 0) {
+            return;
+        }
+
+        const edgeThreshold = Math.min(REMOTE_FILTER_LOAD_EDGE_ROWS, Math.max(20, Math.floor(count * 0.2)));
+        const nearTop = startIndex <= edgeThreshold;
+        const nearBottom = endIndex >= Math.max(0, count - 1 - edgeThreshold);
+
+        if (!nearTop && !nearBottom) {
+            return;
+        }
+
+        const movingDown = startIndex > previousStart;
+
+        const topDirection = viewMode === ViewModeEnum.FromEnd ? 'newer' : 'older';
+        const bottomDirection = viewMode === ViewModeEnum.FromEnd ? 'older' : 'newer';
+
+        if (nearTop && nearBottom) {
+            void loadMoreRemoteFilteredRows(movingDown ? bottomDirection : topDirection);
+            return;
+        }
+
+        if (nearTop) {
+            void loadMoreRemoteFilteredRows(topDirection);
+            return;
+        }
+
+        if (nearBottom) {
+            void loadMoreRemoteFilteredRows(bottomDirection);
+        }
+    }, [indexedFilteredRows.length, hasActiveFiltersApplied, isDbView, loadMoreRemoteFilteredRows, viewMode]);
 
     useEffect(() => {
         if (!isDbView || hasActiveFilters(filters)) {
@@ -1324,6 +1973,72 @@ export const useViewLogsController = () => {
             return;
         }
 
+        if (isDbView && !hasActiveFiltersApplied) {
+            if (!virtuosoRef.current || dbLineCount <= 0) return;
+
+            const fileIndex = Math.max(0, Math.min(dbLineCount - 1, Math.floor(targetSourceLine) - 1));
+            const globalDisplayIndex = viewMode === ViewModeEnum.FromEnd
+                ? Math.max(0, dbLineCount - 1 - fileIndex)
+                : fileIndex;
+
+            const currentVirtualCount = getVirtualWindowSize(dbVirtualWindowStart, dbLineCount);
+            const localIndexInCurrentWindow = globalDisplayIndex - dbVirtualWindowStart;
+            const isInsideCurrentWindow = (
+                localIndexInCurrentWindow >= 0
+                && localIndexInCurrentWindow < currentVirtualCount
+            );
+
+            if (isInsideCurrentWindow) {
+                dbRebaseAnchorRef.current = null;
+                setSelectedLine(Math.floor(targetSourceLine));
+                virtuosoRef.current.scrollToIndex({
+                    index: localIndexInCurrentWindow,
+                    align: 'center',
+                    behavior: 'auto',
+                });
+                return;
+            }
+
+            const nextWindowStart = clampWindowStart(
+                globalDisplayIndex - Math.floor(MAX_VIRTUAL_ROWS / 2),
+                dbLineCount,
+            );
+            dbRebaseAnchorRef.current = Math.max(0, globalDisplayIndex - nextWindowStart);
+            setDbVirtualWindowStart(nextWindowStart);
+            setSelectedLine(Math.floor(targetSourceLine));
+            return;
+        }
+
+        if (isDbView && hasActiveFiltersApplied) {
+            if (!virtuosoRef.current || indexedFilteredRows.length === 0) return;
+
+            let targetIndex = indexedFilteredRows.findIndex((line) => line.lineNumber === targetSourceLine);
+            if (targetIndex < 0) {
+                let bestIndex = -1;
+                let bestDistance = Number.POSITIVE_INFINITY;
+
+                for (let i = 0; i < indexedFilteredRows.length; i += 1) {
+                    const source = indexedFilteredRows[i].lineNumber;
+                    const distance = Math.abs(source - targetSourceLine);
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        bestIndex = i;
+                    }
+                }
+
+                targetIndex = bestIndex;
+            }
+
+            if (targetIndex < 0) {
+                return;
+            }
+
+            const targetLine = indexedFilteredRows[targetIndex];
+            setSelectedLine(targetLine.lineNumber);
+            virtuosoRef.current.scrollToIndex({ index: targetIndex, align: 'center', behavior: 'auto' });
+            return;
+        }
+
         if (!virtuosoRef.current || displayLines.length === 0) return;
 
         let targetIndex = displayLines.findIndex((line) => line.sourceLineNumber === targetSourceLine);
@@ -1368,14 +2083,91 @@ export const useViewLogsController = () => {
         setSelectedLine(targetLine.displayLineNumber);
         virtuosoRef.current.scrollToIndex({ index: targetIndex, align: 'center', behavior: 'auto' });
     }, [
+        clampWindowStart,
+        dbLineCount,
+        dbVirtualWindowStart,
         displayLines,
         getVirtualWindowSize,
+        hasActiveFiltersApplied,
+        isDbView,
+        indexedFilteredRows,
         lineCount,
         setWindowAroundDisplayIndex,
         viewMode,
         virtualWindowStart,
         isStreamView,
     ]);
+
+    const getAdjacentAnomalyLine = useCallback((
+        direction: 'up' | 'down',
+        fromLine: number | null,
+    ): number | null => {
+        if (anomalyIntervals.length === 0) {
+            return null;
+        }
+
+        const minAnomalyLine = anomalyIntervals[0].start;
+        const maxAnomalyLine = anomalyIntervals[anomalyIntervals.length - 1].end;
+
+        const moveTowardsGreaterLine = direction === 'down'
+            ? viewMode !== ViewModeEnum.FromEnd
+            : viewMode === ViewModeEnum.FromEnd;
+
+        const normalizedCurrent = fromLine !== null && Number.isFinite(fromLine)
+            ? Math.floor(fromLine)
+            : null;
+
+        if (!normalizedCurrent || normalizedCurrent <= 0) {
+            return moveTowardsGreaterLine ? minAnomalyLine : maxAnomalyLine;
+        }
+
+        if (moveTowardsGreaterLine) {
+            for (let i = 0; i < anomalyIntervals.length; i += 1) {
+                const interval = anomalyIntervals[i];
+                if (normalizedCurrent < interval.start) {
+                    return interval.start;
+                }
+                if (normalizedCurrent >= interval.start && normalizedCurrent < interval.end) {
+                    return normalizedCurrent + 1;
+                }
+            }
+
+            // Circular navigation: after the last anomaly jump to the first.
+            return minAnomalyLine;
+        }
+
+        for (let i = anomalyIntervals.length - 1; i >= 0; i -= 1) {
+            const interval = anomalyIntervals[i];
+            if (normalizedCurrent > interval.end) {
+                return interval.end;
+            }
+            if (normalizedCurrent > interval.start && normalizedCurrent <= interval.end) {
+                return normalizedCurrent - 1;
+            }
+        }
+
+        // Circular navigation: before the first anomaly jump to the last.
+        return maxAnomalyLine;
+    }, [anomalyIntervals, viewMode]);
+
+    const previousAnomalyTargetLine = useMemo(
+        () => getAdjacentAnomalyLine('up', selectedLine),
+        [getAdjacentAnomalyLine, selectedLine],
+    );
+
+    const nextAnomalyTargetLine = useMemo(
+        () => getAdjacentAnomalyLine('down', selectedLine),
+        [getAdjacentAnomalyLine, selectedLine],
+    );
+
+    const navigateToAdjacentAnomaly = useCallback((direction: 'up' | 'down') => {
+        const targetLine = getAdjacentAnomalyLine(direction, selectedLine);
+        if (targetLine === null) {
+            return;
+        }
+
+        handleAnomalyRangeSelect(targetLine, targetLine);
+    }, [getAdjacentAnomalyLine, handleAnomalyRangeSelect, selectedLine]);
 
     const fieldDefinitions = useMemo((): LogFormatField[] => {
         if (format) {
@@ -1492,106 +2284,117 @@ export const useViewLogsController = () => {
     }, [getVirtualWindowSize, lineCount, isStreamView, virtualWindowStart]);
 
     useEffect(() => {
-        if (!isMonitoring || !autoRefresh || !hasFileHandle) return;
-
-        const fileHandle = getFileHandle();
-        if (!fileHandle) return;
+        if (!autoRefresh) return;
 
         let intervalId: number | null = null;
 
-        const startPolling = async () => {
+        const pollOnce = async () => {
             try {
+                const fileHandle = getFileHandle();
+                if (!fileHandle) {
+                    return;
+                }
+
                 const file = await fileHandle.getFile();
-                lastModifiedRef.current = file.lastModified;
-                lastSizeRef.current = file.size;
+                const currentSize = file.size;
 
-                intervalId = window.setInterval(async () => {
-                    try {
-                        const file = await fileHandle.getFile();
+                if (lastModifiedRef.current === 0 && lastSizeRef.current === 0) {
+                    lastModifiedRef.current = file.lastModified;
+                    lastSizeRef.current = currentSize;
+                    return;
+                }
 
-                        if (file.lastModified > lastModifiedRef.current) {
-                            lastModifiedRef.current = file.lastModified;
-                            const currentSize = file.size;
+                const hasMetadataChanged = file.lastModified !== lastModifiedRef.current || currentSize !== lastSizeRef.current;
 
-                            if (isStreamView) {
-                                if (currentSize < lastSizeRef.current) {
-                                    const offsets = await buildLineIndex(file);
-                                    lineOffsetsRef.current = offsets;
-                                    lineCacheRef.current = new Map();
-                                    cacheBytesRef.current = 0;
-                                    setLineCacheVersion((version) => version + 1);
-                                    setLineCount(offsets.length);
-                                    lastSizeRef.current = currentSize;
-                                } else if (currentSize > lastSizeRef.current) {
-                                    const buffer = await file.slice(lastSizeRef.current, currentSize).arrayBuffer();
-                                    const bytes = new Uint8Array(buffer);
-                                    const offsets = lineOffsetsRef.current;
-                                    const previousCount = offsets.length;
-                                    for (let i = 0; i < bytes.length; i += 1) {
-                                        if (bytes[i] === 10) {
-                                            pushOffset(offsets, lastSizeRef.current + i + 1);
-                                        }
-                                    }
-
-                                    const addedLines = offsets.length - previousCount;
-                                    if (addedLines > 0) {
-                                        setNewLinesCount(addedLines);
-                                        setTimeout(() => setNewLinesCount(0), 3000);
-                                    }
-
-                                    setLineCount(offsets.length);
-                                    lastSizeRef.current = currentSize;
-
-                                    if (viewMode === ViewModeEnum.FromEnd && offsets.length > 0) {
-                                        const start = Math.max(0, offsets.length - 1 - RANGE_LOAD_PADDING);
-                                        requestRangeLoad(start, offsets.length - 1);
-                                    }
-                                }
-
-                                return;
-                            }
-
-                            const preview = await file.slice(0, Math.min(file.size, PREVIEW_BYTES)).text();
-                            if (isDbView && analyticsSessionId) {
-                                const previousDbLineCount = dbLineCount;
-                                const result = await appendLogFileToIndex(file, analyticsSessionId);
-                                if (result) {
-                                    setDbLineCount(result.newLineCount);
-                                    if (result.addedLines > 0) {
-                                        setNewLinesCount(result.addedLines);
-                                        setTimeout(() => setNewLinesCount(0), 3000);
-                                    } else if (previousDbLineCount > 0) {
-                                        dbLineCacheRef.current.delete(previousDbLineCount - 1);
-                                        setDbLineCacheVersion((version) => version + 1);
-                                    }
-                                }
-
-                                dispatch(updateLogContent({
-                                    content: '',
-                                    lastModified: file.lastModified,
-                                    size: currentSize,
-                                }));
-                            } else {
-                                dispatch(updateLogContent({
-                                    content: preview,
-                                    lastModified: file.lastModified,
-                                    size: currentSize,
-                                }));
-                            }
-
-                            lastSizeRef.current = currentSize;
+                if (isDbView && analyticsSessionId) {
+                    const previousDbLineCount = dbLineCount;
+                    const result = await appendLogFileToIndex(file, analyticsSessionId);
+                    if (result) {
+                        setDbLineCount(result.newLineCount);
+                        if (result.addedLines > 0) {
+                            showNewLinesBadge(result.addedLines);
+                        } else if (result.newLineCount > 0 || previousDbLineCount > 0) {
+                            const lastLineCount = result.newLineCount > 0 ? result.newLineCount : previousDbLineCount;
+                            void refreshLastDbLineCache(lastLineCount);
                         }
-                    } catch (error) {
-                        console.error('Error reading file:', error);
+                        lastModifiedRef.current = result.newLastModified;
+                        lastSizeRef.current = result.newFileSize;
+                    } else {
+                        lastModifiedRef.current = file.lastModified;
+                        lastSizeRef.current = currentSize;
                     }
-                }, 1000);
 
+                    if (hasMetadataChanged) {
+                        dispatch(updateLogContent({
+                            content: '',
+                            lastModified: file.lastModified,
+                            size: currentSize,
+                        }));
+                    }
+
+                    return;
+                }
+
+                if (!hasMetadataChanged) {
+                    return;
+                }
+
+                lastModifiedRef.current = file.lastModified;
+
+                if (isStreamView) {
+                    if (currentSize < lastSizeRef.current) {
+                        const offsets = await buildLineIndex(file);
+                        lineOffsetsRef.current = offsets;
+                        lineCacheRef.current = new Map();
+                        cacheBytesRef.current = 0;
+                        setLineCacheVersion((version) => version + 1);
+                        setLineCount(offsets.length);
+                        lastSizeRef.current = currentSize;
+                    } else if (currentSize > lastSizeRef.current) {
+                        const buffer = await file.slice(lastSizeRef.current, currentSize).arrayBuffer();
+                        const bytes = new Uint8Array(buffer);
+                        const offsets = lineOffsetsRef.current;
+                        const previousCount = offsets.length;
+                        for (let i = 0; i < bytes.length; i += 1) {
+                            if (bytes[i] === 10) {
+                                pushOffset(offsets, lastSizeRef.current + i + 1);
+                            }
+                        }
+
+                        const addedLines = offsets.length - previousCount;
+                        if (addedLines > 0) {
+                            showNewLinesBadge(addedLines);
+                        }
+
+                        setLineCount(offsets.length);
+                        lastSizeRef.current = currentSize;
+
+                        if (viewMode === ViewModeEnum.FromEnd && offsets.length > 0) {
+                            const start = Math.max(0, offsets.length - 1 - RANGE_LOAD_PADDING);
+                            requestRangeLoad(start, offsets.length - 1);
+                        }
+                    }
+
+                    return;
+                }
+
+                const preview = await file.slice(0, Math.min(file.size, PREVIEW_BYTES)).text();
+                dispatch(updateLogContent({
+                    content: preview,
+                    lastModified: file.lastModified,
+                    size: currentSize,
+                }));
+
+                lastSizeRef.current = currentSize;
             } catch (error) {
-                console.error('Error starting file monitoring:', error);
+                console.error('Error reading file:', error);
             }
         };
 
-        startPolling();
+        void pollOnce();
+        intervalId = window.setInterval(() => {
+            void pollOnce();
+        }, 1000);
 
         return () => {
             if (intervalId !== null) {
@@ -1605,12 +2408,12 @@ export const useViewLogsController = () => {
         content,
         dbLineCount,
         dispatch,
-        hasFileHandle,
-        isMonitoring,
         requestRangeLoad,
         isDbView,
         isStreamView,
         viewMode,
+        refreshLastDbLineCache,
+        showNewLinesBadge,
     ]);
 
     const handleToggleAutoRefresh = () => {
@@ -1649,7 +2452,23 @@ export const useViewLogsController = () => {
 
             const file = await fileHandle.getFile();
             lastModifiedRef.current = file.lastModified;
+            lastSizeRef.current = file.size;
             const newContent = await file.slice(0, Math.min(file.size, PREVIEW_BYTES)).text();
+
+            if (isDbView && analyticsSessionId) {
+                const previousDbLineCount = dbLineCount;
+                const appendResult = await appendLogFileToIndex(file, analyticsSessionId);
+                if (appendResult) {
+                    setDbLineCount(appendResult.newLineCount);
+
+                    if (appendResult.addedLines > 0) {
+                        showNewLinesBadge(appendResult.addedLines);
+                    } else if (appendResult.newLineCount > 0 || previousDbLineCount > 0) {
+                        const lastLineCount = appendResult.newLineCount > 0 ? appendResult.newLineCount : previousDbLineCount;
+                        void refreshLastDbLineCache(lastLineCount);
+                    }
+                }
+            }
 
             dispatch(updateLogContent({
                 content: isDbView ? '' : newContent,
@@ -1680,7 +2499,6 @@ export const useViewLogsController = () => {
         isHistogramLoading,
         parsedLines: isStreamView ? [] : indexedHistogramLines,
         anomalyRegions,
-        anomalyLineNumbers,
         onAnomalyRangeSelect: handleAnomalyRangeSelect,
     };
 
@@ -1696,11 +2514,16 @@ export const useViewLogsController = () => {
         filters,
         onFiltersChange: setFilters,
         fieldDefinitions,
+        hasAnomalyResults,
         isStreamView,
         filtersDisabled: isIndexing || serverUploadInProgress,
-        lineCount,
+        totalRowsHintForAnomaly,
         normalRows,
         requestFileForAnomalyAnalysis,
+        onNavigateToPreviousAnomaly: () => navigateToAdjacentAnomaly('up'),
+        onNavigateToNextAnomaly: () => navigateToAdjacentAnomaly('down'),
+        canNavigateToPreviousAnomaly: previousAnomalyTargetLine !== null,
+        canNavigateToNextAnomaly: nextAnomalyTargetLine !== null,
         remoteIngestId: isRemoteLargeSession ? analyticsSessionId.replace('remote:', '') : undefined,
         showUploadToServer: requiresServerUpload,
         uploadInProgress: isServerUploadActive,
@@ -1710,17 +2533,31 @@ export const useViewLogsController = () => {
         fileActionsDisabled: requiresServerUpload,
     };
 
-    const totalCount = isStreamView
-        ? getVirtualWindowSize(virtualWindowStart, lineCount)
-        : (isDbView && !hasActiveFilters(filters)
-            ? getVirtualWindowSize(dbVirtualWindowStart, dbLineCount)
-            : displayLines.length);
+    let totalCount = displayLines.length;
+    if (isStreamView) {
+        totalCount = getVirtualWindowSize(virtualWindowStart, lineCount);
+    } else if (isDbView && hasActiveFiltersApplied) {
+        totalCount = indexedFilteredRows.length;
+    } else if (isDbView) {
+        totalCount = getVirtualWindowSize(dbVirtualWindowStart, dbLineCount);
+    }
+
+    const showEmptyFilteredState = hasActiveFiltersApplied
+        && !isStreamView
+        && !isFilteringRows
+        && totalCount === 0;
 
     const listProps = {
         displayLines,
         totalCount,
         getLineAtIndex,
-        onRangeChange: isStreamView ? handleRangeChange : (isDbView ? handleDbRangeChange : undefined),
+        onRangeChange: isStreamView
+            ? handleRangeChange
+            : (isDbView
+                ? (hasActiveFiltersApplied
+                    ? handleRemoteFilteredRangeChange
+                    : handleDbRangeChange)
+                : undefined),
         selectedLine,
         onSelectLine: setSelectedLine,
         virtuosoRef,
@@ -1732,6 +2569,7 @@ export const useViewLogsController = () => {
         histogram,
         toolbarProps,
         listProps,
+        showEmptyFilteredState,
         isRemoteLargeSession,
         isDbView,
         requiresServerUpload,

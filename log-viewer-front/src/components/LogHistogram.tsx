@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Collapse from '@mui/material/Collapse';
@@ -9,6 +10,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import type { ParsedLogLine } from '../utils/logFormatDetector';
+import { extractTimestampFromParsedLine, parseTimestamp } from '../utils/logTimestamp';
 
 // Log level colors - consistent across different log formats
 const LOG_LEVEL_COLORS: Record<string, string> = {
@@ -118,6 +120,8 @@ interface LogHistogramProps {
     height?: number;
     /** Callback when time range changes via slider */
     onTimeRangeChange?: (startTime: number | null, endTime: number | null) => void;
+    /** Callback when legend category visibility changes */
+    onCategoryFilterChange?: (payload: { field: string | null; selectedCategories: string[] | null }) => void;
     /** Optional anomaly regions from backend */
     anomalyRegions?: Array<{
         start_line: number;
@@ -127,6 +131,7 @@ interface LogHistogramProps {
     }>;
     anomalyLineNumbers?: number[];
     onAnomalyRangeSelect?: (startLine: number, endLine: number) => void;
+    showQuickRangeButtons?: boolean;
 }
 
 interface TimedParsedLine {
@@ -135,6 +140,8 @@ interface TimedParsedLine {
     raw: string;
     timestampMs: number;
 }
+
+type QuickRangePreset = 'day' | 'week' | 'month' | 'quarter' | 'all';
 
 interface ResolvedAnomalyRange {
     key: string;
@@ -162,105 +169,6 @@ function resolveLocale(language: string): string {
     if (language === 'cz') return 'cs-CZ';
     if (language === 'ru') return 'ru-RU';
     return 'en-US';
-}
-
-/**
- * Parses various timestamp formats to a Date object
- */
-function parseTimestamp(timestamp: string): Date | null {
-    if (!timestamp) return null;
-
-    // Try direct Date parsing first
-    const directParse = new Date(timestamp);
-    if (!isNaN(directParse.getTime())) {
-        return directParse;
-    }
-
-    // Try common formats
-    // Format: YYYY-MM-DD HH:MM:SS,mmm (HDFS style)
-    const hdfsMatch = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})[,.](\d{3})?/);
-    if (hdfsMatch) {
-        const [, year, month, day, hour, min, sec, ms] = hdfsMatch;
-        return new Date(
-            parseInt(year),
-            parseInt(month) - 1,
-            parseInt(day),
-            parseInt(hour),
-            parseInt(min),
-            parseInt(sec),
-            parseInt(ms || '0')
-        );
-    }
-
-    // Format: Mon Oct 30 12:34:56 2025 (Apache style)
-    const apacheMatch = timestamp.match(/^\w{3}\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+(\d{4})/);
-    if (apacheMatch) {
-        const [, month, day, hour, min, sec, year] = apacheMatch;
-        const monthIndex = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(month);
-        if (monthIndex >= 0) {
-            return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(min), parseInt(sec));
-        }
-    }
-
-    // Format: DD/Mon/YYYY:HH:MM:SS (Apache access log style)
-    const accessMatch = timestamp.match(/^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
-    if (accessMatch) {
-        const [, day, month, year, hour, min, sec] = accessMatch;
-        const monthIndex = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(month);
-        if (monthIndex >= 0) {
-            return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(min), parseInt(sec));
-        }
-    }
-
-    // Format: YYYY-MM-DD-HH.MM.SS.microseconds (BGL old style)
-    const bglOldMatch = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})\.(\d{2})\.(\d{2})\.(\d{1,6})$/);
-    if (bglOldMatch) {
-        const [, year, month, day, hour, min, sec, micros] = bglOldMatch;
-        const ms = Math.floor(parseInt(micros.padEnd(6, '0').slice(0, 6), 10) / 1000);
-        return new Date(
-            parseInt(year, 10),
-            parseInt(month, 10) - 1,
-            parseInt(day, 10),
-            parseInt(hour, 10),
-            parseInt(min, 10),
-            parseInt(sec, 10),
-            ms
-        );
-    }
-
-    return null;
-}
-
-function extractTimestampFromParsedLine(parsed: ParsedLogLine): number | null {
-    const directCandidates = [parsed.fields.timestamp, parsed.fields.datetime];
-
-    for (const candidate of directCandidates) {
-        if (!candidate) continue;
-        const ts = parseTimestamp(candidate);
-        if (ts) {
-            return ts.getTime();
-        }
-    }
-
-    if (parsed.fields.date && parsed.fields.time) {
-        const msPart = parsed.fields.milliseconds || parsed.fields.ms;
-        const combined = msPart
-            ? `${parsed.fields.date} ${parsed.fields.time},${msPart}`
-            : `${parsed.fields.date} ${parsed.fields.time}`;
-        const ts = parseTimestamp(combined);
-        if (ts) {
-            return ts.getTime();
-        }
-    }
-
-    if (parsed.fields.date) {
-        const ts = parseTimestamp(parsed.fields.date);
-        if (ts) {
-            return ts.getTime();
-        }
-    }
-
-    return null;
 }
 
 function isFieldSuitableForGrouping(
@@ -460,6 +368,12 @@ function parseZoomBoundary(value: unknown): number | null {
     return null;
 }
 
+function subtractMonths(timestamp: number, months: number): number {
+    const date = new Date(timestamp);
+    date.setMonth(date.getMonth() - months);
+    return date.getTime();
+}
+
 /**
  * LogHistogram component - displays a histogram of log entries over time,
  * with stacked bars colored by log level and a range slider
@@ -469,9 +383,11 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     defaultCollapsed = false,
     height = 180,
     onTimeRangeChange,
+    onCategoryFilterChange,
     anomalyRegions,
     anomalyLineNumbers,
     onAnomalyRangeSelect,
+    showQuickRangeButtons = true,
 }) => {
     const { i18n } = useTranslation();
     const locale = useMemo(() => resolveLocale(i18n.language), [i18n.language]);
@@ -487,11 +403,14 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     const [hoveredAnomalyRangeKey, setHoveredAnomalyRangeKey] = useState<string | null>(null);
     const [hoveredAnomalyPointer, setHoveredAnomalyPointer] = useState<{ x: number; y: number } | null>(null);
     const [sliderReadyVersion, setSliderReadyVersion] = useState(0);
+    const [legendSelection, setLegendSelection] = useState<Record<string, boolean>>({});
+    const [activeQuickRange, setActiveQuickRange] = useState<QuickRangePreset | null>(null);
     const zoomSliderRef = useRef<ReactECharts | null>(null);
+    const quickRangeDispatchRef = useRef(false);
 
     const { validLines, timeRange } = useMemo(() => {
         // Extract lines with valid timestamps from any known time fields.
-        const validLines: TimedParsedLine[] = parsedLines.flatMap((line) => {
+        const parsedWithRealTimestamps: TimedParsedLine[] = parsedLines.flatMap((line) => {
             if (!line.parsed) {
                 return [];
             }
@@ -508,6 +427,32 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 timestampMs,
             }];
         });
+
+        const validLines: TimedParsedLine[] = parsedWithRealTimestamps.length > 0
+            ? parsedWithRealTimestamps
+            : (() => {
+                const parsedOnly = parsedLines.flatMap((line) => {
+                    if (!line.parsed) {
+                        return [] as Array<{ lineNumber: number; parsed: ParsedLogLine; raw: string }>;
+                    }
+
+                    return [{
+                        lineNumber: line.lineNumber,
+                        parsed: line.parsed,
+                        raw: line.raw,
+                    }];
+                });
+
+                if (parsedOnly.length === 0) {
+                    return [];
+                }
+
+                const syntheticBaseMs = Date.now();
+                return parsedOnly.map((line, index) => ({
+                    ...line,
+                    timestampMs: syntheticBaseMs + index * 1000,
+                }));
+            })();
 
         if (validLines.length === 0) {
             return { validLines: [], timeRange: null };
@@ -606,6 +551,51 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         return buildHistogram(validLines, { start, end });
     }, [validLines, timeRange, selectedRange, buildHistogram]);
 
+    useEffect(() => {
+        setLegendSelection((prev) => {
+            const next: Record<string, boolean> = {};
+            mainHistogram.logLevels.forEach((level) => {
+                next[level] = prev[level] ?? true;
+            });
+            return next;
+        });
+    }, [mainHistogram.logLevels]);
+
+    const selectedCategories = useMemo(() => {
+        return mainHistogram.logLevels.filter((level) => legendSelection[level] !== false);
+    }, [legendSelection, mainHistogram.logLevels]);
+
+    useEffect(() => {
+        if (!onCategoryFilterChange) {
+            return;
+        }
+
+        const hasActiveFilter = selectedCategories.length > 0
+            && selectedCategories.length < mainHistogram.logLevels.length;
+
+        onCategoryFilterChange({
+            field: categoryField,
+            selectedCategories: hasActiveFilter ? selectedCategories : null,
+        });
+    }, [categoryField, mainHistogram.logLevels.length, onCategoryFilterChange, selectedCategories]);
+
+    const handleLegendSelectChanged = useCallback((params: {
+        selected?: Record<string, boolean>;
+    }) => {
+        if (!params.selected) {
+            return;
+        }
+
+        setLegendSelection((prev) => {
+            const next: Record<string, boolean> = {};
+            mainHistogram.logLevels.forEach((level) => {
+                const selected = params.selected?.[level];
+                next[level] = typeof selected === 'boolean' ? selected : (prev[level] ?? true);
+            });
+            return next;
+        });
+    }, [mainHistogram.logLevels]);
+
     const zoomSliderGrid = {
         top: 6,
         right: 20,
@@ -616,12 +606,34 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     const zoomChartGrid = {
         ...zoomSliderGrid,
         top: 18,
-        bottom: 5,
+        bottom: 22,
     };
 
     useEffect(() => {
         if (!timeRange) return;
         setZoomShade({ leftPercent: 0, rightPercent: 0 });
+    }, [timeRange?.min, timeRange?.max]);
+
+    useEffect(() => {
+        if (!timeRange) {
+            setSelectedRange({ start: null, end: null });
+            return;
+        }
+
+        setSelectedRange((prev) => {
+            if (prev.start === null && prev.end === null) {
+                return prev;
+            }
+
+            const outOfBounds = (prev.start !== null && (prev.start < timeRange.min || prev.start > timeRange.max))
+                || (prev.end !== null && (prev.end < timeRange.min || prev.end > timeRange.max));
+
+            if (!outOfBounds) {
+                return prev;
+            }
+
+            return { start: null, end: null };
+        });
     }, [timeRange?.min, timeRange?.max]);
 
     const chartOption = useMemo(() => {
@@ -655,7 +667,10 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
         return {
             tooltip: { trigger: 'axis' },
-            legend: { top: 0 },
+            legend: {
+                top: 0,
+                selected: legendSelection,
+            },
             grid: { top: 20, right: 20, left: 40, bottom: 10 },
             xAxis: {
                 type: 'time',
@@ -676,7 +691,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             },
             series,
         };
-    }, [categoryField, locale, mainHistogram, selectedRange, timeRange]);
+    }, [categoryField, legendSelection, locale, mainHistogram, selectedRange, timeRange]);
 
     const resolvedAnomalyRanges = useMemo((): ResolvedAnomalyRange[] => {
         const zoomLineMinX = timeRange?.min ?? null;
@@ -722,7 +737,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             }
             const candidateLine = validLineNumbers[idx];
             if (candidateLine > endLine) {
-                return null;
+                return resolveNearestTimestamp(startLine);
             }
             return timestampByLine.get(candidateLine) ?? null;
         };
@@ -739,9 +754,30 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             }
             const candidateLine = validLineNumbers[idx];
             if (candidateLine < startLine) {
-                return null;
+                return resolveNearestTimestamp(endLine);
             }
             return timestampByLine.get(candidateLine) ?? null;
+        };
+
+        const resolveNearestTimestamp = (lineNumber: number): number | null => {
+            if (validLineNumbers.length === 0) {
+                return null;
+            }
+
+            const idx = lowerBound(validLineNumbers, lineNumber);
+            if (idx <= 0) {
+                return timestampByLine.get(validLineNumbers[0]) ?? null;
+            }
+            if (idx >= validLineNumbers.length) {
+                return timestampByLine.get(validLineNumbers[validLineNumbers.length - 1]) ?? null;
+            }
+
+            const leftLine = validLineNumbers[idx - 1];
+            const rightLine = validLineNumbers[idx];
+            const leftDistance = Math.abs(lineNumber - leftLine);
+            const rightDistance = Math.abs(rightLine - lineNumber);
+            const nearest = leftDistance <= rightDistance ? leftLine : rightLine;
+            return timestampByLine.get(nearest) ?? null;
         };
 
         const fromLines = (() => {
@@ -829,18 +865,47 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
         const fromRegions = (() => {
             return (anomalyRegions || []).flatMap((region) => {
-                // Strict mode: use exact timestamps of boundary lines.
-                const start = timestampByLine.get(region.start_line)
-                    ?? (region.start_timestamp ? parseTimestamp(region.start_timestamp)?.getTime() ?? null : null);
-                const end = timestampByLine.get(region.end_line)
-                    ?? (region.end_timestamp ? parseTimestamp(region.end_timestamp)?.getTime() ?? null : null);
+                const startLine = Math.min(region.start_line, region.end_line);
+                const endLine = Math.max(region.start_line, region.end_line);
 
-                if (start === null || end === null) {
+                const rangeStartIndex = lowerBound(validLineNumbers, startLine);
+                const rangeEndExclusive = lowerBound(validLineNumbers, endLine + 1);
+
+                let minTs = Number.POSITIVE_INFINITY;
+                let maxTs = Number.NEGATIVE_INFINITY;
+                for (let i = rangeStartIndex; i < rangeEndExclusive; i += 1) {
+                    const ts = timestampByLine.get(validLineNumbers[i]);
+                    if (ts === undefined) {
+                        continue;
+                    }
+                    if (ts < minTs) {
+                        minTs = ts;
+                    }
+                    if (ts > maxTs) {
+                        maxTs = ts;
+                    }
+                }
+
+                const hasInternalTimestamps = Number.isFinite(minTs) && Number.isFinite(maxTs);
+                const startCandidate = hasInternalTimestamps
+                    ? minTs
+                    : (
+                        resolveStartTimestamp(startLine, endLine)
+                        ?? (region.start_timestamp ? parseTimestamp(region.start_timestamp)?.getTime() ?? null : null)
+                    );
+                const endCandidate = hasInternalTimestamps
+                    ? maxTs
+                    : (
+                        resolveEndTimestamp(startLine, endLine)
+                        ?? (region.end_timestamp ? parseTimestamp(region.end_timestamp)?.getTime() ?? null : null)
+                    );
+
+                if (startCandidate === null || endCandidate === null) {
                     return [];
                 }
 
-                const rawStart = Math.min(start, end);
-                const rawEndBase = Math.max(start, end);
+                const rawStart = Math.min(startCandidate, endCandidate);
+                const rawEndBase = Math.max(startCandidate, endCandidate);
                 const rawEnd = rawEndBase === rawStart ? rawStart + 1 : rawEndBase;
 
                 const clampedStart = zoomLineMinX !== null ? Math.max(zoomLineMinX, rawStart) : rawStart;
@@ -853,14 +918,13 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 return [{
                     start: clampedStart,
                     end: clampedEnd,
-                    startLine: region.start_line,
-                    endLine: region.end_line,
+                    startLine,
+                    endLine,
                 }];
             });
         })();
 
-        // Keep chart overlays aligned with table highlighting:
-        // table uses anomalyLineNumbers, so prefer them as the source of truth.
+        // Prefer anomalyLineNumbers when available, otherwise use server regions.
         const ranges = fromLines.length > 0 ? fromLines : fromRegions;
         return sanitizeRanges(ranges).map((range, index) => ({
             ...range,
@@ -1003,6 +1067,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         }
 
         const zr = chart.getZr();
+        zr.setCursorStyle('pointer');
 
         const onMove = (event: { offsetX?: number; offsetY?: number }) => {
             if (typeof event.offsetX !== 'number' || typeof event.offsetY !== 'number') {
@@ -1024,6 +1089,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
         const onOut = () => {
             clearAnomalyHover();
+            zr.setCursorStyle('pointer');
         };
 
         zr.on('mousemove', onMove);
@@ -1047,6 +1113,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
     const zoomChartOption = useMemo(() => {
         const zoomBucketMidOffset = Math.floor(zoomHistogram.bucketSize / 2);
+        const zoomRangeMs = timeRange ? Math.max(1, timeRange.max - timeRange.min) : 1;
         const effectiveMarkAreaData = resolvedAnomalyRanges.map((range) => ([
             {
                 xAxis: range.start,
@@ -1072,9 +1139,17 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 type: 'time',
                 min: timeRange?.min,
                 max: timeRange?.max,
-                axisLabel: { show: false },
-                axisTick: { show: false },
-                axisLine: { show: false },
+                splitNumber: 6,
+                axisLabel: {
+                    show: true,
+                    fontSize: 10,
+                    hideOverlap: false,
+                    showMinLabel: true,
+                    showMaxLabel: true,
+                    formatter: (value: number) => formatAxisTimeLabel(value, zoomRangeMs, zoomHistogram.bucketSize, locale),
+                },
+                axisTick: { show: true },
+                axisLine: { show: true },
                 splitLine: { show: false },
             },
             yAxis: {
@@ -1087,6 +1162,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             series: [
                 {
                     type: 'line',
+                    cursor: 'pointer',
                     data: zoomHistogram.chartData.map((point, index) => [point.timestamp + zoomBucketMidOffset, totals[index]]),
                     smooth: true,
                     symbol: 'none',
@@ -1100,7 +1176,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 },
             ],
         };
-    }, [hoveredAnomalyRangeKey, resolvedAnomalyRanges, timeRange, zoomHistogram]);
+    }, [hoveredAnomalyRangeKey, locale, resolvedAnomalyRanges, timeRange, zoomHistogram]);
 
     const zoomSliderOption = useMemo(() => {
         if (!timeRange) {
@@ -1152,6 +1228,8 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     moveHandleSize: 14,
                     showDataShadow: false,
                     handleSize: '100%',
+                    brushSelect: false,
+                    zoomLock: false,
                     handleIcon: 'path://M50,0 L50,100 M44,40 L56,40 L56,60 L44,60 Z M47,44 L47,56 M53,44 L53,56',
                     handleStyle: {
                         color: '#b0b0b0',
@@ -1172,14 +1250,30 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     }) => {
         if (!timeRange || zoomHistogram.chartData.length === 0) return;
 
+        const isQuickRangeDispatch = quickRangeDispatchRef.current;
+        quickRangeDispatchRef.current = false;
+        if (!isQuickRangeDispatch) {
+            setActiveQuickRange(null);
+        }
+
         const payload = params?.batch?.[0] ?? params ?? {};
         const parsedStartValue = parseZoomBoundary(payload.startValue ?? params.startValue);
         const parsedEndValue = parseZoomBoundary(payload.endValue ?? params.endValue);
 
         let startTime = timeRange.min;
         let endTime = timeRange.max;
+        const fullWindowMs = Math.max(1, timeRange.max - timeRange.min);
 
-        if (parsedStartValue !== null && parsedEndValue !== null) {
+        const isLikelyAbsoluteRange = (
+            parsedStartValue !== null
+            && parsedEndValue !== null
+            && parsedStartValue >= (timeRange.min - fullWindowMs)
+            && parsedStartValue <= (timeRange.max + fullWindowMs)
+            && parsedEndValue >= (timeRange.min - fullWindowMs)
+            && parsedEndValue <= (timeRange.max + fullWindowMs)
+        );
+
+        if (isLikelyAbsoluteRange && parsedStartValue !== null && parsedEndValue !== null) {
             startTime = Math.max(timeRange.min, Math.floor(parsedStartValue));
             endTime = Math.min(timeRange.max, Math.ceil(parsedEndValue));
         } else {
@@ -1189,14 +1283,31 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             endTime = timeRange.min + ((timeRange.max - timeRange.min) * endPercent) / 100;
         }
 
+        if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+            return;
+        }
+
+        if (startTime > endTime) {
+            const tmp = startTime;
+            startTime = endTime;
+            endTime = tmp;
+        }
+
+        const minWindowMs = Math.max(1000, Math.min(60_000, Math.floor(fullWindowMs / 250)));
+
         if (endTime <= startTime) {
-            endTime = Math.min(timeRange.max, startTime + 1000);
+            if (startTime >= timeRange.max) {
+                startTime = Math.max(timeRange.min, timeRange.max - minWindowMs);
+                endTime = timeRange.max;
+            } else {
+                endTime = Math.min(timeRange.max, startTime + minWindowMs);
+            }
         }
 
         const total = Math.max(1, timeRange.max - timeRange.min);
         const leftPercent = Math.max(0, Math.min(100, ((startTime - timeRange.min) / total) * 100));
         const rightPercent = Math.max(0, Math.min(100, ((timeRange.max - endTime) / total) * 100));
-        const edgeToleranceMs = Math.max(1000, total * 0.001);
+        const edgeToleranceMs = Math.max(1, Math.min(1000, Math.floor(total * 0.00001)));
         const isFullRange =
             startTime <= timeRange.min + edgeToleranceMs &&
             endTime >= timeRange.max - edgeToleranceMs;
@@ -1216,6 +1327,69 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             onTimeRangeChange(startTime, endTime);
         }
     }, [onTimeRangeChange, timeRange, zoomHistogram]);
+
+    const handleQuickRangeSelect = useCallback((preset: QuickRangePreset) => {
+        if (!timeRange) {
+            return;
+        }
+
+        const nowMs = Date.now();
+        let startMs: number;
+        let endMs = nowMs;
+
+        if (preset === 'all') {
+            startMs = timeRange.min;
+            endMs = timeRange.max;
+        } else if (preset === 'day') {
+            startMs = nowMs - (24 * 60 * 60 * 1000);
+        } else if (preset === 'week') {
+            startMs = nowMs - (7 * 24 * 60 * 60 * 1000);
+        } else if (preset === 'month') {
+            startMs = subtractMonths(nowMs, 1);
+        } else {
+            startMs = subtractMonths(nowMs, 3);
+        }
+
+        const hasDataInRequestedPeriod = preset === 'all'
+            ? validLines.length > 0
+            : validLines.some((line) => line.timestampMs >= startMs && line.timestampMs <= endMs);
+
+        setActiveQuickRange(preset);
+
+        const chart = zoomSliderRef.current?.getEchartsInstance();
+        if (!chart) {
+            return;
+        }
+
+        if (preset !== 'all' && !hasDataInRequestedPeriod) {
+            // Keep the requested period even if it is outside file bounds,
+            // so parent analytics receive an empty window and show zeros.
+            setSelectedRange({ start: startMs, end: endMs });
+            setZoomShade({ leftPercent: 0, rightPercent: 0 });
+            if (onTimeRangeChange) {
+                onTimeRangeChange(startMs, endMs);
+            }
+            return;
+        }
+
+        quickRangeDispatchRef.current = true;
+        if (preset === 'all') {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomIndex: 0,
+                start: 0,
+                end: 100,
+            });
+            return;
+        }
+
+        chart.dispatchAction({
+            type: 'dataZoom',
+            dataZoomIndex: 0,
+            startValue: startMs,
+            endValue: endMs,
+        });
+    }, [onTimeRangeChange, timeRange, validLines]);
 
     // Don't render if no valid data
     if (fullHistogram.chartData.length === 0) {
@@ -1277,12 +1451,13 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         option={chartOption}
                         style={{ height }}
                         notMerge={true}
+                        onEvents={{ legendselectchanged: handleLegendSelectChanged }}
                     />
                     <Box sx={{ mt: 1 }}>
                         <Box sx={{ position: 'relative' }}>
                             <ReactECharts
                                 option={zoomChartOption}
-                                style={{ height: 80 }}
+                                style={{ height: 96, cursor: 'pointer' }}
                                 notMerge={true}
                             />
                             {hoveredAnomalyRange && hoveredAnomalyPointer && (
@@ -1312,7 +1487,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                                 <ReactECharts
                                     ref={zoomSliderRef}
                                     option={zoomSliderOption}
-                                    style={{ height: '100%' }}
+                                    style={{ height: '100%', cursor: 'grab' }}
                                     onChartReady={() => setSliderReadyVersion((v) => v + 1)}
                                     onEvents={{ datazoom: handleZoom }}
                                 />
@@ -1351,6 +1526,54 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         </Box>
                     </Box>
                 </Box>
+                {showQuickRangeButtons && (
+                    <Box
+                        sx={{
+                            mt: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                        }}
+                    >
+                        <Button
+                            size="small"
+                            variant={activeQuickRange === 'day' ? 'contained' : 'outlined'}
+                            onClick={() => handleQuickRangeSelect('day')}
+                        >
+                            День
+                        </Button>
+                        <Button
+                            size="small"
+                            variant={activeQuickRange === 'week' ? 'contained' : 'outlined'}
+                            onClick={() => handleQuickRangeSelect('week')}
+                        >
+                            Неделя
+                        </Button>
+                        <Button
+                            size="small"
+                            variant={activeQuickRange === 'month' ? 'contained' : 'outlined'}
+                            onClick={() => handleQuickRangeSelect('month')}
+                        >
+                            Месяц
+                        </Button>
+                        <Button
+                            size="small"
+                            variant={activeQuickRange === 'quarter' ? 'contained' : 'outlined'}
+                            onClick={() => handleQuickRangeSelect('quarter')}
+                        >
+                            Квартал
+                        </Button>
+                        <Button
+                            size="small"
+                            variant={activeQuickRange === 'all' ? 'contained' : 'outlined'}
+                            onClick={() => handleQuickRangeSelect('all')}
+                        >
+                            Весь период
+                        </Button>
+
+                    </Box>
+                )}
             </Collapse>
         </Box>
     );

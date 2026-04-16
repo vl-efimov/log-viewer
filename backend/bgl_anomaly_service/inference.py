@@ -177,9 +177,7 @@ class NeuralLogAnomalyService:
                 },
                 "rows": [] if include_rows else None,
                 "windows": [] if include_windows else None,
-                "anomaly_lines": [],
                 "anomaly_regions": [],
-                "chart_overlays": _build_overlay_payload([]),
             }
 
         messages: list[str] = []
@@ -264,8 +262,6 @@ class NeuralLogAnomalyService:
                     }
                 )
 
-        anomaly_lines = [idx + 1 for idx, is_anomaly in enumerate(line_flags.tolist()) if is_anomaly]
-
         anomaly_count = int(np.sum(line_flags))
         return {
             "meta": {
@@ -280,9 +276,7 @@ class NeuralLogAnomalyService:
             },
             "rows": rows_out if include_rows else None,
             "windows": windows_out if include_windows else None,
-            "anomaly_lines": anomaly_lines,
             "anomaly_regions": region_items,
-            "chart_overlays": _build_overlay_payload(region_items),
         }
 
 

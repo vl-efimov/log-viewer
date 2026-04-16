@@ -7,6 +7,9 @@ export interface TextFilter {
     value: string;
 }
 
+export const ANOMALY_STATUS_VALUES = ['anomaly', 'normal', 'undefined'] as const;
+export type AnomalyStatusFilterValue = typeof ANOMALY_STATUS_VALUES[number];
+
 export interface LogFilters {
     // Time/Date fields
     timestamp?: DateRangeFilter;
@@ -17,6 +20,7 @@ export interface LogFilters {
     // Common fields
     level?: string[];
     message?: TextFilter;
+    anomalyStatus?: AnomalyStatusFilterValue[];
     
     // Source/Class/Logger fields
     source?: TextFilter;

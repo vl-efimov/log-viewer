@@ -147,6 +147,103 @@ Formats are checked in **descending priority order**:
 - **`time`**: Time only
 - **`duration`**: Time duration (e.g., HH:MM:SS)
 
+## Dashboard Facet Standard (Locked, v1)
+
+This section defines the shared dashboard analytics contract for all existing and future log formats.
+
+### Scope
+
+- Applies to dashboard charts built from parsed fields.
+- Applies to built-in formats and custom formats added to `public/log-formats.json`.
+
+### Top Charts (Fixed Core)
+
+- Top area is reserved for core operational fields only:
+  - `level`
+  - `status`
+  - `method`
+- A top chart is rendered only if that field has at least one value in the active filter window.
+- If a core field is missing or empty in the active window, its chart is hidden.
+
+### Lower Charts (Facets)
+
+- Lower area is for additional field distributions (facets).
+- Lower area shows up to 3 facet charts.
+- A facet candidate must:
+  - not be a core field (`level`, `status`, `method`)
+  - not be an excluded technical field (`raw`, `timestamp`, `datetime`, `event_time`, `created_at`)
+  - have more than one unique value in the active window
+- When no facet qualifies:
+  - show a single no-data state in the lower area
+  - text: `No data to display` (or localized equivalent)
+
+### Canonical Field Names for Cross-Format Consistency
+
+Custom and built-in formats should map equivalent fields to canonical names when possible.
+
+- `timestamp`: full timestamp value
+- `level`: log severity
+- `status`: numeric status code or discrete job state
+- `method`: HTTP or operation method
+- `host`: hostname or node identifier
+- `class`: class/logger/source class
+- `process`: process name
+- `component`: subsystem/component
+- `user`: user/account
+- `ip`: client/server IP
+- `queue`: queue name
+- `type`: event/type family
+
+Recommended aliases:
+
+- `hostname` -> `host`
+- `node` or `node2` -> `host`
+- `logger` or `source` -> `class`
+- `client` -> `ip`
+
+### Value Normalization Rules
+
+- Trim spaces.
+- Ignore empty values and placeholders: `-`, `null`, `undefined`.
+- Preserve semantics of categorical values (do not convert to numeric bins at parse stage).
+- Keep raw high-cardinality fields (for example `message`) out of dashboard facets.
+
+### Time and Filter Dependence
+
+- Dashboard charts always reflect the active histogram time range and active legend/category filtering.
+- The histogram control is the source of truth for filtered dashboard analytics.
+
+### Format Author Checklist
+
+When adding a new format in `public/log-formats.json`:
+
+1. Capture `timestamp` whenever possible.
+2. Capture at least one core field from `level` / `status` / `method`.
+3. Capture at least one low-cardinality operational field for facets (`class`, `host`, `component`, `queue`, `type`, `user`).
+4. Avoid using free-text fields (like `message`) as facet candidates.
+5. Prefer canonical field names or alias mapping to canonical names.
+
+### Supported Formats: Practical Target Facets
+
+- Apache Access / Nginx / Web Access:
+  - Core: `status`, `method`
+  - Facets: `ip`, `user`, `protocol` (or normalized path group if implemented)
+- Apache Error:
+  - Core: `level`
+  - Facets: `client`, `host`, `component/class`
+- BGL (New):
+  - Core: `status`
+  - Facets: `queue`, `user`, `host`
+- BGL (Old):
+  - Core: `level`
+  - Facets: `type`, `host`
+- HDFS v1 / HDFS v2:
+  - Core: `level`
+  - Facets: `class`, `host/component`
+- Syslog:
+  - Core: `level` (when available)
+  - Facets: `process`, `host`
+
 ## Example Formats with Named Capture Groups
 
 ### Apache Error Log

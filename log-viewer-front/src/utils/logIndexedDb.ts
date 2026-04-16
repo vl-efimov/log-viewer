@@ -63,8 +63,9 @@ export type AnomalySnapshotRecord = {
         start_timestamp: string | null;
         end_timestamp: string | null;
     }>;
-    lineNumbers: number[];
+    lineNumbers?: number[];
     rowsCount: number;
+    totalRows?: number;
     analyzedAt: number;
     modelId: 'bgl' | 'hdfs';
     params: {
@@ -82,9 +83,28 @@ export type FilteredLinesResult = {
     lines: Array<{ lineNumber: number; raw: string }>;
 };
 
+export type ExactDashboardSnapshot = {
+    stats: {
+        totalLines: number;
+        nonEmptyLines: number;
+        parsedLines: number;
+        fieldValueCounts: Record<string, Record<string, number>>;
+    };
+};
+
+type ExactDashboardFilters = {
+    startMs?: number | null;
+    endMs?: number | null;
+    categoryField?: string | null;
+    categoryValues?: string[] | null;
+    signal?: AbortSignal;
+};
+
 type QueryFilteredLinesOptions = {
     limit?: number;
     afterLine?: number;
+    beforeLine?: number;
+    order?: 'asc' | 'desc';
     signal?: AbortSignal;
     onProgress?: (partial: FilteredLinesResult) => void;
 };
@@ -101,6 +121,9 @@ const serializeFiltersForApi = (filters: LogFilters): Record<string, unknown> =>
     const result: Record<string, unknown> = {};
 
     Object.entries(filters).forEach(([key, value]) => {
+        if (key === 'anomalyStatus') {
+            return;
+        }
         if (!value) return;
 
         if (Array.isArray(value)) {
@@ -137,6 +160,19 @@ const requestToPromise = <T>(request: IDBRequest<T>): Promise<T> => {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
+};
+
+const normalizeFieldValue = (value: unknown): string | null => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '-' || trimmed === 'null' || trimmed === 'undefined') {
+        return null;
+    }
+
+    return trimmed;
 };
 
 const transactionDone = (tx: IDBTransaction): Promise<void> => {
@@ -376,6 +412,126 @@ export const getDashboardSnapshot = async (sessionId: string): Promise<LogStatsR
     return result ?? null;
 };
 
+export const getLocalExactDashboardSnapshot = async (
+    sessionId: string,
+    filters: ExactDashboardFilters = {},
+): Promise<ExactDashboardSnapshot> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_LINES, 'readonly');
+    const index = tx.objectStore(STORE_LINES).index('by_session');
+
+    const normalizedCategoryField = (filters.categoryField ?? '').trim();
+    const selectedCategoryValues = new Set(
+        (filters.categoryValues ?? [])
+            .map((value) => String(value).trim().toUpperCase())
+            .filter((value) => value.length > 0),
+    );
+
+    const hasTimeFilter = filters.startMs != null || filters.endMs != null;
+    const hasCategoryFilter = normalizedCategoryField.length > 0 && selectedCategoryValues.size > 0;
+
+    const fieldValueCounts: Record<string, Record<string, number>> = {};
+    let totalLines = 0;
+    let nonEmptyLines = 0;
+    let parsedLines = 0;
+
+    const throwIfAborted = () => {
+        if (filters.signal?.aborted) {
+            throw new DOMException('Exact dashboard query aborted', 'AbortError');
+        }
+    };
+
+    await new Promise<void>((resolve, reject) => {
+        const request = index.openCursor(IDBKeyRange.only(sessionId));
+
+        request.onsuccess = () => {
+            try {
+                throwIfAborted();
+
+                const cursor = request.result;
+                if (!cursor) {
+                    resolve();
+                    return;
+                }
+
+                const row = cursor.value as LogLineRecord;
+
+                if (hasTimeFilter) {
+                    const ts = row.timestampMs;
+                    if (ts == null) {
+                        cursor.continue();
+                        return;
+                    }
+
+                    if (filters.startMs != null && ts < filters.startMs) {
+                        cursor.continue();
+                        return;
+                    }
+
+                    if (filters.endMs != null && ts > filters.endMs) {
+                        cursor.continue();
+                        return;
+                    }
+                }
+
+                if (hasCategoryFilter) {
+                    if (!row.parsed) {
+                        cursor.continue();
+                        return;
+                    }
+
+                    const rawCategory = row.fields?.[normalizedCategoryField];
+                    const normalizedCategory = normalizeFieldValue(rawCategory)?.toUpperCase() ?? 'UNKNOWN';
+                    if (!selectedCategoryValues.has(normalizedCategory)) {
+                        cursor.continue();
+                        return;
+                    }
+                }
+
+                totalLines += 1;
+                if (row.raw.trim().length > 0) {
+                    nonEmptyLines += 1;
+                }
+
+                if (row.parsed) {
+                    parsedLines += 1;
+
+                    Object.entries(row.fields || {}).forEach(([field, rawValue]) => {
+                        const normalized = normalizeFieldValue(rawValue);
+                        if (!normalized) {
+                            return;
+                        }
+
+                        if (!fieldValueCounts[field]) {
+                            fieldValueCounts[field] = {};
+                        }
+
+                        const counter = fieldValueCounts[field];
+                        counter[normalized] = (counter[normalized] || 0) + 1;
+                    });
+                }
+
+                cursor.continue();
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+
+    await transactionDone(tx);
+
+    return {
+        stats: {
+            totalLines,
+            nonEmptyLines,
+            parsedLines,
+            fieldValueCounts,
+        },
+    };
+};
+
 export const saveAnomalySnapshot = async (
     sessionId: string,
     snapshot: Omit<AnomalySnapshotRecord, 'sessionId' | 'kind' | 'updatedAt'>
@@ -555,19 +711,24 @@ export const queryFilteredLines = async (
     sessionId: string,
     filters: LogFilters,
     options: QueryFilteredLinesOptions = {}
-): Promise<FilteredLinesResult & { nextAfterLine?: number | null; hasMore?: boolean }> => {
+): Promise<FilteredLinesResult & { nextAfterLine?: number | null; nextBeforeLine?: number | null; hasMore?: boolean }> => {
     if (isRemoteSessionId(sessionId)) {
         const limit = options.limit ?? MAX_FILTER_LINES_DEFAULT;
         const remoteResult = await queryRemoteFilteredLines(
             toRemoteIngestId(sessionId),
             serializeFiltersForApi(filters),
             limit,
-            { afterLine: options.afterLine },
+            {
+                afterLine: options.afterLine,
+                beforeLine: options.beforeLine,
+                order: options.order,
+            },
         );
         return {
             totalMatches: remoteResult.totalMatches,
             lines: remoteResult.lines,
             nextAfterLine: remoteResult.nextAfterLine,
+            nextBeforeLine: remoteResult.nextBeforeLine,
             hasMore: remoteResult.hasMore,
         };
     }
@@ -576,6 +737,16 @@ export const queryFilteredLines = async (
     const signal = options.signal;
     const onProgress = options.onProgress;
     const PROGRESS_CHUNK_SIZE = 2_000;
+    const order = options.order === 'desc' ? 'desc' : 'asc';
+    const startAfter = options.afterLine ? Math.max(0, Math.floor(options.afterLine)) : 0;
+    const endBefore = options.beforeLine ? Math.max(0, Math.floor(options.beforeLine)) : Number.MAX_SAFE_INTEGER;
+
+    const isLineWithinCursorBounds = (lineNumber: number): boolean => {
+        if (order === 'desc') {
+            return lineNumber < endBefore && lineNumber > startAfter;
+        }
+        return lineNumber > startAfter && lineNumber < endBefore;
+    };
 
     const throwIfAborted = () => {
         if (signal?.aborted) {
@@ -594,7 +765,71 @@ export const queryFilteredLines = async (
     });
 
     if (entries.length === 0) {
-        return { totalMatches: 0, lines: [] };
+        const db = await getLogDb();
+        const tx = db.transaction(STORE_LINES, 'readonly');
+        const store = tx.objectStore(STORE_LINES);
+
+        const lowerLine = Math.max(1, startAfter + 1);
+        const upperLine = Math.max(0, endBefore - 1);
+        const hasBeforeBound = options.beforeLine !== undefined;
+        if ((hasBeforeBound && upperLine < lowerLine) || upperLine === 0) {
+            await transactionDone(tx);
+            return {
+                totalMatches: 0,
+                lines: [],
+                nextAfterLine: null,
+                nextBeforeLine: null,
+                hasMore: false,
+            };
+        }
+
+        const safeUpper = upperLine > 0 ? upperLine : Number.MAX_SAFE_INTEGER;
+        const range = IDBKeyRange.bound([sessionId, lowerLine], [sessionId, safeUpper]);
+
+        const lines: Array<{ lineNumber: number; raw: string }> = [];
+        let hasMore = false;
+
+        await new Promise<void>((resolve, reject) => {
+            const request = store.openCursor(range, order === 'desc' ? 'prev' : 'next');
+            request.onsuccess = () => {
+                if (signal?.aborted) {
+                    reject(new DOMException('Filtering aborted', 'AbortError'));
+                    return;
+                }
+
+                const cursor = request.result;
+                if (!cursor) {
+                    resolve();
+                    return;
+                }
+
+                const record = cursor.value as LogLineRecord;
+                if (lines.length < limit) {
+                    lines.push({ lineNumber: record.lineNumber, raw: record.raw });
+                    if (onProgress) {
+                        onProgress({
+                            totalMatches: lines.length,
+                            lines: [{ lineNumber: record.lineNumber, raw: record.raw }],
+                        });
+                    }
+                    cursor.continue();
+                    return;
+                }
+
+                hasMore = true;
+                resolve();
+            };
+            request.onerror = () => reject(request.error);
+        });
+
+        await transactionDone(tx);
+        return {
+            totalMatches: lines.length,
+            lines,
+            nextAfterLine: order === 'asc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+            nextBeforeLine: order === 'desc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+            hasMore,
+        };
     }
 
     let candidateLines: Set<number> | null = null;
@@ -636,13 +871,13 @@ export const queryFilteredLines = async (
         const index = tx.objectStore(STORE_LINES).index('by_session');
 
         const lines: Array<{ lineNumber: number; raw: string }> = [];
-        let totalMatches = 0;
+        let hasMore = false;
         let activeMatchedGroupId: number | null = null;
         let lastReportedCount = 0;
         let progressChunk: Array<{ lineNumber: number; raw: string }> = [];
 
         await new Promise<void>((resolve, reject) => {
-            const request = index.openCursor(IDBKeyRange.only(sessionId));
+            const request = index.openCursor(IDBKeyRange.only(sessionId), order === 'desc' ? 'prev' : 'next');
             request.onsuccess = () => {
                 if (signal?.aborted) {
                     reject(new DOMException('Filtering aborted', 'AbortError'));
@@ -664,28 +899,38 @@ export const queryFilteredLines = async (
 
                     if (parsedMatches) {
                         activeMatchedGroupId = record.groupId;
-                        totalMatches += 1;
-                        if (lines.length < limit) {
-                            const row = { lineNumber: record.lineNumber, raw: record.raw };
-                            lines.push(row);
-                            progressChunk.push(row);
+                        if (isLineWithinCursorBounds(record.lineNumber)) {
+                            if (lines.length < limit) {
+                                const row = { lineNumber: record.lineNumber, raw: record.raw };
+                                lines.push(row);
+                                progressChunk.push(row);
+                            } else {
+                                hasMore = true;
+                                resolve();
+                                return;
+                            }
                         }
                     } else {
                         activeMatchedGroupId = null;
                     }
                 } else if (activeMatchedGroupId !== null && record.groupId === activeMatchedGroupId) {
-                    totalMatches += 1;
-                    if (lines.length < limit) {
-                        const row = { lineNumber: record.lineNumber, raw: record.raw };
-                        lines.push(row);
-                        progressChunk.push(row);
+                    if (isLineWithinCursorBounds(record.lineNumber)) {
+                        if (lines.length < limit) {
+                            const row = { lineNumber: record.lineNumber, raw: record.raw };
+                            lines.push(row);
+                            progressChunk.push(row);
+                        } else {
+                            hasMore = true;
+                            resolve();
+                            return;
+                        }
                     }
                 }
 
-                if (onProgress && totalMatches - lastReportedCount >= PROGRESS_CHUNK_SIZE) {
-                    lastReportedCount = totalMatches;
+                if (onProgress && lines.length - lastReportedCount >= PROGRESS_CHUNK_SIZE && progressChunk.length > 0) {
+                    lastReportedCount = lines.length;
                     onProgress({
-                        totalMatches,
+                        totalMatches: lines.length,
                         lines: progressChunk,
                     });
                     progressChunk = [];
@@ -698,15 +943,18 @@ export const queryFilteredLines = async (
 
         if (onProgress && progressChunk.length > 0) {
             onProgress({
-                totalMatches,
+                totalMatches: lines.length,
                 lines: progressChunk,
             });
         }
 
         await transactionDone(tx);
         return {
-            totalMatches,
+            totalMatches: lines.length,
             lines,
+            nextAfterLine: order === 'asc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+            nextBeforeLine: order === 'desc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+            hasMore,
         };
     }
 
@@ -764,8 +1012,29 @@ export const queryFilteredLines = async (
     }
 
     const sorted = Array.from(unique.values()).sort((a, b) => a.lineNumber - b.lineNumber);
+    const ordered = order === 'desc' ? sorted.slice().reverse() : sorted;
+
+    const lines: Array<{ lineNumber: number; raw: string }> = [];
+    let hasMore = false;
+    for (const record of ordered) {
+        if (!isLineWithinCursorBounds(record.lineNumber)) {
+            continue;
+        }
+
+        if (lines.length < limit) {
+            lines.push({ lineNumber: record.lineNumber, raw: record.raw });
+            continue;
+        }
+
+        hasMore = true;
+        break;
+    }
+
     return {
-        totalMatches: sorted.length,
-        lines: sorted.slice(0, limit).map((record) => ({ lineNumber: record.lineNumber, raw: record.raw })),
+        totalMatches: lines.length,
+        lines,
+        nextAfterLine: order === 'asc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+        nextBeforeLine: order === 'desc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+        hasMore,
     };
 };
