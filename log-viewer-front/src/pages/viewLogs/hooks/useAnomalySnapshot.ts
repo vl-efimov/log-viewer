@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import {
     clearAnomalyResults,
     setAnomalyResults,
 } from '../../../redux/slices/anomalySlice';
 import {
-    deleteAnomalySnapshot,
     getAnomalySnapshot,
+    pruneAnomalySnapshots,
     saveAnomalySnapshot,
 } from '../../../utils/logIndexedDb';
 
@@ -49,9 +49,13 @@ export const useAnomalySnapshot = ({
 }: UseAnomalySnapshotOptions) => {
     const dispatch = useDispatch();
     const [isHydrated, setIsHydrated] = useState(false);
+    const previousStorageKeyRef = useRef<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
+        const previousStorageKey = previousStorageKeyRef.current;
+        const storageKeyChanged = previousStorageKey !== null && previousStorageKey !== storageKey;
+        previousStorageKeyRef.current = storageKey;
         setIsHydrated(false);
 
         const loadSnapshot = async () => {
@@ -65,6 +69,7 @@ export const useAnomalySnapshot = ({
                 return;
             }
 
+            await pruneAnomalySnapshots(storageKey);
             const snapshot = await getAnomalySnapshot(storageKey);
             if (cancelled) {
                 return;
@@ -80,7 +85,7 @@ export const useAnomalySnapshot = ({
                     modelId: snapshot.modelId,
                     params: snapshot.params,
                 }));
-            } else if (!isRunning && !hasResults) {
+            } else if (!isRunning && (storageKeyChanged || !hasResults)) {
                 dispatch(clearAnomalyResults());
             }
 
@@ -100,18 +105,23 @@ export const useAnomalySnapshot = ({
         }
 
         if (!hasResults || !lastAnalyzedAt || !lastModelId || !lastRunParams) {
-            void deleteAnomalySnapshot(storageKey);
+            // Keep latest snapshot until an explicit replacement (new calculation)
+            // or full DB/session cleanup happens.
+            void pruneAnomalySnapshots(storageKey);
             return;
         }
 
-        void saveAnomalySnapshot(storageKey, {
-            regions,
-            rowsCount,
-            totalRows,
-            analyzedAt: lastAnalyzedAt,
-            modelId: lastModelId,
-            params: lastRunParams,
-        });
+        void (async () => {
+            await saveAnomalySnapshot(storageKey, {
+                regions,
+                rowsCount,
+                totalRows,
+                analyzedAt: lastAnalyzedAt,
+                modelId: lastModelId,
+                params: lastRunParams,
+            });
+            await pruneAnomalySnapshots(storageKey);
+        })();
     }, [
         hasResults,
         isHydrated,

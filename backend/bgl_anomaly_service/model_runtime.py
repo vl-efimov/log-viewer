@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from pathlib import Path
 
 os.environ.setdefault("TF_USE_LEGACY_KERAS", "0")
@@ -34,6 +35,14 @@ class ModelRuntime:
         self._prepare_progress = 0
         self._prepare_message = "Not prepared"
         self._prepare_error: str | None = None
+        self._prediction_running = False
+        self._prediction_stage = "idle"
+        self._prediction_processed_windows = 0
+        self._prediction_total_windows = 0
+        self._prediction_processed_rows = 0
+        self._prediction_total_rows = 0
+        self._prediction_started_at_ms: int | None = None
+        self._prediction_updated_at_ms: int | None = None
         self._cancel_event = threading.Event()
         self._tokenizer: BertTokenizer | None = None
         self._bert_model: TFBertModel | None = None
@@ -81,6 +90,111 @@ class ModelRuntime:
                 "message": self._prepare_message,
                 "error": self._prepare_error,
                 "loaded": self._loaded,
+            }
+
+    def begin_prediction(
+        self,
+        *,
+        total_windows: int,
+        stage: str = "embedding",
+        total_rows: int = 0,
+    ) -> None:
+        now_ms = int(time.time() * 1000)
+        with self._state_lock:
+            self._prediction_running = True
+            self._prediction_stage = stage
+            self._prediction_processed_windows = 0
+            self._prediction_total_windows = max(0, int(total_windows))
+            self._prediction_processed_rows = 0
+            self._prediction_total_rows = max(0, int(total_rows))
+            self._prediction_started_at_ms = now_ms
+            self._prediction_updated_at_ms = now_ms
+
+    def reset_prediction_status(self) -> None:
+        with self._state_lock:
+            self._prediction_running = False
+            self._prediction_stage = "idle"
+            self._prediction_processed_windows = 0
+            self._prediction_total_windows = 0
+            self._prediction_processed_rows = 0
+            self._prediction_total_rows = 0
+            self._prediction_started_at_ms = None
+            self._prediction_updated_at_ms = None
+
+    def update_prediction_progress(
+        self,
+        *,
+        processed_windows: int,
+        total_windows: int | None = None,
+        processed_rows: int | None = None,
+        total_rows: int | None = None,
+        stage: str | None = None,
+    ) -> None:
+        now_ms = int(time.time() * 1000)
+        with self._state_lock:
+            if total_windows is not None:
+                self._prediction_total_windows = max(0, int(total_windows))
+            if total_rows is not None:
+                self._prediction_total_rows = max(0, int(total_rows))
+
+            total = self._prediction_total_windows
+            processed = max(0, int(processed_windows))
+            if total > 0:
+                processed = min(processed, total)
+            self._prediction_processed_windows = processed
+
+            if processed_rows is not None:
+                total_row_count = self._prediction_total_rows
+                row_processed = max(0, int(processed_rows))
+                if total_row_count > 0:
+                    row_processed = min(row_processed, total_row_count)
+                self._prediction_processed_rows = row_processed
+
+            if stage is not None:
+                self._prediction_stage = stage
+
+            if not self._prediction_running:
+                self._prediction_running = True
+                if self._prediction_started_at_ms is None:
+                    self._prediction_started_at_ms = now_ms
+
+            self._prediction_updated_at_ms = now_ms
+
+    def finish_prediction(self, *, stage: str = "done") -> None:
+        now_ms = int(time.time() * 1000)
+        with self._state_lock:
+            if stage == "done" and self._prediction_total_windows > 0:
+                self._prediction_processed_windows = self._prediction_total_windows
+            if stage == "done" and self._prediction_total_rows > 0:
+                self._prediction_processed_rows = self._prediction_total_rows
+            self._prediction_running = False
+            self._prediction_stage = stage
+            self._prediction_updated_at_ms = now_ms
+
+    def get_prediction_status(self) -> dict[str, object]:
+        with self._state_lock:
+            total = self._prediction_total_windows
+            processed = self._prediction_processed_windows
+            total_rows = self._prediction_total_rows
+            processed_rows = self._prediction_processed_rows
+
+            if total > 0:
+                progress_percent = int(round((processed / total) * 100))
+            elif total_rows > 0:
+                progress_percent = int(round((processed_rows / total_rows) * 100))
+            else:
+                progress_percent = 0
+
+            return {
+                "running": self._prediction_running,
+                "stage": self._prediction_stage,
+                "processed_windows": processed,
+                "total_windows": total,
+                "processed_rows": processed_rows,
+                "total_rows": total_rows,
+                "progress_percent": max(0, min(100, progress_percent)),
+                "started_at_ms": self._prediction_started_at_ms,
+                "updated_at_ms": self._prediction_updated_at_ms,
             }
 
     def request_cancel(self) -> None:

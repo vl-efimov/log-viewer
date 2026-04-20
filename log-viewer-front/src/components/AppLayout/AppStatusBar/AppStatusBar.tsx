@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
 import LinearProgress from '@mui/material/LinearProgress';
+import CircularProgress from '@mui/material/CircularProgress';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CloseIcon from '@mui/icons-material/Close';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -15,7 +16,7 @@ import { RootState } from '../../../redux/store';
 import { baseUrl } from '../../../constants/BaseUrl';
 import { RouteViewLogs } from '../../../routes/routePaths';
 import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
-import { cancelActiveAnomalyPredictionSession, cancelBglAnomalyPrediction } from '../../../services/bglAnomalyApi';
+import { cancelActiveAnomalyPredictionSession, cancelBglAnomalyPrediction, getBglAnomalyProgress } from '../../../services/bglAnomalyApi';
 import AppStatusBarItem from '../AppStatusBarItem';
 import {
     anomalyTextSx,
@@ -27,6 +28,21 @@ import {
     statusBarSx,
     textSx,
 } from './styles';
+
+type AnomalyWindowProgress = {
+    percent: number | null;
+    processedWindows: number;
+    totalWindows: number;
+    processedRows: number;
+    totalRows: number;
+    stage: string;
+};
+
+type AnomalyStatusText = {
+    compact: string;
+    full: string;
+    showSpinner?: boolean;
+};
 
 const AppStatusBar: React.FC = () => {
     const dispatch = useDispatch();
@@ -51,11 +67,9 @@ const AppStatusBar: React.FC = () => {
         lastModelId: anomalyLastModelId,
         isRunning: anomalyIsRunning,
         runningModelId: anomalyRunningModelId,
-        runStartedAt: anomalyRunStartedAt,
-        expectedDurationSec: anomalyExpectedDurationSec,
         lastRunParams: anomalyLastRunParams,
     } = useSelector((state: RootState) => state.anomaly);
-    const [nowMs, setNowMs] = useState<number>(() => Date.now());
+    const [anomalyWindowProgress, setAnomalyWindowProgress] = useState<AnomalyWindowProgress | null>(null);
 
     const formatFileSize = (bytes: number): string => {
         if (bytes === 0) return '0 B';
@@ -72,56 +86,110 @@ const AppStatusBar: React.FC = () => {
 
     useEffect(() => {
         if (!anomalyIsRunning) {
+            setAnomalyWindowProgress(null);
             return;
         }
 
+        let cancelled = false;
+        let inFlight = false;
+        const modelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
+
+        const poll = async () => {
+            if (inFlight) {
+                return;
+            }
+            inFlight = true;
+            try {
+                const progress = await getBglAnomalyProgress(modelId);
+                if (cancelled) {
+                    return;
+                }
+
+                if (!progress.running) {
+                    setAnomalyWindowProgress({
+                        percent: null,
+                        processedWindows: 0,
+                        totalWindows: 0,
+                        processedRows: 0,
+                        totalRows: 0,
+                        stage: 'starting',
+                    });
+                    return;
+                }
+
+                const safeTotal = Math.max(0, Math.floor(progress.total_windows));
+                const safeProcessed = Math.max(0, Math.floor(progress.processed_windows));
+                const safeTotalRows = Math.max(0, Math.floor(progress.total_rows));
+                const safeProcessedRows = Math.max(0, Math.floor(progress.processed_rows));
+                const normalizedPercent = safeTotal > 0
+                    ? Math.round((Math.min(safeProcessed, safeTotal) / safeTotal) * 100)
+                    : Math.max(0, Math.min(100, Math.round(progress.progress_percent)));
+
+                setAnomalyWindowProgress({
+                    percent: normalizedPercent,
+                    processedWindows: safeProcessed,
+                    totalWindows: safeTotal,
+                    processedRows: safeProcessedRows,
+                    totalRows: safeTotalRows,
+                    stage: progress.stage || 'idle',
+                });
+            } catch {
+                // Keep last known progress if polling fails transiently.
+            } finally {
+                inFlight = false;
+            }
+        };
+
+        void poll();
         const timer = window.setInterval(() => {
-            setNowMs(Date.now());
+            void poll();
         }, 1000);
 
         return () => {
+            cancelled = true;
             window.clearInterval(timer);
         };
-    }, [anomalyIsRunning]);
+    }, [anomalyIsRunning, anomalyLastModelId, anomalyRunningModelId]);
 
-    const formatDuration = (seconds: number): string => {
-        const safe = Math.max(0, Math.floor(seconds));
-        const hh = Math.floor(safe / 3600);
-        const mm = Math.floor((safe % 3600) / 60);
-        const ss = safe % 60;
-        if (hh > 0) {
-            return `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
-        }
-        return `${mm}:${String(ss).padStart(2, '0')}`;
-    };
-
-    const buildEtaCorridor = (elapsedSec: number, expectedSec: number | null): { minSec: number; maxSec: number } | null => {
-        if (expectedSec == null) {
-            return null;
-        }
-
-        const correctedExpected = Math.max(expectedSec, Math.ceil(elapsedSec * 1.2));
-        const corridorMin = Math.max(elapsedSec, Math.floor(correctedExpected * 0.88));
-        const corridorMax = Math.max(corridorMin + 1, Math.ceil(correctedExpected * 1.28));
-        return { minSec: corridorMin, maxSec: corridorMax };
-    };
-
-    const anomalyStatus = (() => {
+    const anomalyStatus: AnomalyStatusText | null = (() => {
         const allowStatusOnCurrentRoute = anomalyIsRunning || (loaded && isViewLogsRoute);
         if (!allowStatusOnCurrentRoute) {
             return null;
         }
 
         if (anomalyIsRunning) {
-            const elapsedSec = anomalyRunStartedAt ? Math.max(0, Math.floor((nowMs - anomalyRunStartedAt) / 1000)) : 0;
-            const corridor = buildEtaCorridor(elapsedSec, anomalyExpectedDurationSec);
+            const progress = anomalyWindowProgress;
+            const stage = progress?.stage ?? 'starting';
+            const hasVisiblePercent = progress?.percent != null && stage !== 'starting';
+            const progressText = hasVisiblePercent
+                ? `${Math.max(0, Math.min(100, progress?.percent ?? 0))}%`
+                : null;
+            const rowsText = progress && progress.totalRows > 0
+                ? `${Math.min(progress.processedRows, progress.totalRows)}/${progress.totalRows} строк`
+                : 'подготовка строк';
+            const windowsText = progress && progress.totalWindows > 0
+                ? `${Math.min(progress.processedWindows, progress.totalWindows)}/${progress.totalWindows} окон`
+                : 'подготовка окон';
+            const stageLabel = stage === 'preprocessing'
+                ? 'Идет подготовка данных'
+                : stage === 'embedding'
+                    ? 'Идет подготовка эмбеддингов'
+                    : stage === 'scoring'
+                        ? 'Расчет аномалий'
+                        : 'Ожидание запуска расчета';
+            const stageDetail = stage === 'scoring'
+                ? `Обработано ${windowsText}.`
+                : stage === 'starting'
+                    ? 'Сервер запускает задачу анализа.'
+                    : `Обработано ${rowsText}.`;
+            const compactText = progressText ? `${stageLabel}: ${progressText}` : `${stageLabel}`;
+            const fullText = progressText
+                ? `${stageLabel}: ${progressText}. ${stageDetail}`
+                : `${stageLabel}. ${stageDetail}`;
             return {
-                compact: corridor
-                    ? `Происходит расчет аномалий. ${formatDuration(elapsedSec)} / ~${formatDuration(corridor.minSec)}-${formatDuration(corridor.maxSec)}`
-                    : `Происходит расчет аномалий. ${formatDuration(elapsedSec)} / --:--`,
-                full: corridor
-                    ? `Происходит расчет аномалий. Прошло ${formatDuration(elapsedSec)}. Прогнозный коридор общего времени: ${formatDuration(corridor.minSec)}-${formatDuration(corridor.maxSec)}.`
-                    : `Происходит расчет аномалий. Прошло ${formatDuration(elapsedSec)}. Прогноз времени пока недоступен.`,
+                compact: compactText,
+                full: fullText,
+                showSpinner: stage === 'starting',
             };
         }
 
@@ -259,6 +327,13 @@ const AppStatusBar: React.FC = () => {
                 )}
                 {anomalyStatus && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {anomalyStatus.showSpinner && (
+                            <CircularProgress
+                                size={12}
+                                thickness={6}
+                                sx={{ color: 'inherit', opacity: 0.85 }}
+                            />
+                        )}
                         <Tooltip
                             title={anomalyStatus.full}
                             arrow

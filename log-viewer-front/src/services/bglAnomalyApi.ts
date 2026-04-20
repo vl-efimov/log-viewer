@@ -86,6 +86,18 @@ export interface PretrainedModelInfo {
     prepareError?: string;
 }
 
+export interface BglPredictionProgress {
+    running: boolean;
+    stage: string;
+    processed_windows: number;
+    total_windows: number;
+    processed_rows: number;
+    total_rows: number;
+    progress_percent: number;
+    started_at_ms: number | null;
+    updated_at_ms: number | null;
+}
+
 interface ModelStatus {
     model_id: string;
     name: string;
@@ -663,4 +675,28 @@ export async function cancelBglAnomalyPrediction(modelId: string = 'bgl'): Promi
         const errorText = await response.text();
         throw new Error(errorText || `Cancel request failed (${response.status})`);
     }
+}
+
+export async function getBglAnomalyProgress(modelId: string = 'bgl'): Promise<BglPredictionProgress> {
+    const response = await fetch(`${backendBaseUrl}/bgl/progress?model_id=${encodeURIComponent(modelId)}`);
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Progress request failed (${response.status})`);
+    }
+
+    const payload = await response.json() as {
+        prediction?: Partial<BglPredictionProgress> | null;
+    };
+
+    return {
+        running: Boolean(payload.prediction?.running),
+        stage: String(payload.prediction?.stage ?? 'idle'),
+        processed_windows: Number(payload.prediction?.processed_windows ?? 0),
+        total_windows: Number(payload.prediction?.total_windows ?? 0),
+        processed_rows: Number(payload.prediction?.processed_rows ?? 0),
+        total_rows: Number(payload.prediction?.total_rows ?? 0),
+        progress_percent: Number(payload.prediction?.progress_percent ?? 0),
+        started_at_ms: payload.prediction?.started_at_ms == null ? null : Number(payload.prediction.started_at_ms),
+        updated_at_ms: payload.prediction?.updated_at_ms == null ? null : Number(payload.prediction.updated_at_ms),
+    };
 }

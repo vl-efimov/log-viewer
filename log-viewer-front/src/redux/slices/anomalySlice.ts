@@ -22,12 +22,6 @@ interface AnomalyState {
     isRunning: boolean;
     runningModelId: 'bgl' | 'hdfs' | null;
     cancelRequestSeq: number;
-    runStartedAt: number | null;
-    expectedDurationSec: number | null;
-    rowsPerSecondByModel: {
-        bgl: number | null;
-        hdfs: number | null;
-    };
     lastRunParams: {
         threshold: number;
         stepSize: number;
@@ -51,12 +45,6 @@ const initialAnomalyState: AnomalyState = {
     isRunning: false,
     runningModelId: null,
     cancelRequestSeq: 0,
-    runStartedAt: null,
-    expectedDurationSec: null,
-    rowsPerSecondByModel: {
-        bgl: null,
-        hdfs: null,
-    },
     lastRunParams: null,
 };
 
@@ -101,34 +89,14 @@ const anomalySlice = createSlice({
         setAnomalyRunning: (state, action: PayloadAction<{
             running: boolean;
             modelId?: 'bgl' | 'hdfs' | null;
-            startedAt?: number | null;
-            expectedDurationSec?: number | null;
         }>) => {
             state.isRunning = action.payload.running;
             if (action.payload.modelId !== undefined) {
                 state.runningModelId = action.payload.modelId;
             }
-            if (action.payload.startedAt !== undefined) {
-                state.runStartedAt = action.payload.startedAt;
-            }
-            if (action.payload.expectedDurationSec !== undefined) {
-                state.expectedDurationSec = action.payload.expectedDurationSec;
-            }
             if (!action.payload.running) {
                 state.runningModelId = null;
-                state.runStartedAt = null;
-                state.expectedDurationSec = null;
             }
-        },
-        updateAnomalyRowsPerSecond: (state, action: PayloadAction<{ modelId: 'bgl' | 'hdfs'; rowsPerSecond: number }>) => {
-            const { modelId, rowsPerSecond } = action.payload;
-            const prev = state.rowsPerSecondByModel[modelId];
-            // Adapt down quickly (avoid optimistic ETA), recover up slowly.
-            state.rowsPerSecondByModel[modelId] = prev == null
-                ? rowsPerSecond
-                : (rowsPerSecond < prev
-                    ? (prev * 0.2 + rowsPerSecond * 0.8)
-                    : (prev * 0.85 + rowsPerSecond * 0.15));
         },
         clearAnomalyResults: (state) => {
             state.regions = [];
@@ -143,8 +111,6 @@ const anomalySlice = createSlice({
             state.lastModelId = null;
             state.isRunning = false;
             state.runningModelId = null;
-            state.runStartedAt = null;
-            state.expectedDurationSec = null;
             state.lastRunParams = null;
         },
     },
@@ -156,7 +122,6 @@ export const {
     setAnomalyStopped,
     requestAnomalyCancel,
     setAnomalyRunning,
-    updateAnomalyRowsPerSecond,
     clearAnomalyResults,
 } = anomalySlice.actions;
 

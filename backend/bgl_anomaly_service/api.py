@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
 from .inference import NeuralLogAnomalyService, PredictionCancelledError
 from .io_utils import parse_rows_from_bytes
@@ -158,11 +159,23 @@ def cancel_prediction(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
     }
 
 
+@app.get("/bgl/progress")
+def prediction_progress(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    selected = _normalize_model_id(model_id)
+    runtime = get_runtime(selected)
+    return {
+        "ok": True,
+        "model_id": selected,
+        "prediction": runtime.get_prediction_status(),
+    }
+
+
 @app.post("/bgl/predict-json")
 def predict_json(request: PredictJsonRequest) -> dict[str, Any]:
     try:
         service = services[request.model_id]
         service.runtime.reset_cancel()
+        service.runtime.reset_prediction_status()
         return service.predict_rows(
             rows=request.rows,
             text_column=request.text_column,
@@ -195,18 +208,23 @@ async def predict_file(
         selected = _normalize_model_id(model_id)
         service = services[selected]
         service.runtime.reset_cancel()
+        service.runtime.reset_prediction_status()
         raw = await file.read()
-        rows = parse_rows_from_bytes(raw, source_name=file.filename or "")
-        return service.predict_rows(
-            rows=rows,
-            text_column=text_column,
-            timestamp_column=timestamp_column,
-            threshold=threshold,
-            step_size=step_size,
-            min_region_lines=min_region_lines,
-            include_rows=include_rows,
-            include_windows=include_windows,
-        )
+
+        def _run_prediction() -> dict[str, Any]:
+            rows = parse_rows_from_bytes(raw, source_name=file.filename or "")
+            return service.predict_rows(
+                rows=rows,
+                text_column=text_column,
+                timestamp_column=timestamp_column,
+                threshold=threshold,
+                step_size=step_size,
+                min_region_lines=min_region_lines,
+                include_rows=include_rows,
+                include_windows=include_windows,
+            )
+
+        return await run_in_threadpool(_run_prediction)
     except PredictionCancelledError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover
@@ -370,6 +388,7 @@ def predict_ingest(
         selected = _normalize_model_id(model_id)
         service = services[selected]
         service.runtime.reset_cancel()
+        service.runtime.reset_prediction_status()
         rows = get_rows_for_anomaly(ingest_id)
         return service.predict_rows(
             rows=rows,

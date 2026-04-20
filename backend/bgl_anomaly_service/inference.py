@@ -166,118 +166,173 @@ class NeuralLogAnomalyService:
         if min_region_lines <= 0:
             raise ValueError("min_region_lines must be positive")
 
-        if not rows:
-            return {
-                "meta": {
-                    "total_rows": 0,
-                    "anomaly_rows": 0,
-                    "threshold": threshold,
-                    "window_size": WINDOW_SIZE,
-                    "step_size": step_size,
-                },
-                "rows": [] if include_rows else None,
-                "windows": [] if include_windows else None,
-                "anomaly_regions": [],
-            }
+        self.runtime.begin_prediction(
+            total_windows=0,
+            stage="preprocessing",
+            total_rows=len(rows),
+        )
 
-        messages: list[str] = []
-        processed: list[str] = []
-        timestamps: list[str | None] = []
+        try:
+            if not rows:
+                self.runtime.finish_prediction(stage="done")
+                return {
+                    "meta": {
+                        "total_rows": 0,
+                        "anomaly_rows": 0,
+                        "threshold": threshold,
+                        "window_size": WINDOW_SIZE,
+                        "step_size": step_size,
+                    },
+                    "rows": [] if include_rows else None,
+                    "windows": [] if include_windows else None,
+                    "anomaly_regions": [],
+                }
 
-        for row in rows:
-            raise_if_cancelled()
-            message = extract_message(row, forced_column=text_column)
-            messages.append(message)
-            processed.append(prepare_log_message(message))
-            timestamps.append(extract_timestamp_iso(row, forced_column=timestamp_column))
+            messages: list[str] = []
+            processed: list[str] = []
+            timestamps: list[str | None] = []
 
-        embeddings: list[np.ndarray] = []
-        for item in processed:
-            raise_if_cancelled()
-            if not item:
-                embeddings.append(np.zeros((EMBED_DIM,), dtype=np.float32))
-                continue
-            embeddings.append(self._embed(item))
+            preprocess_report_every = 1024
+            for idx, row in enumerate(rows, start=1):
+                raise_if_cancelled()
+                message = extract_message(row, forced_column=text_column)
+                messages.append(message)
+                processed.append(prepare_log_message(message))
+                timestamps.append(extract_timestamp_iso(row, forced_column=timestamp_column))
 
-        window_spans = _build_windows(len(embeddings), WINDOW_SIZE, step_size)
+                if idx % preprocess_report_every == 0 or idx == len(rows):
+                    self.runtime.update_prediction_progress(
+                        processed_windows=0,
+                        processed_rows=idx,
+                        total_rows=len(rows),
+                        stage="preprocessing",
+                    )
 
-        line_scores = np.zeros((len(rows),), dtype=np.float32)
-        line_hits = np.zeros((len(rows),), dtype=np.int32)
+            self.runtime.update_prediction_progress(
+                processed_windows=0,
+                processed_rows=0,
+                total_rows=len(rows),
+                stage="embedding",
+            )
 
-        windows_out: list[dict[str, Any]] = []
-        window_batch_size = 256
-        for chunk_start in range(0, len(window_spans), window_batch_size):
-            raise_if_cancelled()
-            chunk_spans = window_spans[chunk_start : chunk_start + window_batch_size]
-            chunk_batch = _build_window_batch(embeddings, chunk_spans)
-            chunk_scores = self.runtime.predict_window_batch(chunk_batch) if len(chunk_spans) > 0 else np.array([])
+            embeddings: list[np.ndarray] = []
+            embedding_report_every = 256
+            for idx, item in enumerate(processed, start=1):
+                raise_if_cancelled()
+                if not item:
+                    embeddings.append(np.zeros((EMBED_DIM,), dtype=np.float32))
+                else:
+                    embeddings.append(self._embed(item))
 
-            for i, (start, end, _length) in enumerate(chunk_spans):
-                score = float(chunk_scores[i])
+                if idx % embedding_report_every == 0 or idx == len(processed):
+                    self.runtime.update_prediction_progress(
+                        processed_windows=0,
+                        processed_rows=idx,
+                        total_rows=len(rows),
+                        stage="embedding",
+                    )
 
-                line_scores[start:end] = np.maximum(line_scores[start:end], score)
-                line_hits[start:end] += 1
+            window_spans = _build_windows(len(embeddings), WINDOW_SIZE, step_size)
+            total_windows = len(window_spans)
+            self.runtime.update_prediction_progress(
+                processed_windows=0,
+                total_windows=total_windows,
+                processed_rows=len(rows),
+                total_rows=len(rows),
+                stage="scoring",
+            )
 
-                if include_windows:
-                    windows_out.append(
+            line_scores = np.zeros((len(rows),), dtype=np.float32)
+            line_hits = np.zeros((len(rows),), dtype=np.int32)
+
+            windows_out: list[dict[str, Any]] = []
+            window_batch_size = 256
+            for chunk_start in range(0, len(window_spans), window_batch_size):
+                raise_if_cancelled()
+                chunk_spans = window_spans[chunk_start : chunk_start + window_batch_size]
+                chunk_batch = _build_window_batch(embeddings, chunk_spans)
+                chunk_scores = self.runtime.predict_window_batch(chunk_batch) if len(chunk_spans) > 0 else np.array([])
+
+                for i, (start, end, _length) in enumerate(chunk_spans):
+                    score = float(chunk_scores[i])
+
+                    line_scores[start:end] = np.maximum(line_scores[start:end], score)
+                    line_hits[start:end] += 1
+
+                    if include_windows:
+                        windows_out.append(
+                            {
+                                "window_index": chunk_start + i,
+                                "start_index": start,
+                                "end_index": end - 1,
+                                "start_line": start + 1,
+                                "end_line": end,
+                                "score": score,
+                                "is_anomaly": score >= threshold,
+                            }
+                        )
+
+                self.runtime.update_prediction_progress(
+                    processed_windows=chunk_start + len(chunk_spans),
+                    total_windows=total_windows,
+                    processed_rows=len(rows),
+                    total_rows=len(rows),
+                )
+
+            line_flags = line_scores >= threshold
+            regions_raw = _build_regions(line_flags, min_region_lines=min_region_lines)
+
+            region_items: list[dict[str, Any]] = []
+            for region in regions_raw:
+                item = {
+                    "start_index": region.start_index,
+                    "end_index": region.end_index,
+                    "start_line": region.start_index + 1,
+                    "end_line": region.end_index + 1,
+                    "count": region.count,
+                    "start_timestamp": timestamps[region.start_index],
+                    "end_timestamp": timestamps[region.end_index],
+                }
+                region_items.append(item)
+
+            rows_out: list[dict[str, Any]] = []
+            if include_rows:
+                for idx in range(len(rows)):
+                    rows_out.append(
                         {
-                            "window_index": chunk_start + i,
-                            "start_index": start,
-                            "end_index": end - 1,
-                            "start_line": start + 1,
-                            "end_line": end,
-                            "score": score,
-                            "is_anomaly": score >= threshold,
+                            "index": idx,
+                            "line": idx + 1,
+                            "message": messages[idx],
+                            "timestamp": timestamps[idx],
+                            "score": float(line_scores[idx]),
+                            "votes": int(line_hits[idx]),
+                            "is_anomaly": bool(line_flags[idx]),
                         }
                     )
 
-        line_flags = line_scores >= threshold
-        regions_raw = _build_regions(line_flags, min_region_lines=min_region_lines)
-
-        region_items: list[dict[str, Any]] = []
-        for region in regions_raw:
-            item = {
-                "start_index": region.start_index,
-                "end_index": region.end_index,
-                "start_line": region.start_index + 1,
-                "end_line": region.end_index + 1,
-                "count": region.count,
-                "start_timestamp": timestamps[region.start_index],
-                "end_timestamp": timestamps[region.end_index],
+            anomaly_count = int(np.sum(line_flags))
+            self.runtime.finish_prediction(stage="done")
+            return {
+                "meta": {
+                    "total_rows": len(rows),
+                    "anomaly_rows": anomaly_count,
+                    "anomaly_ratio": (anomaly_count / len(rows)) if rows else 0.0,
+                    "threshold": threshold,
+                    "window_size": WINDOW_SIZE,
+                    "step_size": step_size,
+                    "min_region_lines": min_region_lines,
+                    "model_id": self.model_id,
+                },
+                "rows": rows_out if include_rows else None,
+                "windows": windows_out if include_windows else None,
+                "anomaly_regions": region_items,
             }
-            region_items.append(item)
-
-        rows_out: list[dict[str, Any]] = []
-        if include_rows:
-            for idx in range(len(rows)):
-                rows_out.append(
-                    {
-                        "index": idx,
-                        "line": idx + 1,
-                        "message": messages[idx],
-                        "timestamp": timestamps[idx],
-                        "score": float(line_scores[idx]),
-                        "votes": int(line_hits[idx]),
-                        "is_anomaly": bool(line_flags[idx]),
-                    }
-                )
-
-        anomaly_count = int(np.sum(line_flags))
-        return {
-            "meta": {
-                "total_rows": len(rows),
-                "anomaly_rows": anomaly_count,
-                "anomaly_ratio": (anomaly_count / len(rows)) if rows else 0.0,
-                "threshold": threshold,
-                "window_size": WINDOW_SIZE,
-                "step_size": step_size,
-                "min_region_lines": min_region_lines,
-                "model_id": self.model_id,
-            },
-            "rows": rows_out if include_rows else None,
-            "windows": windows_out if include_windows else None,
-            "anomaly_regions": region_items,
-        }
+        except PredictionCancelledError:
+            self.runtime.finish_prediction(stage="cancelled")
+            raise
+        except Exception:
+            self.runtime.finish_prediction(stage="error")
+            raise
 
 
 class BGLAnomalyService(NeuralLogAnomalyService):

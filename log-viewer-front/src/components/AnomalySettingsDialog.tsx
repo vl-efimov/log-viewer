@@ -25,7 +25,6 @@ import {
     setAnomalyResults,
     setAnomalyRunning,
     setAnomalyStopped,
-    updateAnomalyRowsPerSecond,
 } from '../redux/slices/anomalySlice';
 import { deleteAnomalySnapshot } from '../utils/logIndexedDb';
 import {
@@ -51,18 +50,6 @@ type AnomalySourceRow = {
     lineNumber: number;
     raw: string;
 };
-
-type AnomalyEtaHistorySample = {
-    modelId: 'bgl' | 'hdfs';
-    rows: number;
-    bytes: number | null;
-    durationSec: number;
-    createdAt: number;
-};
-
-const ANOMALY_ETA_HISTORY_STORAGE_KEY = 'logViewer.anomalyEtaHistory.v1';
-const ANOMALY_ETA_HISTORY_MAX_SAMPLES = 120;
-const ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC = 7 * 24 * 60 * 60;
 
 type ParameterLoadSeverity = 'none' | 'elevated' | 'high' | 'critical';
 
@@ -129,152 +116,6 @@ function getParameterLoadWarning(settings: Pick<AnomalySettings, 'stepSize'>): P
     };
 }
 
-function normalizeHistoryDurationSec(value: unknown): number | null {
-    const raw = typeof value === 'number' ? value : Number(value);
-    if (!Number.isFinite(raw) || raw <= 0) {
-        return null;
-    }
-
-    if (raw <= ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC) {
-        return raw;
-    }
-
-    // Backward compatibility: older versions could persist milliseconds in durationSec.
-    const maybeSeconds = raw / 1000;
-    if (maybeSeconds >= 1 && maybeSeconds <= ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC) {
-        return maybeSeconds;
-    }
-
-    return null;
-}
-
-function loadAnomalyEtaHistory(): AnomalyEtaHistorySample[] {
-    if (typeof window === 'undefined') {
-        return [];
-    }
-
-    try {
-        const raw = window.localStorage.getItem(ANOMALY_ETA_HISTORY_STORAGE_KEY);
-        if (!raw) {
-            return [];
-        }
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-
-        return parsed.flatMap((sample): AnomalyEtaHistorySample[] => {
-            if (!sample || (sample.modelId !== 'bgl' && sample.modelId !== 'hdfs')) {
-                return [];
-            }
-
-            const rows = typeof sample.rows === 'number' ? sample.rows : Number(sample.rows);
-            if (!Number.isFinite(rows) || rows <= 0) {
-                return [];
-            }
-
-            const durationSec = normalizeHistoryDurationSec(sample.durationSec);
-            if (durationSec == null) {
-                return [];
-            }
-
-            const createdAt = typeof sample.createdAt === 'number' ? sample.createdAt : Number(sample.createdAt);
-            if (!Number.isFinite(createdAt)) {
-                return [];
-            }
-
-            const bytes = sample.bytes === null
-                ? null
-                : (typeof sample.bytes === 'number' && Number.isFinite(sample.bytes) && sample.bytes >= 0 ? sample.bytes : null);
-
-            return [{
-                modelId: sample.modelId,
-                rows,
-                bytes,
-                durationSec,
-                createdAt,
-            }];
-        });
-    } catch {
-        return [];
-    }
-}
-
-function saveAnomalyEtaHistory(samples: AnomalyEtaHistorySample[]): void {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
-    try {
-        window.localStorage.setItem(ANOMALY_ETA_HISTORY_STORAGE_KEY, JSON.stringify(samples));
-    } catch {
-        // Best-effort cache; ignore quota or serialization errors.
-    }
-}
-
-function addAnomalyEtaHistorySample(sample: AnomalyEtaHistorySample): void {
-    const current = loadAnomalyEtaHistory();
-    const next = [...current, sample]
-        .sort((a, b) => a.createdAt - b.createdAt)
-        .slice(-ANOMALY_ETA_HISTORY_MAX_SAMPLES);
-    saveAnomalyEtaHistory(next);
-}
-
-function estimateExpectedDurationFromHistory(params: {
-    modelId: 'bgl' | 'hdfs';
-    rowsToAnalyze: number;
-    bytesToAnalyze: number | null;
-}): number | null {
-    const { modelId, rowsToAnalyze, bytesToAnalyze } = params;
-    if (rowsToAnalyze <= 0) {
-        return null;
-    }
-
-    const history = loadAnomalyEtaHistory()
-        .filter((sample) => sample.modelId === modelId);
-    if (history.length < 3) {
-        return null;
-    }
-
-    const currentBytesPerRow = bytesToAnalyze && bytesToAnalyze > 0
-        ? bytesToAnalyze / Math.max(1, rowsToAnalyze)
-        : null;
-
-    const projectedDurations = history
-        .map((sample) => {
-            const rowScale = rowsToAnalyze / Math.max(1, sample.rows);
-            // Avoid extreme extrapolation from tiny/huge unrelated runs.
-            if (rowScale > 25 || rowScale < (1 / 25)) {
-                return null;
-            }
-            const sampleBytesPerRow = sample.bytes && sample.bytes > 0
-                ? sample.bytes / Math.max(1, sample.rows)
-                : null;
-            const complexityScale = currentBytesPerRow && sampleBytesPerRow
-                ? Math.max(0.65, Math.min(2.4, currentBytesPerRow / sampleBytesPerRow))
-                : 1;
-            const recencyDays = Math.max(0, (Date.now() - sample.createdAt) / (24 * 60 * 60 * 1000));
-            const recencyScale = recencyDays > 21 ? 1.08 : recencyDays > 7 ? 1.04 : 1;
-
-            const projected = sample.durationSec * rowScale * complexityScale * recencyScale;
-            if (!Number.isFinite(projected) || projected <= 0 || projected > ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC) {
-                return null;
-            }
-
-            return projected;
-        })
-        .filter((value): value is number => value != null)
-        .sort((a, b) => a - b);
-
-    if (projectedDurations.length < 3) {
-        return null;
-    }
-
-    // Use upper quantile to stay slightly conservative for user-facing ETA.
-    const q75Index = Math.floor((projectedDurations.length - 1) * 0.75);
-    const q75 = projectedDurations[q75Index];
-    return Math.max(1, Math.round(q75 * 1.08));
-}
 
 interface AnomalySettingsDialogProps {
     open: boolean;
@@ -303,13 +144,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         isIndexing,
         isLargeFile,
         hasFileHandle,
-        size: logFileSize,
     } = useSelector((state: RootState) => state.logFile);
     const {
         hasResults: anomalyHasResults,
         isRunning: anomalyIsRunning,
         cancelRequestSeq,
-        rowsPerSecondByModel: anomalyRowsPerSecondByModel,
     } = useSelector((state: RootState) => state.anomaly);
     const [selectedModelId, setSelectedModelId] = useState<'bgl' | 'hdfs'>(() => loadSelectedAnomalyModelId());
     const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
@@ -321,104 +160,6 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     useEffect(() => {
         cancelRequestSeqRef.current = cancelRequestSeq;
     }, [cancelRequestSeq]);
-
-    const estimateExpectedDurationSec = useCallback((params: {
-        rowsToAnalyze: number;
-        modelId: 'bgl' | 'hdfs';
-        rowsPerSecondHint: number | null;
-        bytesToAnalyze: number | null;
-    }): number | null => {
-        const { rowsToAnalyze, modelId, rowsPerSecondHint, bytesToAnalyze } = params;
-        if (rowsToAnalyze <= 0) {
-            return null;
-        }
-
-        const largeFileThresholdBytes = 80 * 1024 * 1024;
-        const hugeFileThresholdBytes = 300 * 1024 * 1024;
-        const largeRowsThreshold = 400_000;
-        const hugeRowsThreshold = 1_200_000;
-        const isLargeDataset = (bytesToAnalyze ?? 0) >= largeFileThresholdBytes || rowsToAnalyze >= largeRowsThreshold;
-        const isHugeDataset = (bytesToAnalyze ?? 0) >= hugeFileThresholdBytes || rowsToAnalyze >= hugeRowsThreshold;
-
-        const safeRowsPerSecondHint = rowsPerSecondHint && rowsPerSecondHint > 0 ? rowsPerSecondHint : null;
-        const fallbackBaseRowsPerSecond = modelId === 'hdfs'
-            ? (isHugeDataset ? 780 : isLargeDataset ? 620 : 520)
-            : (isHugeDataset ? 950 : isLargeDataset ? 1200 : 1600);
-        const fallbackBytesPerSecond = modelId === 'hdfs'
-            ? (isHugeDataset ? 520_000 : isLargeDataset ? 430_000 : 360_000)
-            : (isHugeDataset ? 500_000 : isLargeDataset ? 700_000 : 900_000);
-
-        let averageBytesPerRow: number | null = null;
-        if (bytesToAnalyze && bytesToAnalyze > 0) {
-            averageBytesPerRow = bytesToAnalyze / Math.max(1, rowsToAnalyze);
-        } else if (normalRows.length > 0) {
-            const sampleSize = Math.min(normalRows.length, 300);
-            const sampleBytes = normalRows
-                .slice(0, sampleSize)
-                .reduce((sum, row) => sum + row.raw.length, 0);
-            averageBytesPerRow = sampleBytes / Math.max(1, sampleSize);
-        }
-
-        const complexityFactor = averageBytesPerRow
-            ? Math.max(0.9, Math.min(7, averageBytesPerRow / 140))
-            : 1.15;
-
-        const rowsPerKiB = bytesToAnalyze && bytesToAnalyze > 0
-            ? rowsToAnalyze / Math.max(1, bytesToAnalyze / 1024)
-            : null;
-        const densityPenalty = rowsPerKiB
-            ? Math.max(1, Math.min(2.2, 1 + ((rowsPerKiB - 180) / 220)))
-            : 1;
-
-        const conservativeRowsPerSecondHint = safeRowsPerSecondHint
-            ? safeRowsPerSecondHint * (modelId === 'hdfs'
-                ? (isHugeDataset ? 0.5 : isLargeDataset ? 0.45 : 0.4)
-                : (isHugeDataset ? 0.68 : isLargeDataset ? 0.74 : 0.82))
-            : null;
-
-        const rawRowsPerSecond = conservativeRowsPerSecondHint ?? fallbackBaseRowsPerSecond;
-        const adjustedRowsPerSecond = rawRowsPerSecond / Math.max(0.75, complexityFactor * densityPenalty);
-        const maxRowsPerSecondForecast = modelId === 'hdfs'
-            ? (isHugeDataset ? 650 : isLargeDataset ? 520 : 430)
-            : (isHugeDataset ? 750 : isLargeDataset ? 1000 : 1400);
-        const estimatedRowsPerSecond = Math.min(adjustedRowsPerSecond, maxRowsPerSecondForecast);
-
-        const estimatedByRows = rowsToAnalyze / Math.max(1, estimatedRowsPerSecond);
-        const estimatedByBytes = bytesToAnalyze && bytesToAnalyze > 0
-            ? bytesToAnalyze / fallbackBytesPerSecond
-            : 0;
-
-        const fixedInferenceOverheadBaseSec = modelId === 'bgl' ? 16 : 14;
-        const overheadWeightByRows = Math.max(0.35, Math.min(1, 12_000 / Math.max(1, rowsToAnalyze)));
-
-        const isSmallDataset = rowsToAnalyze <= 20_000 && ((bytesToAnalyze ?? 0) <= 2 * 1024 * 1024 || bytesToAnalyze == null);
-        const smallDatasetWeight = isSmallDataset
-            ? Math.max(0, Math.min(1, (20_000 - rowsToAnalyze) / 18_000))
-            : 0;
-        const smallDatasetColdStartSec = modelId === 'bgl' ? 18 : 22;
-        const adaptiveFixedOverheadSec = (fixedInferenceOverheadBaseSec * overheadWeightByRows)
-            + (smallDatasetColdStartSec * smallDatasetWeight);
-
-        const startupOverheadSec = conservativeRowsPerSecondHint
-            ? (isHugeDataset ? 8 : isLargeDataset ? 5 : 4)
-            : (isHugeDataset ? 12 : isLargeDataset ? 8 : 6);
-        const sizeOverheadSec = bytesToAnalyze && bytesToAnalyze > 0
-            ? Math.min(
-                isHugeDataset ? 36 : isLargeDataset ? 24 : 12,
-                Math.ceil(bytesToAnalyze / ((isHugeDataset ? 8 : isLargeDataset ? 12 : 18) * 1024 * 1024)),
-            )
-            : 0;
-        const safetyMultiplier = conservativeRowsPerSecondHint
-            ? (isHugeDataset ? 1.25 : isLargeDataset ? 1.18 : 1.12)
-            : (isHugeDataset ? 1.45 : isLargeDataset ? 1.35 : 1.28);
-        const baselineSec = Math.max(estimatedByRows, estimatedByBytes)
-            + startupOverheadSec
-            + adaptiveFixedOverheadSec
-            + sizeOverheadSec;
-        const lowerBoundSec = isHugeDataset ? 18 : isLargeDataset ? 8 : rowsToAnalyze >= 10_000 ? 3 : 1;
-
-        return Math.max(lowerBoundSec, Math.round(baselineSec * safetyMultiplier));
-    }, [normalRows]);
 
     useEffect(() => {
         if (anomalyIsRunning) {
@@ -537,9 +278,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
             return;
         }
 
-        const runStartedAt = Date.now();
         const runCancelRequestSeq = cancelRequestSeqRef.current;
-        let runBytesToAnalyze: number | null = null;
         dispatch(setAnomalyError(''));
         if (anomalyStorageKey) {
             await deleteAnomalySnapshot(anomalyStorageKey);
@@ -557,48 +296,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 return;
             }
 
-            const rowsToAnalyze = Math.max(0, totalRowsHint);
-
-            const rowsPerSecond = anomalyRowsPerSecondByModel[selectedModelId];
-            const bytesToAnalyze = (remoteIngestId
-                ? logFileSize
-                : activeFile?.size ?? logFileSize) || null;
-            runBytesToAnalyze = bytesToAnalyze;
-
-            const heuristicExpectedDurationSec = estimateExpectedDurationSec({
-                rowsToAnalyze,
-                modelId: selectedModelId,
-                rowsPerSecondHint: rowsPerSecond,
-                bytesToAnalyze,
-            });
-            const historyExpectedDurationSec = estimateExpectedDurationFromHistory({
-                modelId: selectedModelId,
-                rowsToAnalyze,
-                bytesToAnalyze,
-            });
-            const expectedDurationSec = (() => {
-                if (heuristicExpectedDurationSec == null) {
-                    return historyExpectedDurationSec;
-                }
-                if (historyExpectedDurationSec == null) {
-                    return heuristicExpectedDurationSec;
-                }
-
-                // Keep history only when it is plausibly close to heuristic forecast.
-                const lowerBound = Math.floor(heuristicExpectedDurationSec * 0.25);
-                const upperBound = Math.ceil(heuristicExpectedDurationSec * 6);
-                if (historyExpectedDurationSec < lowerBound || historyExpectedDurationSec > upperBound) {
-                    return heuristicExpectedDurationSec;
-                }
-
-                return Math.max(historyExpectedDurationSec, heuristicExpectedDurationSec);
-            })();
+            const rowsToAnalyze = Math.max(0, totalRowsHint, normalRows.length);
 
             dispatch(setAnomalyRunning({
                 running: true,
                 modelId: selectedModelId,
-                startedAt: runStartedAt,
-                expectedDurationSec,
             }));
             onClose();
 
@@ -659,36 +361,15 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         } finally {
             setActiveAbortController((current) => (current === abortController ? null : current));
             endAnomalyPredictionSession(abortController);
-            const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
-
-            const analyzedRows = Math.max(0, totalRowsHint);
-            if (analyzedRows > 0) {
-                const measuredRowsPerSecond = analyzedRows / elapsedSec;
-                dispatch(updateAnomalyRowsPerSecond({
-                    modelId: selectedModelId,
-                    rowsPerSecond: measuredRowsPerSecond,
-                }));
-
-                addAnomalyEtaHistorySample({
-                    modelId: selectedModelId,
-                    rows: analyzedRows,
-                    bytes: runBytesToAnalyze,
-                    durationSec: elapsedSec,
-                    createdAt: Date.now(),
-                });
-            }
-
             dispatch(setAnomalyRunning({ running: false }));
         }
     }, [
-        anomalyRowsPerSecondByModel,
         anomalySettings,
         anomalyStorageKey,
         dispatch,
         isModelReady,
-        logFileSize,
         totalRowsHint,
-        estimateExpectedDurationSec,
+        normalRows.length,
         requestFileForAnomalyAnalysis,
         remoteIngestId,
         onClose,

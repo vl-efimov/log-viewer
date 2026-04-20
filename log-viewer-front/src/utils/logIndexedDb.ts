@@ -563,6 +563,35 @@ export const deleteAnomalySnapshot = async (sessionId: string): Promise<void> =>
     await transactionDone(tx);
 };
 
+export const pruneAnomalySnapshots = async (keepSessionId?: string): Promise<void> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_STATS, 'readwrite');
+    const store = tx.objectStore(STORE_STATS);
+
+    await new Promise<void>((resolve, reject) => {
+        const request = store.openCursor();
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) {
+                resolve();
+                return;
+            }
+
+            const value = cursor.value as { sessionId?: string; kind?: string };
+            const isAnomaly = value.kind === 'anomaly';
+            const shouldDelete = isAnomaly && (!keepSessionId || value.sessionId !== keepSessionId);
+
+            if (shouldDelete) {
+                cursor.delete();
+            }
+            cursor.continue();
+        };
+        request.onerror = () => reject(request.error);
+    });
+
+    await transactionDone(tx);
+};
+
 const isDateRangeFilter = (value: unknown): value is DateRangeFilter => {
     return Boolean(value && typeof value === 'object' && ('start' in value || 'end' in value));
 };
