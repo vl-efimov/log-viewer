@@ -14,7 +14,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True, help="Output JSON path")
     parser.add_argument("--text-column", default=None, help="Column containing log message text")
     parser.add_argument("--timestamp-column", default=None, help="Column containing timestamp values")
-    parser.add_argument("--threshold", type=float, default=0.5, help="Anomaly threshold [0,1]")
+    parser.add_argument("--threshold", type=float, default=0.6, help="Anomaly threshold [0,1]")
     parser.add_argument("--step-size", type=int, default=20, help="Sliding window step size")
     parser.add_argument("--min-region-lines", type=int, default=1, help="Minimum lines per anomaly region")
     return parser

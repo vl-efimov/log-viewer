@@ -13,7 +13,7 @@ export interface AnomalySettings {
 
 export const ANOMALY_SETTINGS_DEFAULTS: AnomalySettings = {
     modelId: 'bgl',
-    threshold: 0.5,
+    threshold: 0.6,
     stepSize: 20,
     minRegionLines: 1,
     analysisScope: 'all',

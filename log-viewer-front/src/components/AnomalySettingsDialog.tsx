@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -14,7 +15,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MemoryIcon from '@mui/icons-material/Memory';
 import StorageIcon from '@mui/icons-material/Storage';
 import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../redux/store';
@@ -62,6 +63,71 @@ type AnomalyEtaHistorySample = {
 const ANOMALY_ETA_HISTORY_STORAGE_KEY = 'logViewer.anomalyEtaHistory.v1';
 const ANOMALY_ETA_HISTORY_MAX_SAMPLES = 120;
 const ANOMALY_ETA_MAX_REASONABLE_DURATION_SEC = 7 * 24 * 60 * 60;
+
+type ParameterLoadSeverity = 'none' | 'elevated' | 'high' | 'critical';
+
+type ParameterLoadWarning = {
+    severity: ParameterLoadSeverity;
+    message: string;
+    multiplierLabel: string;
+    shouldConfirmBeforeAnalyze: boolean;
+};
+
+function formatMultiplier(multiplier: number): string {
+    const rounded = Math.round(multiplier * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function getParameterLoadWarning(settings: Pick<AnomalySettings, 'stepSize'>): ParameterLoadWarning | null {
+    const stepSize = Math.max(1, Math.round(settings.stepSize));
+
+    let severityScore = 0;
+    if (stepSize <= 5) {
+        severityScore = 3;
+    } else if (stepSize <= 9) {
+        severityScore = 2;
+    } else if (stepSize <= 15) {
+        severityScore = 1;
+    }
+
+    const normalizedScore = Math.min(3, severityScore);
+    if (normalizedScore <= 0) {
+        return null;
+    }
+
+    const multiplier = 20 / stepSize;
+    const multiplierLabel = formatMultiplier(multiplier);
+    const severity: ParameterLoadSeverity = normalizedScore === 1
+        ? 'elevated'
+        : normalizedScore === 2
+            ? 'high'
+            : 'critical';
+
+    if (severity === 'critical') {
+        return {
+            severity,
+            message: `Эти параметры приведут к значительному увеличению расчета: шаг ${stepSize} дает примерно x${multiplierLabel} проверок относительно шага 20.`,
+            multiplierLabel,
+            shouldConfirmBeforeAnalyze: true,
+        };
+    }
+
+    if (severity === 'high') {
+        return {
+            severity,
+            message: `Текущие параметры заметно увеличат объем расчета (примерно x${multiplierLabel} проверок относительно шага 20).`,
+            multiplierLabel,
+            shouldConfirmBeforeAnalyze: false,
+        };
+    }
+
+    return {
+        severity,
+        message: `Текущие параметры увеличат объем расчета (примерно x${multiplierLabel} проверок относительно шага 20).`,
+        multiplierLabel,
+        shouldConfirmBeforeAnalyze: false,
+    };
+}
 
 function normalizeHistoryDurationSec(value: unknown): number | null {
     const raw = typeof value === 'number' ? value : Number(value);
@@ -450,9 +516,9 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
 
     const applySensitivityProfile = useCallback((profileId: 'sensitive' | 'balanced' | 'strict') => {
         const profiles: Record<'sensitive' | 'balanced' | 'strict', Pick<AnomalySettings, 'threshold' | 'stepSize' | 'minRegionLines'>> = {
-            sensitive: { threshold: 0.35, stepSize: 5, minRegionLines: 1 },
-            balanced: { threshold: 0.5, stepSize: 10, minRegionLines: 2 },
-            strict: { threshold: 0.7, stepSize: 20, minRegionLines: 3 },
+            sensitive: { threshold: 0.4, stepSize: 20, minRegionLines: 1 },
+            balanced: { threshold: 0.6, stepSize: 20, minRegionLines: 1 },
+            strict: { threshold: 0.8, stepSize: 20, minRegionLines: 1 },
         };
         updateAnomalySettings(profiles[profileId]);
     }, [updateAnomalySettings]);
@@ -466,7 +532,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         saveAnomalySettings(reset);
     }, [selectedModelId]);
 
-    const runAnomalyAnalysis = useCallback(async () => {
+    const runAnomalyAnalysis = useCallback(async (prefetchedFile?: File | null) => {
         if (!isModelReady) {
             return;
         }
@@ -484,7 +550,9 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
 
         try {
             const settings = anomalySettings;
-            const activeFile = remoteIngestId ? null : await requestFileForAnomalyAnalysis();
+            const activeFile = remoteIngestId
+                ? null
+                : (prefetchedFile ?? await requestFileForAnomalyAnalysis());
             if (!remoteIngestId && !activeFile) {
                 return;
             }
@@ -637,19 +705,23 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     }, [cancelRequestSeq]);
 
     const selectedSensitivityProfile =
-        Math.abs(anomalySettings.threshold - 0.35) < 0.001
-        && anomalySettings.stepSize === 5
+        Math.abs(anomalySettings.threshold - 0.4) < 0.001
+        && anomalySettings.stepSize === 20
         && anomalySettings.minRegionLines === 1
             ? 'sensitive'
-            : Math.abs(anomalySettings.threshold - 0.5) < 0.001
-                && anomalySettings.stepSize === 10
-                && anomalySettings.minRegionLines === 2
+            : Math.abs(anomalySettings.threshold - 0.6) < 0.001
+                && anomalySettings.stepSize === 20
+                && anomalySettings.minRegionLines === 1
                 ? 'balanced'
-                : Math.abs(anomalySettings.threshold - 0.7) < 0.001
+                : Math.abs(anomalySettings.threshold - 0.8) < 0.001
                     && anomalySettings.stepSize === 20
-                    && anomalySettings.minRegionLines === 3
+                    && anomalySettings.minRegionLines === 1
                     ? 'strict'
                     : null;
+
+    const parameterLoadWarning = useMemo(() => getParameterLoadWarning({
+        stepSize: anomalySettings.stepSize,
+    }), [anomalySettings.stepSize]);
 
     const handleModelChange = (_event: MouseEvent<HTMLElement>, value: 'bgl' | 'hdfs' | null) => {
         if (value) {
@@ -681,6 +753,38 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     const analyzeTooltip = isAnalyzeDisabled && anomalyDisabledReason
         ? anomalyDisabledReason
         : 'Analyze anomalies';
+
+    const handleAnalyzeClick = useCallback(async () => {
+        if (isAnalyzeDisabled) {
+            return;
+        }
+
+        let prefetchedFile: File | null | undefined;
+        if (!remoteIngestId && parameterLoadWarning?.shouldConfirmBeforeAnalyze) {
+            // Keep file request in the original click chain before confirm to preserve user-activation APIs.
+            prefetchedFile = await requestFileForAnomalyAnalysis();
+            if (!prefetchedFile) {
+                return;
+            }
+        }
+
+        if (parameterLoadWarning?.shouldConfirmBeforeAnalyze) {
+            const shouldContinue = window.confirm(
+                `${parameterLoadWarning.message}\n\nПродолжить анализ с текущими параметрами?`,
+            );
+            if (!shouldContinue) {
+                return;
+            }
+        }
+
+        await runAnomalyAnalysis(prefetchedFile);
+    }, [
+        isAnalyzeDisabled,
+        parameterLoadWarning,
+        remoteIngestId,
+        requestFileForAnomalyAnalysis,
+        runAnomalyAnalysis,
+    ]);
 
     return (
         <Dialog
@@ -736,7 +840,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 <Button
                                     size="small"
                                     variant="contained"
-                                    onClick={runAnomalyAnalysis}
+                                    onClick={handleAnalyzeClick}
                                     startIcon={<TroubleshootIcon />}
                                     disabled={isAnalyzeDisabled}
                                 >
@@ -865,6 +969,21 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                         </Box>
                     </Stack>
 
+                    {parameterLoadWarning && (
+                        <Alert
+                            severity={parameterLoadWarning.severity === 'critical' ? 'warning' : 'info'}
+                            variant="outlined"
+                            sx={{ py: 0.25, px: 1 }}
+                        >
+                            <Typography variant="caption">
+                                {parameterLoadWarning.message}
+                                {parameterLoadWarning.shouldConfirmBeforeAnalyze
+                                    ? ' Перед запуском потребуется подтверждение.'
+                                    : ''}
+                            </Typography>
+                        </Alert>
+                    )}
+
                     <Stack
                         direction={{ xs: 'column', md: 'row' }}
                         spacing={1}
@@ -924,5 +1043,4 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         </Dialog>
     );
 };
-
 export default AnomalySettingsDialog;
