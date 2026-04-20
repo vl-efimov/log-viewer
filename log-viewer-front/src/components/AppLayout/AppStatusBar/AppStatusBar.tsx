@@ -41,6 +41,8 @@ type AnomalyWindowProgress = {
 type AnomalyStatusText = {
     compact: string;
     full: string;
+    detailsCompact?: string;
+    detailsFull?: string;
     showSpinner?: boolean;
 };
 
@@ -209,7 +211,6 @@ const AppStatusBar: React.FC = () => {
         }
 
         if (anomalyLastAnalyzedAt && anomalyLastModelId && anomalyLastRunParams) {
-            const time = new Date(anomalyLastAnalyzedAt).toLocaleTimeString();
             const ratio = anomalyTotalRows > 0
                 ? (anomalyRowsCount / anomalyTotalRows) * 100
                 : 0;
@@ -217,8 +218,10 @@ const AppStatusBar: React.FC = () => {
                 ? `${ratio.toFixed(2)}%`
                 : '--%';
             return {
-                compact: `Anomaly: ${anomalyRowsCount} (${ratioText}) | ${time} ${anomalyLastModelId.toUpperCase()} | th ${anomalyLastRunParams.threshold} s ${anomalyLastRunParams.stepSize} r ${anomalyLastRunParams.minRegionLines}`,
-                full: `Anomaly rows: ${anomalyRowsCount} (${ratioText} of ${anomalyTotalRows}) | Last analysis: ${time} (${anomalyLastModelId.toUpperCase()}) | Params: threshold=${anomalyLastRunParams.threshold}, step=${anomalyLastRunParams.stepSize}, minRegion=${anomalyLastRunParams.minRegionLines}`,
+                compact: `Anomaly: ${ratioText}`,
+                full: `Anomaly rows: ${anomalyRowsCount} (${ratioText} of ${anomalyTotalRows})`,
+                detailsCompact: `${anomalyLastModelId.toUpperCase()} th ${anomalyLastRunParams.threshold} s ${anomalyLastRunParams.stepSize} r ${anomalyLastRunParams.minRegionLines}`,
+                detailsFull: `Model: ${anomalyLastModelId.toUpperCase()} | Params: threshold=${anomalyLastRunParams.threshold}, step=${anomalyLastRunParams.stepSize}, minRegion=${anomalyLastRunParams.minRegionLines}`,
             };
         }
 
@@ -343,6 +346,24 @@ const AppStatusBar: React.FC = () => {
                                 {anomalyStatus.compact}
                             </Typography>
                         </Tooltip>
+                        {anomalyStatus.detailsCompact && (
+                            <>
+                                <Divider
+                                    orientation="vertical"
+                                    flexItem
+                                    sx={statusBarDividerSx}
+                                />
+                                <Tooltip
+                                    title={anomalyStatus.detailsFull ?? anomalyStatus.detailsCompact}
+                                    arrow
+                                    placement="top"
+                                >
+                                    <Typography sx={anomalyTextSx}>
+                                        {anomalyStatus.detailsCompact}
+                                    </Typography>
+                                </Tooltip>
+                            </>
+                        )}
                         {anomalyIsRunning && (
                             <Tooltip
                                 title="Остановить расчет аномалий"

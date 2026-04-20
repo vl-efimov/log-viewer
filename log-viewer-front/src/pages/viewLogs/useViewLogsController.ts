@@ -317,11 +317,8 @@ export const useViewLogsController = () => {
     const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [filters, setFilters] = useState<LogFilters>({});
     const [autoRefresh, setAutoRefresh] = useState(true);
-    const [newLinesCount, setNewLinesCount] = useState<number>(0);
-    const newLinesResetTimeoutRef = useRef<number | null>(null);
     const lastModifiedRef = useRef<number>(0);
     const lastSizeRef = useRef<number>(0);
-    const previousLineCountRef = useRef<number>(0);
     const lineOffsetsRef = useRef<LineIndex>(createLineIndex());
     const lineCacheRef = useRef<Map<number, { text: string; size: number }>>(new Map());
     const cacheBytesRef = useRef<number>(0);
@@ -527,29 +524,6 @@ export const useViewLogsController = () => {
         });
     }, []);
 
-    const showNewLinesBadge = useCallback((count: number) => {
-        if (count <= 0) {
-            return;
-        }
-
-        setNewLinesCount(count);
-        if (newLinesResetTimeoutRef.current !== null) {
-            window.clearTimeout(newLinesResetTimeoutRef.current);
-        }
-        newLinesResetTimeoutRef.current = window.setTimeout(() => {
-            setNewLinesCount(0);
-            newLinesResetTimeoutRef.current = null;
-        }, 3000);
-    }, []);
-
-    useEffect(() => {
-        return () => {
-            if (newLinesResetTimeoutRef.current !== null) {
-                window.clearTimeout(newLinesResetTimeoutRef.current);
-            }
-        };
-    }, []);
-
     useEffect(() => {
         if (loaded || fileName) {
             return;
@@ -641,9 +615,7 @@ export const useViewLogsController = () => {
         if (!appendResult) return;
 
         setDbLineCount(appendResult.newLineCount);
-        if (appendResult.addedLines > 0) {
-            showNewLinesBadge(appendResult.addedLines);
-        } else if (appendResult.newLineCount > 0 || previousDbLineCount > 0) {
+        if (appendResult.addedLines <= 0 && (appendResult.newLineCount > 0 || previousDbLineCount > 0)) {
             const lastLineCount = appendResult.newLineCount > 0 ? appendResult.newLineCount : previousDbLineCount;
             void refreshLastDbLineCache(lastLineCount);
         }
@@ -658,7 +630,6 @@ export const useViewLogsController = () => {
         isDbView,
         isLargeFile,
         refreshLastDbLineCache,
-        showNewLinesBadge,
     ]);
 
     const requestFileForAnomalyAnalysis = useCallback(async (): Promise<File | null> => {
@@ -1076,7 +1047,6 @@ export const useViewLogsController = () => {
         if (isStreamView) {
             setNormalRows([]);
             clearParsedRowCache();
-            previousLineCountRef.current = 0;
             lastSizeRef.current = fileSize;
             return;
         }
@@ -1085,12 +1055,8 @@ export const useViewLogsController = () => {
         const rows = buildRowsForView(safeContent);
         clearParsedRowCache();
         setNormalRows(rows);
-        if (previousLineCountRef.current > 0 && rows.length - previousLineCountRef.current > 0) {
-            showNewLinesBadge(rows.length - previousLineCountRef.current);
-        }
-        previousLineCountRef.current = rows.length;
         lastSizeRef.current = fileSize;
-    }, [clearParsedRowCache, content, fileSize, isStreamView, showNewLinesBadge]);
+    }, [clearParsedRowCache, content, fileSize, isStreamView]);
 
     useEffect(() => {
         if (!isDbView || !analyticsSessionId) {
@@ -2598,6 +2564,7 @@ export const useViewLogsController = () => {
 
     useEffect(() => {
         if (!autoRefresh) return;
+        if (isLargeFile) return;
         if (anomalyIsRunning) return;
         if (isRemoteLargeSession) return;
 
@@ -2626,9 +2593,7 @@ export const useViewLogsController = () => {
                     const result = await appendLogFileToIndex(file, analyticsSessionId);
                     if (result) {
                         setDbLineCount(result.newLineCount);
-                        if (result.addedLines > 0) {
-                            showNewLinesBadge(result.addedLines);
-                        } else if (result.newLineCount > 0 || previousDbLineCount > 0) {
+                        if (result.addedLines <= 0 && (result.newLineCount > 0 || previousDbLineCount > 0)) {
                             const lastLineCount = result.newLineCount > 0 ? result.newLineCount : previousDbLineCount;
                             void refreshLastDbLineCache(lastLineCount);
                         }
@@ -2669,16 +2634,10 @@ export const useViewLogsController = () => {
                         const buffer = await file.slice(lastSizeRef.current, currentSize).arrayBuffer();
                         const bytes = new Uint8Array(buffer);
                         const offsets = lineOffsetsRef.current;
-                        const previousCount = offsets.length;
                         for (let i = 0; i < bytes.length; i += 1) {
                             if (bytes[i] === 10) {
                                 pushOffset(offsets, lastSizeRef.current + i + 1);
                             }
-                        }
-
-                        const addedLines = offsets.length - previousCount;
-                        if (addedLines > 0) {
-                            showNewLinesBadge(addedLines);
                         }
 
                         setLineCount(offsets.length);
@@ -2724,13 +2683,13 @@ export const useViewLogsController = () => {
         content,
         dbLineCount,
         dispatch,
+        isLargeFile,
         isRemoteLargeSession,
         requestRangeLoad,
         isDbView,
         isStreamView,
         viewMode,
         refreshLastDbLineCache,
-        showNewLinesBadge,
     ]);
 
     const handleToggleAutoRefresh = () => {
@@ -2738,6 +2697,8 @@ export const useViewLogsController = () => {
     };
 
     const handleManualRefresh = async () => {
+        if (isLargeFile) return;
+
         const fileHandle = getFileHandle();
         if (!fileHandle && !isStreamView) return;
 
@@ -2778,9 +2739,7 @@ export const useViewLogsController = () => {
                 if (appendResult) {
                     setDbLineCount(appendResult.newLineCount);
 
-                    if (appendResult.addedLines > 0) {
-                        showNewLinesBadge(appendResult.addedLines);
-                    } else if (appendResult.newLineCount > 0 || previousDbLineCount > 0) {
+                    if (appendResult.addedLines <= 0 && (appendResult.newLineCount > 0 || previousDbLineCount > 0)) {
                         const lastLineCount = appendResult.newLineCount > 0 ? appendResult.newLineCount : previousDbLineCount;
                         void refreshLastDbLineCache(lastLineCount);
                     }
@@ -2834,11 +2793,11 @@ export const useViewLogsController = () => {
         onCancelUploadToServer: isServerUploadActive ? handleCancelUploadToServer : undefined,
         viewMode,
         onViewModeChange: setViewMode,
-        newLinesCount,
         filters,
         onFiltersChange: setFilters,
         fieldDefinitions,
         hasAnomalyResults,
+        isLargeFile,
         isStreamView,
         filtersDisabled: isIndexing || serverUploadInProgress,
         totalRowsHintForAnomaly,

@@ -15,7 +15,6 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import NotificationsIcon from '@mui/icons-material/Notifications';
 import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import { ViewModeEnum } from '../constants/ViewModeEnum';
@@ -37,11 +36,11 @@ interface LogToolbarProps {
     onCancelUploadToServer?: () => void;
     viewMode: ViewModeEnum;
     onViewModeChange: (mode: ViewModeEnum) => void;
-    newLinesCount: number;
     filters: LogFilters;
     onFiltersChange: (filters: LogFilters) => void;
     fieldDefinitions: LogFormatField[];
     hasAnomalyResults: boolean;
+    isLargeFile: boolean;
     isStreamView: boolean;
     filtersDisabled: boolean;
     totalRowsHintForAnomaly: number;
@@ -67,11 +66,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     onCancelUploadToServer,
     viewMode,
     onViewModeChange,
-    newLinesCount,
     filters,
     onFiltersChange,
     fieldDefinitions,
     hasAnomalyResults,
+    isLargeFile,
     isStreamView,
     filtersDisabled,
     totalRowsHintForAnomaly,
@@ -254,66 +253,70 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     </>
                 )}
 
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 0.25
-                    }}
-                >
-                    <Typography
-                        variant="caption"
-                        sx={{ color: 'text.secondary' }}
-                    >
-                        Обновление
-                    </Typography>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1
-                        }}
-                    >
-                        <Tooltip
-                            title="Refresh now"
-                            arrow
+                {!isLargeFile && (
+                    <>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 0.25
+                            }}
                         >
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={onManualRefresh}
-                                disabled={controlsDisabled}
-                                startIcon={<RefreshIcon fontSize="small" />}
-                                sx={compactButtonSx}
+                            <Typography
+                                variant="caption"
+                                sx={{ color: 'text.secondary' }}
                             >
-                                Обновить
-                            </Button>
-                        </Tooltip>
-
-                        <Tooltip
-                            title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'}
-                            arrow
-                        >
-                            <Button
-                                size="small"
-                                variant={autoRefresh ? 'contained' : 'outlined'}
-                                color={autoRefresh ? 'success' : 'inherit'}
-                                onClick={onToggleAutoRefresh}
-                                disabled={controlsDisabled}
-                                startIcon={<AutorenewIcon fontSize="small" />}
-                                sx={compactButtonSx}
+                                Обновление
+                            </Typography>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}
                             >
-                                Авто
-                            </Button>
-                        </Tooltip>
-                    </Box>
-                </Box>
+                                <Tooltip
+                                    title="Refresh now"
+                                    arrow
+                                >
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={onManualRefresh}
+                                        disabled={controlsDisabled}
+                                        startIcon={<RefreshIcon fontSize="small" />}
+                                        sx={compactButtonSx}
+                                    >
+                                        Обновить
+                                    </Button>
+                                </Tooltip>
 
-                <Divider
-                    orientation="vertical"
-                    flexItem
-                />
+                                <Tooltip
+                                    title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'}
+                                    arrow
+                                >
+                                    <Button
+                                        size="small"
+                                        variant={autoRefresh ? 'contained' : 'outlined'}
+                                        color={autoRefresh ? 'success' : 'inherit'}
+                                        onClick={onToggleAutoRefresh}
+                                        disabled={controlsDisabled}
+                                        startIcon={<AutorenewIcon fontSize="small" />}
+                                        sx={compactButtonSx}
+                                    >
+                                        Авто
+                                    </Button>
+                                </Tooltip>
+                            </Box>
+                        </Box>
+
+                        <Divider
+                            orientation="vertical"
+                            flexItem
+                        />
+                    </>
+                )}
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                     <Typography
@@ -377,42 +380,6 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     orientation="vertical"
                     flexItem
                 />
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                    <Typography
-                        variant="caption"
-                        sx={{ color: 'text.secondary' }}
-                    >
-                        Уведомления
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Tooltip
-                            title={`${newLinesCount} new lines`}
-                            arrow
-                        >
-                            <span>
-                                <Button
-                                    size="small"
-                                    variant="outlined"
-                                    disabled={controlsDisabled || newLinesCount === 0}
-                                    startIcon={(
-                                        <Badge
-                                            badgeContent={newLinesCount}
-                                            color="success"
-                                            max={999}
-                                            invisible={newLinesCount === 0}
-                                        >
-                                            <NotificationsIcon fontSize="small" />
-                                        </Badge>
-                                    )}
-                                    sx={compactButtonSx}
-                                >
-                                    Новые
-                                </Button>
-                            </span>
-                        </Tooltip>
-                    </Box>
-                </Box>
 
                 <Box
                     sx={{

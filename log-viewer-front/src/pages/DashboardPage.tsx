@@ -1496,6 +1496,7 @@ const DashboardPage: React.FC = () => {
             <NoFileSelected
                 title={t('dashboard.title')}
                 description={t('dashboard.selectFileDescription')}
+                buttonText={t('dashboard.goToUploadButton')}
             />
         );
     }

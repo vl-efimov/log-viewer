@@ -21,7 +21,7 @@ const AddLogsPage: React.FC = () => {
     return isMonitoring ? (
         <MonitoringActiveView
             fileName={fileName}
-            onViewLogs={() => navigate(RouteViewLogs)}
+            onViewLogs={() => navigate(`/${RouteViewLogs}`)}
             onStopMonitoring={stopMonitoring}
         />
     ) : (

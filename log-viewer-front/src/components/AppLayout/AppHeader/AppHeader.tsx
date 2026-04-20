@@ -17,6 +17,7 @@ import Box from '@mui/material/Box';
 import { ColorModeEnum } from '../../../constants/ColorModeEnum';
 import { RootState } from '../../../redux/store';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import Tooltip from '@mui/material/Tooltip';
 import { clearLogFile, setFileHandle, setFileObject } from '../../../redux/slices/logFileSlice';
 import { clearAnomalyResults, requestAnomalyCancel } from '../../../redux/slices/anomalySlice';
@@ -44,6 +45,7 @@ import {
     fileClearButtonSx,
     fileBadgeSpacerSx,
 } from './styles';
+import { RouteViewLogs } from '../../../routes/routePaths';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -53,6 +55,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
     const { i18n } = useTranslation();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const themeCtx = useContext(ThemeContext);
     if (!themeCtx) return null;
     const { toggleTheme, mode, primaryColor, setPrimaryColor } = themeCtx;
@@ -102,6 +105,9 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
         if (analyticsSessionId) {
             cancelIndexing(analyticsSessionId);
         }
+
+        navigate(`/${RouteViewLogs}`, { replace: true });
+
         await deleteAllLogData();
     };
 

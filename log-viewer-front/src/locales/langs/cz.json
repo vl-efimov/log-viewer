@@ -19,7 +19,8 @@
   },
   "dashboard": {
     "title": "Dashboard logů",
-    "selectFileDescription": "Vyberte soubor logu pro zobrazení statistik a analytiky.",
+    "selectFileDescription": "Soubor ještě není vybraný. Přejděte na stránku nahrání a zvolte log soubor pro otevření dashboardu.",
+    "goToUploadButton": "Přejít na nahrání souboru",
     "noDataDescription": "Zatím nejsou k dispozici data pro analytiku.",
     "fileAndFormat": "Soubor: {{fileName}} | Detekovaný formát: {{format}}",
     "largeFilePreviewNotice": "Režim velkého souboru: dashboard vychází z náhledu souboru a může se lišit od plného zobrazení tabulky.",

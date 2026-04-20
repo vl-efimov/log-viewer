@@ -19,7 +19,8 @@
   },
   "dashboard": {
     "title": "Logs Dashboard",
-    "selectFileDescription": "Select a log file to view statistics and analytics.",
+    "selectFileDescription": "No file is selected yet. Go to the upload page and choose a log file to open the dashboard.",
+    "goToUploadButton": "Go to File Upload",
     "noDataDescription": "No data available yet for analytics.",
     "fileAndFormat": "File: {{fileName}} | Detected format: {{format}}",
     "largeFilePreviewNotice": "Large file mode: dashboard is based on file preview and can differ from the full-table view.",

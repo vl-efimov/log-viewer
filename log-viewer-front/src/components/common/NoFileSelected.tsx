@@ -8,17 +8,19 @@ interface NoFileSelectedProps {
     title?: string;
     description?: string;
     showButton?: boolean;
+    buttonText?: string;
 }
 
 const NoFileSelected: React.FC<NoFileSelectedProps> = ({ 
     title = "No file selected",
     description = "Please select a log file from the Home page to start monitoring.",
-    showButton = true
+    showButton = true,
+    buttonText = "Go to File Upload"
 }) => {
     const navigate = useNavigate();
 
     const handleBackToHome = () => {
-        navigate(RouteViewLogs);
+        navigate(`/${RouteViewLogs}`);
     };
 
     return (
@@ -52,7 +54,7 @@ const NoFileSelected: React.FC<NoFileSelectedProps> = ({
                     color="primary"
                     onClick={handleBackToHome}
                 >
-                    Go to Home
+                    {buttonText}
                 </Button>
             )}
         </Box>
