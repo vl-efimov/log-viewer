@@ -14,7 +14,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MemoryIcon from '@mui/icons-material/Memory';
 import StorageIcon from '@mui/icons-material/Storage';
 import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../redux/store';
@@ -26,7 +26,14 @@ import {
     setAnomalyStopped,
     updateAnomalyRowsPerSecond,
 } from '../redux/slices/anomalySlice';
-import { getPretrainedModels, predictBglAnomaliesFromFile, predictBglAnomaliesFromIngest } from '../services/bglAnomalyApi';
+import { deleteAnomalySnapshot } from '../utils/logIndexedDb';
+import {
+    beginAnomalyPredictionSession,
+    endAnomalyPredictionSession,
+    getPretrainedModels,
+    predictBglAnomaliesFromFile,
+    predictBglAnomaliesFromIngest,
+} from '../services/bglAnomalyApi';
 import {
     ANOMALY_MIN_REGION_LINES_RANGE,
     ANOMALY_SETTINGS_DEFAULTS,
@@ -211,6 +218,7 @@ interface AnomalySettingsDialogProps {
     normalRows: AnomalySourceRow[];
     requestFileForAnomalyAnalysis: () => Promise<File | null>;
     remoteIngestId?: string;
+    anomalyStorageKey?: string;
 }
 
 const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
@@ -221,6 +229,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     normalRows,
     requestFileForAnomalyAnalysis,
     remoteIngestId,
+    anomalyStorageKey,
 }) => {
     const dispatch = useDispatch();
     const {
@@ -241,6 +250,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
     const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
+    const cancelRequestSeqRef = useRef(cancelRequestSeq);
+
+    useEffect(() => {
+        cancelRequestSeqRef.current = cancelRequestSeq;
+    }, [cancelRequestSeq]);
 
     const estimateExpectedDurationSec = useCallback((params: {
         rowsToAnalyze: number;
@@ -458,9 +472,14 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         }
 
         const runStartedAt = Date.now();
+        const runCancelRequestSeq = cancelRequestSeqRef.current;
         let runBytesToAnalyze: number | null = null;
         dispatch(setAnomalyError(''));
-        const abortController = new AbortController();
+        if (anomalyStorageKey) {
+            await deleteAnomalySnapshot(anomalyStorageKey);
+        }
+        dispatch(clearAnomalyResults());
+        const abortController = beginAnomalyPredictionSession(selectedModelId);
         setActiveAbortController(abortController);
 
         try {
@@ -538,6 +557,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 ? rowsToAnalyze
                 : Math.max(0, result.meta.total_rows);
 
+            if (abortController.signal.aborted || cancelRequestSeqRef.current !== runCancelRequestSeq) {
+                dispatch(setAnomalyStopped());
+                return;
+            }
+
             dispatch(setAnomalyResults({
                 regions: result.anomaly_regions,
                 rowsCount: result.meta.anomaly_rows,
@@ -566,6 +590,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
             }
         } finally {
             setActiveAbortController((current) => (current === abortController ? null : current));
+            endAnomalyPredictionSession(abortController);
             const elapsedSec = Math.max(1, Math.round((Date.now() - runStartedAt) / 1000));
 
             const analyzedRows = Math.max(0, totalRowsHint);
@@ -590,6 +615,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     }, [
         anomalyRowsPerSecondByModel,
         anomalySettings,
+        anomalyStorageKey,
         dispatch,
         isModelReady,
         logFileSize,

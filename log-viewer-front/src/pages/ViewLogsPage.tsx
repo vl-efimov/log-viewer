@@ -12,6 +12,7 @@ const ViewLogsPage: React.FC = () => {
     const {
         fileSelection,
         monitoringBanner,
+        tableServerConnectionState,
         histogram,
         toolbarProps,
         listProps,
@@ -44,9 +45,9 @@ const ViewLogsPage: React.FC = () => {
         >
             {monitoringBanner.show && (
                 <LogViewMonitoringBanner
-                    message="Для отслеживания новых строк выберите тот же файл снова."
-                    actionLabel="Выбрать файл для мониторинга"
-                    onAction={() => void monitoringBanner.onReattach()}
+                    message={monitoringBanner.message}
+                    actionLabel={monitoringBanner.actionLabel}
+                    onAction={monitoringBanner.onAction}
                 />
             )}
 
@@ -72,7 +73,29 @@ const ViewLogsPage: React.FC = () => {
                     overflow: 'hidden',
                 }}
             >
-                {showTablePreparing ? (
+                {tableServerConnectionState.show ? (
+                    <Box
+                        sx={{
+                            height: '100%',
+                            width: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 1,
+                            px: 2,
+                        }}
+                    >
+                        <CircularProgress size={26} />
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            align="center"
+                        >
+                            {tableServerConnectionState.message}
+                        </Typography>
+                    </Box>
+                ) : showTablePreparing ? (
                     <Box
                         sx={{
                             height: '100%',

@@ -15,7 +15,7 @@ import { RootState } from '../../../redux/store';
 import { baseUrl } from '../../../constants/BaseUrl';
 import { RouteViewLogs } from '../../../routes/routePaths';
 import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
-import { cancelBglAnomalyPrediction } from '../../../services/bglAnomalyApi';
+import { cancelActiveAnomalyPredictionSession, cancelBglAnomalyPrediction } from '../../../services/bglAnomalyApi';
 import AppStatusBarItem from '../AppStatusBarItem';
 import {
     anomalyTextSx,
@@ -158,7 +158,9 @@ const AppStatusBar: React.FC = () => {
     })();
 
     const handleCancelAnomaly = async () => {
-        const modelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
+        const fallbackModelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
+        const activeModelId = cancelActiveAnomalyPredictionSession();
+        const modelId = activeModelId ?? fallbackModelId;
         dispatch(requestAnomalyCancel());
         try {
             await cancelBglAnomalyPrediction(modelId);

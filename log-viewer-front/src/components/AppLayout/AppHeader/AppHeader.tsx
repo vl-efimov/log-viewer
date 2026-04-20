@@ -23,6 +23,7 @@ import { clearAnomalyResults, requestAnomalyCancel } from '../../../redux/slices
 import { deleteAllLogData } from '../../../utils/logIndexedDb';
 import { cancelIndexing } from '../../../utils/logIndexer';
 import {
+    cancelActiveAnomalyPredictionSession,
     cancelActiveRemoteUploadSession,
     cancelBglAnomalyPrediction,
     deleteRemoteIngest,
@@ -67,7 +68,9 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
         if (anomalyIsRunning) {
             dispatch(requestAnomalyCancel());
-            const modelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
+            const fallbackModelId = anomalyRunningModelId ?? anomalyLastModelId ?? 'bgl';
+            const activeModelId = cancelActiveAnomalyPredictionSession();
+            const modelId = activeModelId ?? fallbackModelId;
             try {
                 await cancelBglAnomalyPrediction(modelId);
             } catch (error) {

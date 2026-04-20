@@ -881,6 +881,13 @@ const DashboardPage: React.FC = () => {
         setIsExactFilteredLoading(false);
     }, [normalFileCacheKey]);
 
+    useEffect(() => {
+        return () => {
+            largeFileDashboardCache.clear();
+            normalDashboardCache.clear();
+        };
+    }, []);
+
     const analytics = useMemo(() => {
         if (requiresServerUploadForDashboard) {
             return {

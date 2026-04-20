@@ -5,8 +5,8 @@ import type { FC } from 'react';
 
 interface LogViewMonitoringBannerProps {
     message: string;
-    actionLabel: string;
-    onAction: () => void;
+    actionLabel?: string;
+    onAction?: () => void;
 }
 
 const LogViewMonitoringBanner: FC<LogViewMonitoringBannerProps> = ({
@@ -34,13 +34,15 @@ const LogViewMonitoringBanner: FC<LogViewMonitoringBannerProps> = ({
             >
                 {message}
             </Typography>
-            <Button
-                variant="outlined"
-                size="small"
-                onClick={onAction}
-            >
-                {actionLabel}
-            </Button>
+            {actionLabel && onAction && (
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={onAction}
+                >
+                    {actionLabel}
+                </Button>
+            )}
         </Box>
     );
 };

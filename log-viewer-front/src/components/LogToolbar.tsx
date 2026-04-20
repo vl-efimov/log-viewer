@@ -52,6 +52,7 @@ interface LogToolbarProps {
     canNavigateToPreviousAnomaly?: boolean;
     canNavigateToNextAnomaly?: boolean;
     remoteIngestId?: string;
+    anomalyStorageKey?: string;
     showUploadToServer?: boolean;
     uploadInProgress?: boolean;
     uploadProgress?: number;
@@ -81,6 +82,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     canNavigateToPreviousAnomaly = false,
     canNavigateToNextAnomaly = false,
     remoteIngestId,
+    anomalyStorageKey,
     showUploadToServer = false,
     uploadInProgress = false,
     uploadProgress = 0,
@@ -472,6 +474,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 normalRows={normalRows}
                 requestFileForAnomalyAnalysis={requestFileForAnomalyAnalysis}
                 remoteIngestId={remoteIngestId}
+                anomalyStorageKey={anomalyStorageKey}
             />
         </>
     );

@@ -134,7 +134,13 @@ type ActiveRemoteUploadState = {
     ingestId: string | null;
 };
 
+type ActiveAnomalyPredictionState = {
+    controller: AbortController;
+    modelId: string;
+};
+
 let activeRemoteUploadState: ActiveRemoteUploadState | null = null;
+let activeAnomalyPredictionState: ActiveAnomalyPredictionState | null = null;
 
 export function beginRemoteUploadSession(): AbortController {
     const controller = new AbortController();
@@ -162,6 +168,29 @@ export function endRemoteUploadSession(controller?: AbortController): void {
         return;
     }
     activeRemoteUploadState = null;
+}
+
+export function beginAnomalyPredictionSession(modelId: string): AbortController {
+    const controller = new AbortController();
+    activeAnomalyPredictionState = {
+        controller,
+        modelId,
+    };
+    return controller;
+}
+
+export function cancelActiveAnomalyPredictionSession(): string | null {
+    if (!activeAnomalyPredictionState) return null;
+    activeAnomalyPredictionState.controller.abort();
+    return activeAnomalyPredictionState.modelId;
+}
+
+export function endAnomalyPredictionSession(controller?: AbortController): void {
+    if (!activeAnomalyPredictionState) return;
+    if (controller && activeAnomalyPredictionState.controller !== controller) {
+        return;
+    }
+    activeAnomalyPredictionState = null;
 }
 
 function statusFromModel(model: ModelStatus): PretrainedModelInfo['status'] {
