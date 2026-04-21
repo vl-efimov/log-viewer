@@ -8,11 +8,12 @@ import {
 } from '../services/bglAnomalyApi';
 
 const DB_NAME = 'log_viewer';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_SESSIONS = 'sessions';
 const STORE_LINES = 'lines';
 const STORE_FIELD_INDEX = 'fieldIndex';
 const STORE_STATS = 'stats';
+const STORE_CUSTOM_FORMATS = 'customFormats';
 
 const MAX_FILTER_LINES_DEFAULT = 200_000;
 const MIN_TIMESTAMP_MS = -8640000000000000;
@@ -75,6 +76,15 @@ export type AnomalySnapshotRecord = {
         analysisScope: 'all' | 'filtered';
         timestampColumn: 'auto' | 'timestamp' | 'datetime' | 'time' | 'date' | 'event_time' | 'created_at';
     };
+    updatedAt: number;
+};
+
+export type CustomLogFormatRecord = {
+    id: string;
+    name: string;
+    description: string;
+    regex: string;
+    createdAt: number;
     updatedAt: number;
 };
 
@@ -210,6 +220,11 @@ const openLogDb = (): Promise<IDBDatabase> => {
                 const store = db.createObjectStore(STORE_STATS, { keyPath: ['sessionId', 'kind'] });
                 store.createIndex('by_session', 'sessionId', { unique: false });
             }
+
+            if (!db.objectStoreNames.contains(STORE_CUSTOM_FORMATS)) {
+                const store = db.createObjectStore(STORE_CUSTOM_FORMATS, { keyPath: 'id' });
+                store.createIndex('by_updatedAt', 'updatedAt', { unique: false });
+            }
         };
 
         request.onsuccess = () => resolve(request.result);
@@ -225,17 +240,80 @@ export const getLogDb = async (): Promise<IDBDatabase> => {
 };
 
 export const deleteAllLogData = async (): Promise<void> => {
-    dbPromise = null;
-    await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(DB_NAME);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => resolve();
-    });
+    const db = await getLogDb();
+    const storesToClear = [STORE_SESSIONS, STORE_LINES, STORE_STATS];
+
+    for (const storeName of storesToClear) {
+        if (!db.objectStoreNames.contains(storeName)) {
+            continue;
+        }
+
+        const tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).clear();
+        await transactionDone(tx);
+    }
 };
 
 export const createLogSessionId = (): string => {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+export const getCustomLogFormats = async (): Promise<CustomLogFormatRecord[]> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_CUSTOM_FORMATS, 'readonly');
+    const store = tx.objectStore(STORE_CUSTOM_FORMATS);
+    const index = store.index('by_updatedAt');
+
+    const result = await new Promise<CustomLogFormatRecord[]>((resolve, reject) => {
+        const formats: CustomLogFormatRecord[] = [];
+        const request = index.openCursor(null, 'prev');
+
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) {
+                resolve(formats);
+                return;
+            }
+
+            formats.push(cursor.value as CustomLogFormatRecord);
+            cursor.continue();
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+
+    await transactionDone(tx);
+    return result;
+};
+
+export const upsertCustomLogFormat = async (
+    format: Pick<CustomLogFormatRecord, 'id' | 'name' | 'description' | 'regex'>,
+): Promise<CustomLogFormatRecord> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_CUSTOM_FORMATS, 'readwrite');
+    const store = tx.objectStore(STORE_CUSTOM_FORMATS);
+
+    const existing = await requestToPromise<CustomLogFormatRecord | undefined>(store.get(format.id));
+    const now = Date.now();
+    const next: CustomLogFormatRecord = {
+        id: format.id,
+        name: format.name,
+        description: format.description,
+        regex: format.regex,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+    };
+
+    store.put(next);
+    await transactionDone(tx);
+    return next;
+};
+
+export const deleteCustomLogFormat = async (id: string): Promise<void> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_CUSTOM_FORMATS, 'readwrite');
+    tx.objectStore(STORE_CUSTOM_FORMATS).delete(id);
+    await transactionDone(tx);
 };
 
 export const upsertSession = async (session: LogSessionRecord): Promise<void> => {

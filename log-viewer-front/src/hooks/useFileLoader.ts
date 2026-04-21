@@ -1,8 +1,18 @@
 import { useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { clearLogFile, setLogFile, setMonitoringState, setFileHandle, setFileObject, setIndexingState } from '../redux/slices/logFileSlice';
+import {
+    clearLogFile,
+    getFileHandle,
+    getFileObject,
+    setLogFile,
+    setMonitoringState,
+    setFileHandle,
+    setFileObject,
+    setIndexingState,
+} from '../redux/slices/logFileSlice';
+import { enqueueNotification } from '../redux/slices/notificationsSlice';
 import type { RootState } from '../redux/store';
-import { detectLogFormat } from '../utils/logFormatDetector';
+import { detectLogFormat, initializeLogFormats } from '../utils/logFormatDetector';
 import { deleteSessionData } from '../utils/logIndexedDb';
 import { cancelIndexing, clearIndexingController, createSessionRecord, indexLogFile, registerIndexingController } from '../utils/logIndexer';
 
@@ -19,14 +29,35 @@ type AttachOptions = {
 
 type ReattachResult = 'attached' | 'switched' | 'cancelled' | 'failed';
 
-export const useFileLoader = () => {
+type UnknownFormatResolution = {
+    mode: 'continue-unknown' | 'use-format';
+    formatId?: string;
+};
+
+type UnknownFormatContext = {
+    fileName: string;
+    fileSize: number;
+    previewText: string;
+    previewLines: string[];
+};
+
+type LoadFileOptions = {
+    forcedFormatId?: string;
+    skipUnknownPrompt?: boolean;
+};
+
+type UseFileLoaderOptions = {
+    resolveUnknownFormat?: (context: UnknownFormatContext) => Promise<UnknownFormatResolution>;
+};
+
+export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
     const dispatch = useDispatch();
     const [indexing, setIndexing] = useState(false);
     const currentSessionId = useSelector((state: RootState) => state.logFile.analyticsSessionId);
     const activeSessionIdRef = useRef<string | null>(null);
     const loadTokenRef = useRef(0);
 
-    const loadFile = async (file: File, handle?: FileSystemFileHandle) => {
+    const loadFile = async (file: File, handle?: FileSystemFileHandle, loadOptions: LoadFileOptions = {}) => {
         const loadToken = ++loadTokenRef.current;
         const isLargeFile = file.size >= LARGE_FILE_BYTES;
 
@@ -48,12 +79,37 @@ export const useFileLoader = () => {
         }
 
         try {
+            await initializeLogFormats();
+
             const previewBlob = file.slice(0, Math.min(file.size, FORMAT_PREVIEW_BYTES));
             const previewText = await previewBlob.text();
             const detectedFormat = detectLogFormat(previewText);
+            let formatId = (loadOptions.forcedFormatId || detectedFormat || 'unknown').trim() || 'unknown';
 
             if (loadToken !== loadTokenRef.current) {
                 return;
+            }
+
+            if (
+                !loadOptions.forcedFormatId
+                && !loadOptions.skipUnknownPrompt
+                && formatId === 'unknown'
+                && options.resolveUnknownFormat
+            ) {
+                const resolution = await options.resolveUnknownFormat({
+                    fileName: file.name,
+                    fileSize: file.size,
+                    previewText,
+                    previewLines: previewText.split(/\r?\n/).slice(0, 5),
+                });
+
+                if (loadToken !== loadTokenRef.current) {
+                    return;
+                }
+
+                if (resolution.mode === 'use-format' && resolution.formatId?.trim()) {
+                    formatId = resolution.formatId.trim();
+                }
             }
 
             if (handle) {
@@ -73,7 +129,7 @@ export const useFileLoader = () => {
                     name: file.name,
                     size: file.size,
                     content: content,
-                    format: detectedFormat || 'Unknown',
+                    format: formatId,
                     lastModified: file.lastModified,
                     hasFileHandle: !!handle,
                     isLargeFile,
@@ -84,7 +140,7 @@ export const useFileLoader = () => {
                     fileName: file.name,
                     fileSize: file.size,
                     lastModified: file.lastModified,
-                    formatId: detectedFormat || 'unknown',
+                    formatId,
                     previewText,
                 });
                 activeSessionIdRef.current = session.sessionId;
@@ -93,7 +149,7 @@ export const useFileLoader = () => {
                     name: file.name,
                     size: file.size,
                     content: content,
-                    format: detectedFormat || 'Unknown',
+                    format: formatId,
                     lastModified: file.lastModified,
                     hasFileHandle: !!handle,
                     isLargeFile,
@@ -113,6 +169,14 @@ export const useFileLoader = () => {
                             : 0;
                         dispatch(setIndexingState({ isIndexing: true, progress: percent }));
                     },
+                }).then(() => {
+                    if (loadToken !== loadTokenRef.current) {
+                        return;
+                    }
+                    dispatch(enqueueNotification({
+                        message: `Индексация файла ${file.name} завершена`,
+                        severity: 'success',
+                    }));
                 }).catch((error) => {
                     if ((error as Error).name !== 'AbortError') {
                         console.error('Indexing failed:', error);
@@ -137,6 +201,29 @@ export const useFileLoader = () => {
         if (loadToken === loadTokenRef.current) {
             dispatch(setMonitoringState(true));
         }
+    };
+
+    const reloadCurrentFileWithFormat = async (formatId: string): Promise<boolean> => {
+        const fileHandle = getFileHandle();
+        if (fileHandle) {
+            const file = await fileHandle.getFile();
+            await loadFile(file, fileHandle, {
+                forcedFormatId: formatId,
+                skipUnknownPrompt: true,
+            });
+            return true;
+        }
+
+        const file = getFileObject();
+        if (!file) {
+            return false;
+        }
+
+        await loadFile(file, undefined, {
+            forcedFormatId: formatId,
+            skipUnknownPrompt: true,
+        });
+        return true;
     };
 
     const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,6 +334,8 @@ export const useFileLoader = () => {
             setFileHandle(handle);
             setFileObject(file);
 
+            await initializeLogFormats();
+
             const previewBlob = file.slice(0, Math.min(file.size, FORMAT_PREVIEW_BYTES));
             const previewText = await previewBlob.text();
             const detectedFormat = detectLogFormat(previewText);
@@ -296,6 +385,7 @@ export const useFileLoader = () => {
         handleFileDrop,
         handleFileSystemAccess,
         handleFileSystemAccessForMonitoring,
+        reloadCurrentFileWithFormat,
         stopMonitoring,
     };
 };

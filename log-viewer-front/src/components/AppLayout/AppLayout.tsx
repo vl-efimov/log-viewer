@@ -6,6 +6,7 @@ import AppStatusBar from './AppStatusBar/AppStatusBar';
 import { useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useFileLoader } from '../../hooks/useFileLoader';
+import GlobalNotifications from '../common/GlobalNotifications';
 
 
 export default function MainLayout () {
@@ -134,6 +135,7 @@ export default function MainLayout () {
                     </Box>
                 </Box>
             </Box>
+            <GlobalNotifications />
             <AppStatusBar />
             {isDragActive && (
                 <Box

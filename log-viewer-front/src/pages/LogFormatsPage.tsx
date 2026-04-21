@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import AddLogFormatDialog from '../components/log-patterns/AddLogFormatDialog';
 import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -18,34 +20,19 @@ import Typography from '@mui/material/Typography';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CircularProgress from '@mui/material/CircularProgress';
 import RegexHighlighter from '../components/log-patterns/RegexHighlighter';
+import ConfirmActionDialog from '../components/common/ConfirmActionDialog';
 import { baseUrl } from '../constants/BaseUrl';
 import {
-    USER_FORMATS_STORAGE_KEY,
     buildCustomFormatPattern,
     registerCustomLogFormat,
     unregisterLogFormat,
 } from '../utils/logFormatDetector';
-
-interface UserLogFormat {
-    id: string;
-    name: string;
-    description: string;
-    regex: string;
-}
-
-function loadUserFormats(): UserLogFormat[] {
-    try {
-        const raw = localStorage.getItem(USER_FORMATS_STORAGE_KEY);
-        if (!raw) return [];
-        return JSON.parse(raw);
-    } catch {
-        return [];
-    }
-}
-
-function saveUserFormats(formats: UserLogFormat[]) {
-    localStorage.setItem(USER_FORMATS_STORAGE_KEY, JSON.stringify(formats));
-}
+import {
+    deleteCustomLogFormat,
+    getCustomLogFormats,
+    upsertCustomLogFormat,
+    type CustomLogFormatRecord,
+} from '../utils/logIndexedDb';
 
 interface LogFormat {
     id: string;
@@ -56,63 +43,102 @@ interface LogFormat {
 }
 
 const LogFormatsPage: React.FC = () => {
-    console.log('LogFormatsPage render');
     const [systemFormats, setSystemFormats] = useState<LogFormat[]>([]);
-    const [userFormats, setUserFormats] = useState<UserLogFormat[]>([]);
+    const [userFormats, setUserFormats] = useState<CustomLogFormatRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [addOpen, setAddOpen] = useState(false);
+    const [editingFormat, setEditingFormat] = useState<CustomLogFormatRecord | null>(null);
+    const [deleteDialogState, setDeleteDialogState] = useState<{ open: boolean; formatId: string; formatName: string }>(
+        { open: false, formatId: '', formatName: '' }
+    );
 
-    const loadFormats = async () => {
+    const loadFormats = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${baseUrl}log-formats.json`);
+            const [response, customFormats] = await Promise.all([
+                fetch(`${baseUrl}log-formats.json`),
+                getCustomLogFormats(),
+            ]);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             setSystemFormats(data.formats || []);
+
+            setUserFormats(customFormats);
+            customFormats.forEach((customFormat) => {
+                const runtimeFormat = buildCustomFormatPattern(customFormat);
+                if (runtimeFormat) {
+                    registerCustomLogFormat(runtimeFormat);
+                }
+            });
         } catch (error: unknown) {
             console.error('Failed to load log formats:', error);
             setSystemFormats([]);
+            setUserFormats([]);
             setError('Failed to load supported log formats. Please check your connection or file location.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        loadFormats();
-        setUserFormats(loadUserFormats());
-    }, []);
+        void loadFormats();
+    }, [loadFormats]);
 
     const sortedSystemFormats = useMemo(() => [...systemFormats].sort((a, b) => a.name.localeCompare(b.name)), [systemFormats]);
     const sortedUserFormats = useMemo(() => [...userFormats].sort((a, b) => a.name.localeCompare(b.name)), [userFormats]);
 
-    const [addOpen, setAddOpen] = useState(false);
+    const handleSaveFormat = useCallback(async (payload: { name: string; description: string; regex: string }) => {
+        const id = editingFormat?.id ?? `user-${Date.now()}`;
 
-    const handleAddFormat = useCallback((name: string, description: string, regex: string) => {
-        const newFormat: UserLogFormat = {
-            id: `user-${Date.now()}`,
-            name,
-            description,
-            regex,
-        };
-        const runtimeFormat = buildCustomFormatPattern(newFormat);
+        const saved = await upsertCustomLogFormat({
+            id,
+            name: payload.name,
+            description: payload.description,
+            regex: payload.regex,
+        });
+
+        const runtimeFormat = buildCustomFormatPattern(saved);
         if (runtimeFormat) {
             registerCustomLogFormat(runtimeFormat);
         }
 
-        const updated = [...userFormats, newFormat];
-        setUserFormats(updated);
-        saveUserFormats(updated);
-        setAddOpen(false);
-    }, [userFormats]);
+        setUserFormats((prev) => {
+            const existingIndex = prev.findIndex((format) => format.id === saved.id);
+            if (existingIndex >= 0) {
+                const next = [...prev];
+                next[existingIndex] = saved;
+                return next;
+            }
 
-    const deleteUserFormat = useCallback((id: string) => {
+            return [...prev, saved];
+        });
+
+        setAddOpen(false);
+        setEditingFormat(null);
+    }, [editingFormat?.id]);
+
+    const deleteUserFormat = useCallback(async (id: string) => {
+        await deleteCustomLogFormat(id);
         unregisterLogFormat(id);
-        const updated = userFormats.filter(f => f.id !== id);
-        setUserFormats(updated);
-        saveUserFormats(updated);
-    }, [userFormats]);
+        setUserFormats((prev) => prev.filter((format) => format.id !== id));
+    }, []);
+
+    const handleDeleteRequest = (format: CustomLogFormatRecord) => {
+        setDeleteDialogState({ open: true, formatId: format.id, formatName: format.name });
+    };
+
+    const handleDeleteConfirm = async () => {
+        const targetId = deleteDialogState.formatId;
+        setDeleteDialogState({ open: false, formatId: '', formatName: '' });
+        if (!targetId) return;
+        await deleteUserFormat(targetId);
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogState({ open: false, formatId: '', formatName: '' });
+    };
 
     if (loading) {
         return (
@@ -135,7 +161,10 @@ const LogFormatsPage: React.FC = () => {
                 </Typography>
                 <IconButton
                     color="primary"
-                    onClick={() => setAddOpen(true)}
+                    onClick={() => {
+                        setEditingFormat(null);
+                        setAddOpen(true);
+                    }}
                     size="large"
                 >
                     <AddIcon />
@@ -177,13 +206,18 @@ const LogFormatsPage: React.FC = () => {
                                         <Button
                                             size="small"
                                             color="primary"
-                                            disabled
+                                            onClick={() => {
+                                                setEditingFormat(format);
+                                                setAddOpen(true);
+                                            }}
+                                            startIcon={<EditIcon fontSize="small" />}
                                         >Edit
                                         </Button>
                                         <Button
                                             size="small"
                                             color="error"
-                                            onClick={() => deleteUserFormat(format.id)}
+                                            onClick={() => handleDeleteRequest(format)}
+                                            startIcon={<DeleteIcon fontSize="small" />}
                                         >Delete
                                         </Button>
                                     </TableCell>
@@ -196,8 +230,23 @@ const LogFormatsPage: React.FC = () => {
 
             <AddLogFormatDialog
                 open={addOpen}
-                onClose={() => setAddOpen(false)}
-                onAdd={handleAddFormat}
+                onClose={() => {
+                    setAddOpen(false);
+                    setEditingFormat(null);
+                }}
+                onSubmit={handleSaveFormat}
+                initialValue={editingFormat ?? undefined}
+                title={editingFormat ? 'Edit Custom Log Format' : 'Add Custom Log Format'}
+                submitLabel={editingFormat ? 'Save changes' : 'Add'}
+            />
+
+            <ConfirmActionDialog
+                open={deleteDialogState.open}
+                message={`Delete selected custom format${deleteDialogState.formatName ? ` "${deleteDialogState.formatName}"` : ''}?`}
+                confirmLabel="OK"
+                cancelLabel="Отмена"
+                onConfirm={() => void handleDeleteConfirm()}
+                onCancel={handleDeleteCancel}
             />
 
             <Typography 

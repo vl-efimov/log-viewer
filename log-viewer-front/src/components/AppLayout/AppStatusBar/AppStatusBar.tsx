@@ -5,6 +5,8 @@ import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
 import LinearProgress from '@mui/material/LinearProgress';
 import CircularProgress from '@mui/material/CircularProgress';
+import Popover from '@mui/material/Popover';
+import MenuItem from '@mui/material/MenuItem';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CloseIcon from '@mui/icons-material/Close';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -15,8 +17,10 @@ import { useLocation } from 'react-router-dom';
 import { RootState } from '../../../redux/store';
 import { baseUrl } from '../../../constants/BaseUrl';
 import { RouteViewLogs } from '../../../routes/routePaths';
+import { requestFormatChange } from '../../../redux/slices/logFileSlice';
 import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
 import { cancelActiveAnomalyPredictionSession, cancelBglAnomalyPrediction, getBglAnomalyProgress } from '../../../services/bglAnomalyApi';
+import { getAvailableLogFormats, getLogFormatById } from '../../../utils/logFormatDetector';
 import AppStatusBarItem from '../AppStatusBarItem';
 import {
     anomalyTextSx,
@@ -85,6 +89,40 @@ const AppStatusBar: React.FC = () => {
     const fullViewLogsPath = `${baseUrl}${RouteViewLogs}`.replace(/\/+/g, '/').replace(/\/+$/, '');
     const isViewLogsRoute = currentPath === fullViewLogsPath;
     const isServerUploadInProgress = isIndexing && isLargeFile && !analyticsSessionId.startsWith('remote:');
+
+    const normalizedFormatId = (format || '').trim() || 'unknown';
+    const formatDisplayName = getLogFormatById(normalizedFormatId)?.name ?? normalizedFormatId;
+    const formatChangeDisabled = !isViewLogsRoute || !loaded || isIndexing || isServerUploadInProgress;
+    const [formatAnchorEl, setFormatAnchorEl] = useState<HTMLElement | null>(null);
+    const isFormatMenuOpen = Boolean(formatAnchorEl);
+    const availableFormatOptions = getAvailableLogFormats()
+        .slice()
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((formatOption) => ({ id: formatOption.id, name: formatOption.name }));
+
+    if (!availableFormatOptions.some((option) => option.id === 'unknown')) {
+        availableFormatOptions.unshift({ id: 'unknown', name: 'Unknown' });
+    }
+
+    if (normalizedFormatId !== 'unknown' && !availableFormatOptions.some((option) => option.id === normalizedFormatId)) {
+        availableFormatOptions.unshift({ id: normalizedFormatId, name: formatDisplayName });
+    }
+
+    const handleFormatMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+        if (formatChangeDisabled) {
+            return;
+        }
+        setFormatAnchorEl(event.currentTarget);
+    };
+
+    const handleFormatMenuClose = () => {
+        setFormatAnchorEl(null);
+    };
+
+    const handleFormatSelect = (formatId: string) => {
+        dispatch(requestFormatChange(formatId));
+        setFormatAnchorEl(null);
+    };
 
     useEffect(() => {
         if (!anomalyIsRunning) {
@@ -275,12 +313,43 @@ const AppStatusBar: React.FC = () => {
                         />
 
                         {format && (
-                            <AppStatusBarItem title="Detected log format type">
-                                <DataObjectIcon sx={statusBarIconSx} />
-                                <Typography sx={textSx}>
-                                    {format}
-                                </Typography>
-                            </AppStatusBarItem>
+                            <>
+                                <AppStatusBarItem
+                                    title="Detected log format type"
+                                    onClick={handleFormatMenuOpen}
+                                    disabled={formatChangeDisabled}
+                                >
+                                    <DataObjectIcon sx={statusBarIconSx} />
+                                    <Typography sx={textSx}>
+                                        {formatDisplayName}
+                                    </Typography>
+                                </AppStatusBarItem>
+                                <Popover
+                                    open={isFormatMenuOpen}
+                                    anchorEl={formatAnchorEl}
+                                    onClose={handleFormatMenuClose}
+                                    anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                                    transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                                    PaperProps={{
+                                        sx: {
+                                            mt: -0.5,
+                                            minWidth: 220,
+                                            maxHeight: 320,
+                                            overflowY: 'auto',
+                                        },
+                                    }}
+                                >
+                                    {availableFormatOptions.map((formatOption) => (
+                                        <MenuItem
+                                            key={formatOption.id}
+                                            selected={formatOption.id === normalizedFormatId}
+                                            onClick={() => handleFormatSelect(formatOption.id)}
+                                        >
+                                            {formatOption.name}
+                                        </MenuItem>
+                                    ))}
+                                </Popover>
+                            </>
                         )}
 
                     </>

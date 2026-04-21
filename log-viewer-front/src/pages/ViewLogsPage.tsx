@@ -4,8 +4,11 @@ import Typography from '@mui/material/Typography';
 import { FileSelectionView } from '../components/FileSelectionView';
 import LogLinesList from '../components/LogLinesList';
 import LogToolbar from '../components/LogToolbar';
+import AddLogFormatDialog from '../components/log-patterns/AddLogFormatDialog';
 import LogViewHistogramPanel from './viewLogs/components/LogViewHistogramPanel';
 import LogViewMonitoringBanner from './viewLogs/components/LogViewMonitoringBanner';
+import FormatChangeConfirmDialog from './viewLogs/components/FormatChangeConfirmDialog';
+import UnknownFormatConfirmDialog from './viewLogs/components/UnknownFormatConfirmDialog';
 import { useViewLogsController } from './viewLogs/useViewLogsController';
 
 const ViewLogsPage: React.FC = () => {
@@ -17,6 +20,9 @@ const ViewLogsPage: React.FC = () => {
         toolbarProps,
         listProps,
         showEmptyFilteredState,
+        formatChangeDialog,
+        confirmDialog,
+        customFormatDialog,
     } = useViewLogsController();
 
     const showTablePreparing = histogram.isLargeFile
@@ -140,6 +146,31 @@ const ViewLogsPage: React.FC = () => {
                     <LogLinesList {...listProps} />
                 )}
             </Box>
+
+            <UnknownFormatConfirmDialog
+                open={confirmDialog.open}
+                fileName={confirmDialog.fileName}
+                fileSize={confirmDialog.fileSize}
+                previewText={confirmDialog.previewText}
+                onConfirm={confirmDialog.onConfirm}
+                onCancel={confirmDialog.onCancel}
+            />
+
+            <FormatChangeConfirmDialog
+                open={formatChangeDialog.open}
+                message={formatChangeDialog.message}
+                onConfirm={formatChangeDialog.onConfirm}
+                onCancel={formatChangeDialog.onCancel}
+            />
+
+            <AddLogFormatDialog
+                open={customFormatDialog.open}
+                onClose={customFormatDialog.onClose}
+                onSubmit={customFormatDialog.onSubmit}
+                previewLines={customFormatDialog.previewLines}
+                title="Add Custom Log Format"
+                submitLabel="Save and apply"
+            />
         </Box>
     );
 };

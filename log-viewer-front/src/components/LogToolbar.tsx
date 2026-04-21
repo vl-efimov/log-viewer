@@ -56,6 +56,7 @@ interface LogToolbarProps {
     uploadInProgress?: boolean;
     uploadProgress?: number;
     fileActionsDisabled?: boolean;
+    uploadDisabledReason?: string;
 }
 
 const LogToolbar: React.FC<LogToolbarProps> = ({
@@ -86,6 +87,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     uploadInProgress = false,
     uploadProgress = 0,
     fileActionsDisabled = false,
+    uploadDisabledReason,
 }) => {
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
@@ -220,7 +222,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             size="small"
                                             variant="contained"
                                             onClick={onUploadToServer}
-                                            disabled={uploadInProgress || filtersDisabled || !onUploadToServer}
+                                            disabled={uploadInProgress || filtersDisabled || !onUploadToServer || Boolean(uploadDisabledReason)}
                                             sx={compactButtonSx}
                                         >
                                             {uploadInProgress ? `Идет загрузка ${uploadProgress}%` : 'Загрузить на сервер'}
@@ -244,6 +246,14 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                     )}
                                 </Box>
                             </Tooltip>
+                            {uploadDisabledReason && !uploadInProgress && (
+                                <Typography
+                                    variant="caption"
+                                    color="warning.main"
+                                >
+                                    {uploadDisabledReason}
+                                </Typography>
+                            )}
                         </Box>
 
                         <Divider

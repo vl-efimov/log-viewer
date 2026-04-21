@@ -4,8 +4,9 @@
  */
 
 import { baseUrl } from "../constants/BaseUrl";
+import { getCustomLogFormats, type CustomLogFormatRecord } from './logIndexedDb';
 
-export const USER_FORMATS_STORAGE_KEY = 'logViewerUserFormats';
+export const USER_FORMATS_STORAGE_KEY = 'userLogFormats';
 
 interface StoredUserLogFormat {
     id: string;
@@ -50,6 +51,8 @@ export interface LogFormatPattern {
      * Field definitions describing what each named capture group represents
      */
     fields?: LogFormatField[];
+    /** Runtime source of this format. */
+    source?: 'system' | 'custom';
 }
 
 /**
@@ -150,32 +153,9 @@ function normalizeParsedFields(formatId: string, rawFields: Record<string, strin
  * Ordered by priority (higher priority formats are checked first)
  */
 export let LOG_FORMAT_PATTERNS: LogFormatPattern[] = [];
+const CUSTOM_FORMAT_PRIORITY = 10000;
 
-function loadUserFormatsFromStorage(): StoredUserLogFormat[] {
-    if (typeof window === 'undefined') {
-        return [];
-    }
-
-    try {
-        const raw = window.localStorage.getItem(USER_FORMATS_STORAGE_KEY);
-        if (!raw) {
-            return [];
-        }
-
-        const parsed = JSON.parse(raw) as StoredUserLogFormat[];
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-
-        return parsed.filter((item) => {
-            return Boolean(item?.id && item?.name && item?.regex);
-        });
-    } catch {
-        return [];
-    }
-}
-
-function extractNamedGroups(regexSource: string): string[] {
+export function extractNamedGroups(regexSource: string): string[] {
     const groups = new Set<string>();
     const namedGroupRegex = /\(\?<([A-Za-z_][A-Za-z0-9_]*)>/g;
     let match: RegExpExecArray | null = namedGroupRegex.exec(regexSource);
@@ -225,8 +205,9 @@ function toCustomFormatPattern(format: StoredUserLogFormat): LogFormatPattern | 
             id: format.id,
             name: format.name,
             description: format.description,
-            priority: 110,
+            priority: CUSTOM_FORMAT_PRIORITY,
             patterns: [new RegExp(format.regex, 'm')],
+            source: 'custom',
             fields: groups.map((group) => ({
                 name: group,
                 description: `Custom field: ${group}`,
@@ -256,6 +237,7 @@ export async function loadLogFormatsFromJSON(): Promise<void> {
             fields?: LogFormatField[];
         }) => ({
             ...format,
+            source: 'system',
             patterns: format.patterns.map((pattern: string) => new RegExp(pattern, 'm'))
         }));
         
@@ -274,7 +256,7 @@ let formatsInitialized = false;
 export async function initializeLogFormats(): Promise<void> {
     if (!formatsInitialized) {
         await loadLogFormatsFromJSON();
-        const userFormats = loadUserFormatsFromStorage();
+        const userFormats = await getCustomLogFormats();
         userFormats.forEach((format) => {
             const mapped = toCustomFormatPattern(format);
             if (mapped) {
@@ -294,10 +276,15 @@ export async function initializeLogFormats(): Promise<void> {
 export function detectLogFormat(content: string, previewLines: number = 50): string {
     const preview = content.split(/\r?\n/).slice(0, previewLines).join('\n');
 
-    // Sort patterns by priority (descending)
-    const sortedPatterns = [...LOG_FORMAT_PATTERNS].sort((a, b) => b.priority - a.priority);
+    const customPatterns = LOG_FORMAT_PATTERNS
+        .filter((format) => format.source === 'custom')
+        .sort((a, b) => b.priority - a.priority);
 
-    for (const format of sortedPatterns) {
+    const systemPatterns = LOG_FORMAT_PATTERNS
+        .filter((format) => format.source !== 'custom')
+        .sort((a, b) => b.priority - a.priority);
+
+    for (const format of [...customPatterns, ...systemPatterns]) {
         // Check all patterns for this format
         const matchesPattern = format.patterns.some(pattern => pattern.test(preview));
         
@@ -343,15 +330,21 @@ export function getLogFormatById(id: string): LogFormatPattern | undefined {
  * @param format The custom format to add
  */
 export function registerCustomLogFormat(format: LogFormatPattern): void {
+    const customFormat: LogFormatPattern = {
+        ...format,
+        source: 'custom',
+        priority: Math.max(format.priority, CUSTOM_FORMAT_PRIORITY),
+    };
+
     // Check if format with this ID already exists
-    const existingIndex = LOG_FORMAT_PATTERNS.findIndex(f => f.id === format.id);
+    const existingIndex = LOG_FORMAT_PATTERNS.findIndex(f => f.id === customFormat.id);
     
     if (existingIndex >= 0) {
         // Replace existing format
-        LOG_FORMAT_PATTERNS[existingIndex] = format;
+        LOG_FORMAT_PATTERNS[existingIndex] = customFormat;
     } else {
         // Add new format
-        LOG_FORMAT_PATTERNS.push(format);
+        LOG_FORMAT_PATTERNS.push(customFormat);
     }
 }
 
@@ -371,7 +364,7 @@ export function buildCustomFormatPattern(format: {
     description: string;
     regex: string;
 }): LogFormatPattern | null {
-    return toCustomFormatPattern(format);
+    return toCustomFormatPattern(format as CustomLogFormatRecord);
 }
 
 /**
@@ -408,9 +401,14 @@ export function parseLogLine(line: string, formatId: string): ParsedLogLine | nu
  * @returns Parsed log line with extracted fields, or null if no format matched
  */
 export function parseLogLineAuto(line: string): ParsedLogLine | null {
-    const sortedPatterns = [...LOG_FORMAT_PATTERNS].sort((a, b) => b.priority - a.priority);
+    const customPatterns = LOG_FORMAT_PATTERNS
+        .filter((format) => format.source === 'custom')
+        .sort((a, b) => b.priority - a.priority);
+    const systemPatterns = LOG_FORMAT_PATTERNS
+        .filter((format) => format.source !== 'custom')
+        .sort((a, b) => b.priority - a.priority);
 
-    for (const format of sortedPatterns) {
+    for (const format of [...customPatterns, ...systemPatterns]) {
         for (const pattern of format.patterns) {
             const match = line.match(pattern);
             if (match && match.groups) {
@@ -437,3 +435,4 @@ export function getFormatFields(formatId: string): LogFormatField[] {
     const format = getLogFormatById(formatId);
     return format?.fields || [];
 }
+

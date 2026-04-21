@@ -25,6 +25,7 @@ interface LogFileState {
     size: number;
     content: string;
     format: string;
+    requestedFormatId: string | null;
     analyticsSessionId: string;
     loaded: boolean;
     lastModified: number;
@@ -40,6 +41,7 @@ const initialLogFileState: LogFileState = {
     size: 0,
     content: '',
     format: '',
+    requestedFormatId: null,
     analyticsSessionId: '',
     loaded: false,
     lastModified: 0,
@@ -69,6 +71,7 @@ const logFileSlice = createSlice({
             state.size = action.payload.size;
             state.content = action.payload.content ?? '';
             state.format = action.payload.format;
+            state.requestedFormatId = null;
             if ('analyticsSessionId' in action.payload) {
                 state.analyticsSessionId = action.payload.analyticsSessionId ?? '';
             } else {
@@ -109,6 +112,12 @@ const logFileSlice = createSlice({
                 state.indexingProgress = 0;
             }
         },
+        requestFormatChange: (state, action: PayloadAction<string>) => {
+            state.requestedFormatId = action.payload;
+        },
+        clearFormatChangeRequest: (state) => {
+            state.requestedFormatId = null;
+        },
         clearLogContent: (state) => {
             state.content = '';
         },
@@ -117,6 +126,7 @@ const logFileSlice = createSlice({
             state.size = 0;
             state.content = '';
             state.format = '';
+            state.requestedFormatId = null;
             state.analyticsSessionId = '';
             state.loaded = false;
             state.lastModified = 0;
@@ -135,6 +145,8 @@ export const {
     appendLogContent,
     setMonitoringState,
     setIndexingState,
+    requestFormatChange,
+    clearFormatChangeRequest,
     clearLogContent,
     clearLogFile,
 } = logFileSlice.actions;

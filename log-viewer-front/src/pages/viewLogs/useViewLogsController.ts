@@ -5,6 +5,7 @@ import { RootState } from '../../redux/store';
 import { ViewModeEnum } from '../../constants/ViewModeEnum';
 import {
     clearLogContent,
+    clearFormatChangeRequest,
     getFileHandle,
     getFileObject,
     setIndexingState,
@@ -12,11 +13,14 @@ import {
     updateLogContent,
 } from '../../redux/slices/logFileSlice';
 import { setAnomalyResults } from '../../redux/slices/anomalySlice';
+import { enqueueNotification } from '../../redux/slices/notificationsSlice';
 import {
+    buildCustomFormatPattern,
     detectLogFormat,
     getFormatFields,
     getLogFormatById,
     parseLogLineAuto,
+    registerCustomLogFormat,
     type LogFormatField,
     type ParsedLogLine,
 } from '../../utils/logFormatDetector';
@@ -26,9 +30,11 @@ import { useFileLoader } from '../../hooks/useFileLoader';
 import { useParsedRowsCache } from '../../hooks/useParsedRowsCache';
 import {
     getDashboardSnapshot,
+    getSession,
     getLinesRange,
     getSessionLineCount,
     queryFilteredLines,
+    upsertCustomLogFormat,
     upsertSession,
 } from '../../utils/logIndexedDb';
 import { appendLogFileToIndex } from '../../utils/logIndexer';
@@ -135,6 +141,25 @@ type RemoteFilterMergeResult = {
 type BuildLineIndexOptions = {
     onProgress?: (offsets: LineIndex, lineCount: number) => void;
     isCancelled?: () => boolean;
+};
+
+type UnknownFormatDialogState = {
+    open: boolean;
+    previewLines: string[];
+};
+
+type UnknownFormatConfirmDialogState = {
+    open: boolean;
+    fileName: string;
+    fileSize: number;
+    previewText: string;
+    previewLines: string[];
+};
+
+type FormatChangeDialogState = {
+    open: boolean;
+    message: string;
+    nextFormatId: string;
 };
 
 const largeFileViewCache = new Map<string, LargeFileViewCacheEntry>();
@@ -287,6 +312,7 @@ export const useViewLogsController = () => {
         content,
         name: fileName,
         format,
+        requestedFormatId,
         isMonitoring,
         hasFileHandle,
         size: fileSize,
@@ -333,6 +359,25 @@ export const useViewLogsController = () => {
     const [isRemoteServerDisconnected, setIsRemoteServerDisconnected] = useState(false);
     const [serverUploadInProgress, setServerUploadInProgress] = useState(false);
     const [serverUploadProgress, setServerUploadProgress] = useState(0);
+    const [formatChangeInProgress, setFormatChangeInProgress] = useState(false);
+    const [customFormatDialogState, setCustomFormatDialogState] = useState<UnknownFormatDialogState>({
+        open: false,
+        previewLines: [],
+    });
+    const [confirmDialogState, setConfirmDialogState] = useState<UnknownFormatConfirmDialogState>({
+        open: false,
+        fileName: '',
+        fileSize: 0,
+        previewText: '',
+        previewLines: [],
+    });
+    const [formatChangeDialogState, setFormatChangeDialogState] = useState<FormatChangeDialogState>({
+        open: false,
+        message: '',
+        nextFormatId: 'unknown',
+    });
+    const pendingUnknownFormatResolverRef = useRef<((resolution: { mode: 'continue-unknown' | 'use-format'; formatId?: string }) => void) | null>(null);
+    const pendingFormatChangeResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
     const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
     const [dbVirtualWindowStart, setDbVirtualWindowStart] = useState<number>(0);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
@@ -358,12 +403,31 @@ export const useViewLogsController = () => {
         hasMoreNewer: false,
         isLoading: false,
     });
+    const resolveUnknownFormat = useCallback(async (context: {
+        fileName: string;
+        fileSize: number;
+        previewText: string;
+        previewLines: string[];
+    }) => {
+        return await new Promise<{ mode: 'continue-unknown' | 'use-format'; formatId?: string }>((resolve) => {
+            pendingUnknownFormatResolverRef.current = resolve;
+            setConfirmDialogState({
+                open: true,
+                fileName: context.fileName,
+                fileSize: context.fileSize,
+                previewText: context.previewText,
+                previewLines: context.previewLines,
+            });
+        });
+    }, []);
+
     const {
         indexing,
         handleFileInputChange,
         handleFileSystemAccess,
         handleFileSystemAccessForMonitoring,
-    } = useFileLoader();
+        reloadCurrentFileWithFormat,
+    } = useFileLoader({ resolveUnknownFormat });
 
     const largeFileCacheKey = analyticsSessionId || `${fileName}|${fileSize}`;
 
@@ -400,8 +464,89 @@ export const useViewLogsController = () => {
 
             clearParsedRowCache();
             largeFileViewCache.clear();
+
+            if (pendingUnknownFormatResolverRef.current) {
+                pendingUnknownFormatResolverRef.current({ mode: 'continue-unknown' });
+                pendingUnknownFormatResolverRef.current = null;
+            }
         };
     }, [clearParsedRowCache]);
+
+    const closeUnknownFormatDialog = useCallback(() => {
+        setCustomFormatDialogState({ open: false, previewLines: [] });
+
+        if (pendingUnknownFormatResolverRef.current) {
+            pendingUnknownFormatResolverRef.current({ mode: 'continue-unknown' });
+            pendingUnknownFormatResolverRef.current = null;
+        }
+    }, []);
+
+    const handleFormatChangeDialogConfirm = useCallback(() => {
+        setFormatChangeDialogState({ open: false, message: '', nextFormatId: 'unknown' });
+        pendingFormatChangeResolverRef.current?.(true);
+        pendingFormatChangeResolverRef.current = null;
+    }, []);
+
+    const handleFormatChangeDialogCancel = useCallback(() => {
+        setFormatChangeDialogState({ open: false, message: '', nextFormatId: 'unknown' });
+        pendingFormatChangeResolverRef.current?.(false);
+        pendingFormatChangeResolverRef.current = null;
+    }, []);
+
+    const handleConfirmDialogConfirm = useCallback(() => {
+        setConfirmDialogState({
+            open: false,
+            fileName: '',
+            fileSize: 0,
+            previewText: '',
+            previewLines: [],
+        });
+        setCustomFormatDialogState({
+            open: true,
+            previewLines: confirmDialogState.previewLines,
+        });
+    }, [confirmDialogState.previewLines]);
+
+    const handleConfirmDialogCancel = useCallback(() => {
+        setConfirmDialogState({
+            open: false,
+            fileName: '',
+            fileSize: 0,
+            previewText: '',
+            previewLines: [],
+        });
+
+        if (pendingUnknownFormatResolverRef.current) {
+            pendingUnknownFormatResolverRef.current({ mode: 'continue-unknown' });
+            pendingUnknownFormatResolverRef.current = null;
+        }
+    }, []);
+
+    const handleCreateCustomFormatForUnknown = useCallback(async (payload: {
+        name: string;
+        description: string;
+        regex: string;
+    }) => {
+        const saved = await upsertCustomLogFormat({
+            id: `user-${Date.now()}`,
+            name: payload.name,
+            description: payload.description,
+            regex: payload.regex,
+        });
+
+        const runtimeFormat = buildCustomFormatPattern(saved);
+        if (!runtimeFormat) {
+            throw new Error('Не удалось зарегистрировать формат. Проверьте регулярное выражение.');
+        }
+
+        registerCustomLogFormat(runtimeFormat);
+
+        const resolver = pendingUnknownFormatResolverRef.current;
+        pendingUnknownFormatResolverRef.current = null;
+        setCustomFormatDialogState({ open: false, previewLines: [] });
+
+        resolver?.({ mode: 'use-format', formatId: saved.id });
+    }, []);
 
     const anomalyStorageKey = useMemo(() => {
         if (analyticsSessionId) {
@@ -431,6 +576,11 @@ export const useViewLogsController = () => {
     const isStreamView = !isRemoteLargeSession && (isLargeFile || isIndexing);
     const requiresServerUpload = isLargeFile && !isRemoteLargeSession;
     const isServerUploadActive = requiresServerUpload && isIndexing;
+    const normalizedFormatId = (format || '').trim() || 'unknown';
+    const isFormatUnknown = normalizedFormatId === 'unknown';
+    const uploadDisabledReason = requiresServerUpload && isFormatUnknown
+        ? 'Выберите формат логов'
+        : '';
     const isDbView = !isStreamView && Boolean(analyticsSessionId);
     const smallFileTotalRows = useMemo(() => countPhysicalLines(content ?? ''), [content]);
     const totalRowsHintForAnomaly = useMemo(() => {
@@ -671,8 +821,108 @@ export const useViewLogsController = () => {
         isLargeFile,
     ]);
 
+    const handleFormatChange = useCallback(async (nextFormatIdRaw: string) => {
+        const nextFormatId = (nextFormatIdRaw || '').trim() || 'unknown';
+        if (!loaded || nextFormatId === normalizedFormatId) {
+            return;
+        }
+
+        if (nextFormatId !== 'unknown' && !getLogFormatById(nextFormatId)) {
+            dispatch(enqueueNotification({
+                message: 'Выбранный формат не найден.',
+                severity: 'error',
+            }));
+            return;
+        }
+
+        let confirmationMessage = 'Вы уверены, что хотите сменить формат логов?';
+
+        if (isRemoteLargeSession && analyticsSessionId.startsWith('remote:')) {
+            confirmationMessage = 'Смена формата приведет к удалению загруженных данных на сервере и повторной загрузке файла. Вы уверены, что хотите сменить формат?';
+        } else if (analyticsSessionId) {
+            const session = await getSession(analyticsSessionId);
+            const hasIndexedData = Boolean(session && (session.lineCount > 0 || isIndexing));
+            confirmationMessage = hasIndexedData
+                ? 'Смена формата приведет к удалению данных в IndexedDB и повторной индексации файла. Вы уверены, что хотите сменить формат?'
+                : 'Вы уверены, что хотите сменить формат логов?';
+        }
+
+        const confirmed = await new Promise<boolean>((resolve) => {
+            pendingFormatChangeResolverRef.current = resolve;
+            setFormatChangeDialogState({
+                open: true,
+                message: confirmationMessage,
+                nextFormatId,
+            });
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        setFormatChangeInProgress(true);
+
+        try {
+            if (isRemoteLargeSession && analyticsSessionId.startsWith('remote:')) {
+                const ingestId = analyticsSessionId.slice('remote:'.length);
+                if (ingestId) {
+                    await deleteRemoteIngest(ingestId);
+                }
+            }
+
+            const reloaded = await reloadCurrentFileWithFormat(nextFormatId);
+            if (!reloaded) {
+                dispatch(enqueueNotification({
+                    message: 'Не удалось переоткрыть файл для смены формата.',
+                    severity: 'error',
+                }));
+                return;
+            }
+
+            if (isRemoteLargeSession) {
+                dispatch(enqueueNotification({
+                    message: 'Формат изменен. Выполните повторную загрузку файла на сервер.',
+                    severity: 'warning',
+                }));
+            }
+        } catch (error) {
+            console.error('Failed to change log format:', error);
+            dispatch(enqueueNotification({
+                message: 'Не удалось сменить формат логов.',
+                severity: 'error',
+            }));
+        } finally {
+            setFormatChangeInProgress(false);
+        }
+    }, [
+        analyticsSessionId,
+        dispatch,
+        isIndexing,
+        isRemoteLargeSession,
+        loaded,
+        normalizedFormatId,
+        reloadCurrentFileWithFormat,
+    ]);
+
+        useEffect(() => {
+            if (!requestedFormatId) {
+                return;
+            }
+
+            dispatch(clearFormatChangeRequest());
+            void handleFormatChange(requestedFormatId);
+        }, [dispatch, handleFormatChange, requestedFormatId]);
+
     const handleUploadToServer = useCallback(async () => {
         if (!requiresServerUpload || serverUploadInProgress) {
+            return;
+        }
+
+        if (isFormatUnknown) {
+            dispatch(enqueueNotification({
+                message: 'Выберите формат логов перед загрузкой на сервер.',
+                severity: 'warning',
+            }));
             return;
         }
 
@@ -770,6 +1020,13 @@ export const useViewLogsController = () => {
                 isLargeFile,
                 analyticsSessionId: remoteSessionId,
             }));
+
+            dispatch(enqueueNotification({
+                message: finishedLineCount > 0
+                    ? `Загрузка на сервер завершена: ${finishedLineCount.toLocaleString()} строк.`
+                    : 'Загрузка файла на сервер завершена.',
+                severity: 'success',
+            }));
         } catch (error) {
             remoteExpectedLineCountRef.current = 0;
             if ((error as Error).name !== 'AbortError') {
@@ -796,6 +1053,7 @@ export const useViewLogsController = () => {
         format,
         getActiveFile,
         hasFileHandle,
+        isFormatUnknown,
         isLargeFile,
         lastModified,
         requiresServerUpload,
@@ -2789,7 +3047,7 @@ export const useViewLogsController = () => {
         onManualRefresh: handleManualRefresh,
         autoRefresh,
         onToggleAutoRefresh: handleToggleAutoRefresh,
-        onUploadToServer: requiresServerUpload ? () => void handleUploadToServer() : undefined,
+        onUploadToServer: requiresServerUpload && !uploadDisabledReason ? () => void handleUploadToServer() : undefined,
         onCancelUploadToServer: isServerUploadActive ? handleCancelUploadToServer : undefined,
         viewMode,
         onViewModeChange: setViewMode,
@@ -2815,6 +3073,7 @@ export const useViewLogsController = () => {
             ? (serverUploadInProgress ? serverUploadProgress : indexingProgress)
             : 0,
         fileActionsDisabled: requiresServerUpload,
+        uploadDisabledReason,
     };
 
     const isTailLoadedMode = (
@@ -2866,6 +3125,26 @@ export const useViewLogsController = () => {
         toolbarProps,
         listProps,
         showEmptyFilteredState,
+        formatChangeDialog: {
+            open: formatChangeDialogState.open,
+            message: formatChangeDialogState.message,
+            onConfirm: handleFormatChangeDialogConfirm,
+            onCancel: handleFormatChangeDialogCancel,
+        },
+        confirmDialog: {
+            open: confirmDialogState.open,
+            fileName: confirmDialogState.fileName,
+            fileSize: confirmDialogState.fileSize,
+            previewText: confirmDialogState.previewText,
+            onConfirm: handleConfirmDialogConfirm,
+            onCancel: handleConfirmDialogCancel,
+        },
+        customFormatDialog: {
+            open: customFormatDialogState.open,
+            previewLines: customFormatDialogState.previewLines,
+            onClose: closeUnknownFormatDialog,
+            onSubmit: handleCreateCustomFormatForUnknown,
+        },
         isRemoteLargeSession,
         isDbView,
         requiresServerUpload,

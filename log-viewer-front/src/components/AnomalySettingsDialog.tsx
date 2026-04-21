@@ -26,6 +26,7 @@ import {
     setAnomalyRunning,
     setAnomalyStopped,
 } from '../redux/slices/anomalySlice';
+import { enqueueNotification } from '../redux/slices/notificationsSlice';
 import { deleteAnomalySnapshot } from '../utils/logIndexedDb';
 import {
     beginAnomalyPredictionSession,
@@ -345,6 +346,10 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     analysisScope: 'all',
                     timestampColumn: settings.timestampColumn,
                 },
+            }));
+            dispatch(enqueueNotification({
+                message: `Расчет аномалий завершен. Найдено аномальных строк: ${result.meta.anomaly_rows}.`,
+                severity: 'success',
             }));
         } catch (err) {
             if ((err as Error).name === 'AbortError') {
