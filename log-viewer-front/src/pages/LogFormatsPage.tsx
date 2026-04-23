@@ -2,9 +2,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import AddLogFormatDialog from '../components/log-patterns/AddLogFormatDialog';
 import IconButton from '@mui/material/IconButton';
-import AddIcon from '@mui/icons-material/Add';
+import Tooltip from '@mui/material/Tooltip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -88,6 +89,8 @@ const LogFormatsPage: React.FC = () => {
 
     const sortedSystemFormats = useMemo(() => [...systemFormats].sort((a, b) => a.name.localeCompare(b.name)), [systemFormats]);
     const sortedUserFormats = useMemo(() => [...userFormats].sort((a, b) => a.name.localeCompare(b.name)), [userFormats]);
+    const nameColumnSx = { width: 130, minWidth: 130, verticalAlign: 'top' };
+    const descriptionColumnSx = { width: 240, minWidth: 240, verticalAlign: 'top' };
 
     const handleSaveFormat = useCallback(async (payload: { name: string; description: string; regex: string }) => {
         const id = editingFormat?.id ?? `user-${Date.now()}`;
@@ -159,16 +162,18 @@ const LogFormatsPage: React.FC = () => {
                 >
                     Custom Formats
                 </Typography>
-                <IconButton
-                    color="primary"
+                <Button
+                    variant="outlined"
+                    size="small"
+                    sx={{ textTransform: 'none' }}
+                    startIcon={<AddIcon />}
                     onClick={() => {
                         setEditingFormat(null);
                         setAddOpen(true);
                     }}
-                    size="large"
                 >
-                    <AddIcon />
-                </IconButton>
+                    Add custom format
+                </Button>
             </Box>
             <TableContainer
                 component={Paper}
@@ -177,10 +182,10 @@ const LogFormatsPage: React.FC = () => {
                 <Table size="small">
                     <TableHead>
                         <TableRow>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Description</TableCell>
+                            <TableCell sx={nameColumnSx}>Name</TableCell>
+                            <TableCell sx={descriptionColumnSx}>Description</TableCell>
                             <TableCell>Regular Expressions</TableCell>
-                            <TableCell>Actions</TableCell>
+                            <TableCell sx={{ width: 64, minWidth: 64 }}>Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -197,29 +202,37 @@ const LogFormatsPage: React.FC = () => {
                         ) : (
                             sortedUserFormats.map((format) => (
                                 <TableRow key={format.id}>
-                                    <TableCell>{format.name}</TableCell>
-                                    <TableCell>{format.description}</TableCell>
-                                    <TableCell>
-                                        <div style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{format.regex}</div>
+                                    <TableCell sx={nameColumnSx}>{format.name}</TableCell>
+                                    <TableCell sx={descriptionColumnSx}>{format.description}</TableCell>
+                                    <TableCell sx={{ verticalAlign: 'top' }}>
+                                        <RegexHighlighter pattern={format.regex} />
                                     </TableCell>
-                                    <TableCell>
-                                        <Button
-                                            size="small"
-                                            color="primary"
-                                            onClick={() => {
-                                                setEditingFormat(format);
-                                                setAddOpen(true);
-                                            }}
-                                            startIcon={<EditIcon fontSize="small" />}
-                                        >Edit
-                                        </Button>
-                                        <Button
-                                            size="small"
-                                            color="error"
-                                            onClick={() => handleDeleteRequest(format)}
-                                            startIcon={<DeleteIcon fontSize="small" />}
-                                        >Delete
-                                        </Button>
+                                    <TableCell sx={{ width: 64, minWidth: 64, verticalAlign: 'top' }}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                                            <Tooltip title="Edit" arrow>
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    aria-label="Edit custom format"
+                                                    onClick={() => {
+                                                        setEditingFormat(format);
+                                                        setAddOpen(true);
+                                                    }}
+                                                >
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete" arrow>
+                                                <IconButton
+                                                    size="small"
+                                                    color="error"
+                                                    aria-label="Delete custom format"
+                                                    onClick={() => handleDeleteRequest(format)}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -283,16 +296,16 @@ const LogFormatsPage: React.FC = () => {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Description</TableCell>
+                                <TableCell sx={nameColumnSx}>Name</TableCell>
+                                <TableCell sx={descriptionColumnSx}>Description</TableCell>
                                 <TableCell>Regular Expressions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {sortedSystemFormats.map((format) => (
                                 <TableRow key={format.id}>
-                                    <TableCell sx={{ verticalAlign: 'top' }}>{format.name}</TableCell>
-                                    <TableCell sx={{ verticalAlign: 'top' }}>{format.description}</TableCell>
+                                    <TableCell sx={nameColumnSx}>{format.name}</TableCell>
+                                    <TableCell sx={descriptionColumnSx}>{format.description}</TableCell>
                                     <TableCell sx={{ verticalAlign: 'top' }}>
                                         {format.patterns.map((pattern, i) => (
                                             <Box 

@@ -73,9 +73,13 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
             isLargeFile,
             analyticsSessionId: '',
         }));
-        if (currentSessionId) {
-            cancelIndexing(currentSessionId);
-            await deleteSessionData(currentSessionId);
+        const sessionIdToCancel = activeSessionIdRef.current || currentSessionId;
+        if (sessionIdToCancel) {
+            cancelIndexing(sessionIdToCancel);
+            await deleteSessionData(sessionIdToCancel);
+            if (activeSessionIdRef.current === sessionIdToCancel) {
+                activeSessionIdRef.current = null;
+            }
         }
 
         try {
@@ -182,10 +186,11 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                         console.error('Indexing failed:', error);
                     }
                 }).finally(() => {
+                    clearIndexingController(session.sessionId);
+
                     if (loadToken !== loadTokenRef.current) {
                         return;
                     }
-                    clearIndexingController(session.sessionId);
                     setIndexing(false);
                     dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
                 });

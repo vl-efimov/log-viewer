@@ -1,5 +1,8 @@
-import React from 'react';
-import { Box } from '@mui/material';
+import React, { useCallback } from 'react';
+import { Box, IconButton, Tooltip } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { useDispatch } from 'react-redux';
+import { enqueueNotification } from '../../redux/slices/notificationsSlice';
 
 interface RegexHighlighterProps {
     pattern: string;
@@ -10,6 +13,41 @@ interface RegexHighlighterProps {
  * Colors similar to VS Code regex highlighting
  */
 const RegexHighlighter: React.FC<RegexHighlighterProps> = ({ pattern }) => {
+    const dispatch = useDispatch();
+
+    const copyPatternToClipboard = useCallback(async () => {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(pattern);
+            } else {
+                const textArea = document.createElement('textarea');
+                textArea.value = pattern;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const copied = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (!copied) {
+                    throw new Error('Copy command failed');
+                }
+            }
+
+            dispatch(enqueueNotification({
+                message: 'Скопировано в буфер обмена',
+                severity: 'success',
+                autoHideDuration: 2500,
+            }));
+        } catch {
+            dispatch(enqueueNotification({
+                message: 'Не удалось скопировать в буфер обмена',
+                severity: 'error',
+            }));
+        }
+    }, [dispatch, pattern]);
+
     const tokenize = (regex: string): Array<{ text: string; type: string }> => {
         const tokens: Array<{ text: string; type: string }> = [];
         let i = 0;
@@ -162,18 +200,57 @@ const RegexHighlighter: React.FC<RegexHighlighterProps> = ({ pattern }) => {
         <Box
             component="pre"
             sx={{
+                position: 'relative',
                 fontFamily: '"Consolas", "Courier New", monospace',
                 fontSize: '0.85em',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 overflowWrap: 'break-word',
                 margin: 0,
-                padding: 1,
+                p: 1,
+                pr: 5,
                 backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
                 borderRadius: 1,
                 lineHeight: 1.4,
+                '& .regex-copy-button': {
+                    opacity: 0,
+                    pointerEvents: 'none',
+                    transition: 'opacity 0.15s ease',
+                },
+                '&:hover .regex-copy-button, &:focus-within .regex-copy-button': {
+                    opacity: 1,
+                    pointerEvents: 'auto',
+                },
             }}
         >
+            <Tooltip title="Копировать" arrow>
+                <IconButton
+                    size="small"
+                    className="regex-copy-button"
+                    onClick={(event) => {
+                        const target = event.currentTarget;
+                        event.stopPropagation();
+                        void copyPatternToClipboard().finally(() => {
+                            target.blur();
+                        });
+                    }}
+                    sx={{
+                        position: 'absolute',
+                        top: 3,
+                        right: 3,
+                        width: 20,
+                        height: 20,
+                        p: 0.25,
+                        bgcolor: (theme) => theme.palette.background.paper,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                        '&:hover': {
+                            bgcolor: (theme) => theme.palette.action.hover,
+                        },
+                    }}
+                >
+                    <ContentCopyIcon sx={{ fontSize: 12 }} />
+                </IconButton>
+            </Tooltip>
             {tokens.map((token, index) => (
                 <Box
                     key={index}

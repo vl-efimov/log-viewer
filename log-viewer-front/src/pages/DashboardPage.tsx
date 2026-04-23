@@ -287,42 +287,23 @@ const normalizeDashboardSampledLines = (input: unknown): ParsedRow[] => {
                 parsedFields.timestamp = source.timestamp_iso;
             }
 
+            const hasParsedFields = Object.keys(parsedFields).length > 0;
+
             return {
                 lineNumber,
                 raw,
-                parsed: {
-                    formatId,
-                    fields: parsedFields,
-                    raw,
-                },
+                parsed: hasParsedFields
+                    ? {
+                        formatId,
+                        fields: parsedFields,
+                        raw,
+                    }
+                    : null,
             };
         })
         .filter((row): row is ParsedRow => row !== null);
 
-    const hasAnyTimestamp = normalizedRows.some((row) => Boolean(row.parsed?.fields.timestamp));
-    if (hasAnyTimestamp) {
-        return normalizedRows;
-    }
-
-    const syntheticBaseMs = Date.now();
-    return normalizedRows.map((row, index) => {
-        const parsed = row.parsed;
-        if (!parsed) {
-            return row;
-        }
-
-        return {
-            ...row,
-            parsed: {
-                ...parsed,
-                fields: {
-                    ...parsed.fields,
-                    // Fallback timeline for remote snapshots without timestamp parsing.
-                    timestamp: new Date(syntheticBaseMs + index * 1000).toISOString(),
-                },
-            },
-        };
-    });
+    return normalizedRows;
 };
 
 const resolveLocale = (language: string): string => {
@@ -619,59 +600,11 @@ const buildDistributionsFromRows = (rows: ParsedRow[], locale: string): Pick<Nor
     };
 };
 
-const createStableSyntheticBaseMs = (seed: string): number => {
-    let hash = 0;
-    for (let i = 0; i < seed.length; i += 1) {
-        hash = ((hash * 31) + seed.charCodeAt(i)) >>> 0;
-    }
-
-    const dayMs = 24 * 60 * 60 * 1000;
-    const anchorMs = Date.UTC(2020, 0, 1);
-    return anchorMs + ((hash % 365) * dayMs);
+const ensureTimelineTimestamps = (rows: ParsedRow[]): ParsedRow[] => {
+    return rows;
 };
 
-const ensureTimelineTimestamps = (rows: ParsedRow[], seed: string): ParsedRow[] => {
-    const hasRealTimestamps = rows.some((row) => row.parsed && extractTimestampFromParsedLine(row.parsed) !== null);
-    if (hasRealTimestamps) {
-        return rows;
-    }
-
-    const parsedCount = rows.reduce((acc, row) => acc + (row.parsed ? 1 : 0), 0);
-    if (parsedCount === 0) {
-        return rows;
-    }
-
-    const syntheticBaseMs = createStableSyntheticBaseMs(seed);
-    let parsedIndex = 0;
-
-    return rows.map((row) => {
-        if (!row.parsed) {
-            return row;
-        }
-
-        const existingTimestamp = row.parsed.fields.timestamp;
-        if (existingTimestamp && existingTimestamp.trim()) {
-            parsedIndex += 1;
-            return row;
-        }
-
-        const timestamp = new Date(syntheticBaseMs + (parsedIndex * 1000)).toISOString();
-        parsedIndex += 1;
-
-        return {
-            ...row,
-            parsed: {
-                ...row.parsed,
-                fields: {
-                    ...row.parsed.fields,
-                    timestamp,
-                },
-            },
-        };
-    });
-};
-
-const buildTimestampedRowsForWindow = (rows: ParsedRow[], seed: string): TimestampedDashboardRow[] => {
+const buildTimestampedRowsForWindow = (rows: ParsedRow[]): TimestampedDashboardRow[] => {
     if (rows.length === 0) {
         return [];
     }
@@ -693,12 +626,7 @@ const buildTimestampedRowsForWindow = (rows: ParsedRow[], seed: string): Timesta
         .sort((a, b) => a.lineNumber - b.lineNumber);
 
     if (explicitTimestamps.length === 0) {
-        const syntheticBaseMs = createStableSyntheticBaseMs(seed);
-        return rows.map((row, index) => ({
-            row,
-            timestampMs: syntheticBaseMs + (index * 1000),
-            isParsed: Boolean(row.parsed),
-        }));
+        return [];
     }
 
     const lowerBound = (lineNumber: number): number => {
@@ -715,7 +643,7 @@ const buildTimestampedRowsForWindow = (rows: ParsedRow[], seed: string): Timesta
         return left;
     };
 
-    return rows.map((row) => {
+    return rows.map((row): TimestampedDashboardRow | null => {
         const parsedTimestamp = row.parsed ? extractTimestampFromParsedLine(row.parsed) : null;
         if (parsedTimestamp !== null) {
             return {
@@ -738,8 +666,7 @@ const buildTimestampedRowsForWindow = (rows: ParsedRow[], seed: string): Timesta
         } else if (right) {
             estimatedTs = right.ts - ((right.lineNumber - row.lineNumber) * 1000);
         } else {
-            const syntheticBaseMs = createStableSyntheticBaseMs(seed);
-            estimatedTs = syntheticBaseMs;
+            return null;
         }
 
         return {
@@ -747,7 +674,7 @@ const buildTimestampedRowsForWindow = (rows: ParsedRow[], seed: string): Timesta
             timestampMs: estimatedTs,
             isParsed: Boolean(row.parsed),
         };
-    });
+    }).filter((item): item is TimestampedDashboardRow => item !== null);
 };
 
 const toChartOption = (
@@ -1132,12 +1059,12 @@ const DashboardPage: React.FC = () => {
 
     const histogramSourceLines = useMemo(() => {
         const sourceRows = useLocalLargeMode ? largeFileHistogramLines : analytics.parsedRows;
-        return ensureTimelineTimestamps(sourceRows, normalFileCacheKey);
-    }, [analytics.parsedRows, largeFileHistogramLines, normalFileCacheKey, useLocalLargeMode]);
+        return ensureTimelineTimestamps(sourceRows);
+    }, [analytics.parsedRows, largeFileHistogramLines, useLocalLargeMode]);
 
     const timestampedRowsAll = useMemo(() => {
-        return buildTimestampedRowsForWindow(histogramSourceLines, normalFileCacheKey);
-    }, [histogramSourceLines, normalFileCacheKey]);
+        return buildTimestampedRowsForWindow(histogramSourceLines);
+    }, [histogramSourceLines]);
 
     const timelineBounds = useMemo(() => {
         if (timestampedRowsAll.length === 0) {
@@ -1484,6 +1411,7 @@ const DashboardPage: React.FC = () => {
     const hasMethodChartData = chartAnalytics.methodValues.length > 0;
     const hasComponentLevelChartData = chartAnalytics.componentLevelValues.length > 0;
     const hasAnyTopChartData = hasLevelChartData || hasStatusChartData || hasMethodChartData || hasComponentLevelChartData;
+    const hasTimelineData = histogramSourceLines.some((row) => row.parsed && extractTimestampFromParsedLine(row.parsed) !== null);
     const topChartGridMd = hasComponentLevelChartData ? 3 : 4;
     const shouldShowBottomNoDataMessage = (
         (hasActiveTimeRange || hasActiveCategoryFilter)
@@ -1674,64 +1602,66 @@ const DashboardPage: React.FC = () => {
 
                 {!isLargeScanPending && !isNormalSnapshotLoading && (
                     <>
-                        <Card>
-                            <CardContent>
-                                {useLocalLargeMode && isHistogramLoading ? (
-                                    <Box
-                                        sx={{
-                                            height: 160,
-                                            borderRadius: 1,
-                                            border: (theme) => `1px solid ${theme.palette.divider}`,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: 2,
-                                            backgroundColor: (theme) => theme.palette.background.paper,
-                                        }}
-                                    >
-                                        <CircularProgress size={24} />
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
+                        {((useLocalLargeMode && isHistogramLoading) || hasTimelineData) && (
+                            <Card>
+                                <CardContent>
+                                    {useLocalLargeMode && isHistogramLoading ? (
+                                        <Box
+                                            sx={{
+                                                height: 160,
+                                                borderRadius: 1,
+                                                border: (theme) => `1px solid ${theme.palette.divider}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: 2,
+                                                backgroundColor: (theme) => theme.palette.background.paper,
+                                            }}
                                         >
-                                            {t('dashboard.histogramBuilding', { progress: histogramProgress })}
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <LogHistogram
-                                        parsedLines={histogramSourceLines}
-                                        onTimeRangeChange={(startTime, endTime) => {
-                                            applyTimeRangeSelection(startTime, endTime);
-                                        }}
-                                        onCategoryFilterChange={(payload) => {
-                                            setHistogramCategoryFilter((prev) => {
-                                                const prevSelected = prev.selectedCategories;
-                                                const nextSelected = payload.selectedCategories;
-                                                const sameField = prev.field === payload.field;
-                                                const sameSelection = (
-                                                    (prevSelected === null && nextSelected === null)
-                                                    || (
-                                                        prevSelected !== null
-                                                        && nextSelected !== null
-                                                        && prevSelected.length === nextSelected.length
-                                                        && prevSelected.every((value, index) => value === nextSelected[index])
-                                                    )
-                                                );
+                                            <CircularProgress size={24} />
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                {t('dashboard.histogramBuilding', { progress: histogramProgress })}
+                                            </Typography>
+                                        </Box>
+                                    ) : (
+                                        <LogHistogram
+                                            parsedLines={histogramSourceLines}
+                                            onTimeRangeChange={(startTime, endTime) => {
+                                                applyTimeRangeSelection(startTime, endTime);
+                                            }}
+                                            onCategoryFilterChange={(payload) => {
+                                                setHistogramCategoryFilter((prev) => {
+                                                    const prevSelected = prev.selectedCategories;
+                                                    const nextSelected = payload.selectedCategories;
+                                                    const sameField = prev.field === payload.field;
+                                                    const sameSelection = (
+                                                        (prevSelected === null && nextSelected === null)
+                                                        || (
+                                                            prevSelected !== null
+                                                            && nextSelected !== null
+                                                            && prevSelected.length === nextSelected.length
+                                                            && prevSelected.every((value, index) => value === nextSelected[index])
+                                                        )
+                                                    );
 
-                                                if (sameField && sameSelection) {
-                                                    return prev;
-                                                }
+                                                    if (sameField && sameSelection) {
+                                                        return prev;
+                                                    }
 
-                                                return {
-                                                    field: payload.field,
-                                                    selectedCategories: nextSelected ? [...nextSelected] : null,
-                                                };
-                                            });
-                                        }}
-                                    />
-                                )}
-                            </CardContent>
-                        </Card>
+                                                    return {
+                                                        field: payload.field,
+                                                        selectedCategories: nextSelected ? [...nextSelected] : null,
+                                                    };
+                                                });
+                                            }}
+                                        />
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {hasAnyTopChartData && (
                             <Box sx={{ position: 'relative' }}>

@@ -2351,32 +2351,7 @@ export const useViewLogsController = () => {
                     parsed,
                 }];
             });
-
-            const hasAnyTimestamp = normalized.some((line) => Boolean(line.parsed?.fields.timestamp));
-            if (hasAnyTimestamp) {
-                setIndexedHistogramLines(normalized);
-                return;
-            }
-
-            const syntheticBaseMs = Date.now();
-            setIndexedHistogramLines(
-                normalized.map((line, index) => {
-                    if (!line.parsed) {
-                        return line;
-                    }
-
-                    return {
-                        ...line,
-                        parsed: {
-                            ...line.parsed,
-                            fields: {
-                                ...line.parsed.fields,
-                                timestamp: new Date(syntheticBaseMs + index * 1000).toISOString(),
-                            },
-                        },
-                    };
-                }),
-            );
+            setIndexedHistogramLines(normalized);
         };
 
         void loadHistogramSample().finally(() => {

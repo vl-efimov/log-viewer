@@ -6,7 +6,7 @@ import { APP_LAYOUT_TOKENS } from '../../design-tokens';
 const { hoverBg: HOVER_BG } = APP_LAYOUT_TOKENS.statusBar;
 
 type AppStatusBarItemProps = {
-    title: string;
+    title: React.ReactNode;
     children: React.ReactNode;
     onClick?: () => void;
     disabled?: boolean;
@@ -37,10 +37,12 @@ const AppStatusBarItem: React.FC<AppStatusBarItemProps> = ({ title, children, on
                 height: '100%',
                 transition: 'background 0.15s',
                 cursor: onClick && !disabled ? 'pointer' : 'default',
-                opacity: disabled ? 0.6 : 1,
-                '&:hover': {
-                    background: HOVER_BG,
-                },
+                opacity: 1,
+                '&:hover': onClick && !disabled
+                    ? {
+                        background: HOVER_BG,
+                    }
+                    : undefined,
             }}
         >
             {children}

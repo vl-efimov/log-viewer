@@ -66,9 +66,8 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
     // Determine field types based on field definitions
     const isDateTimeField = (field: LogFormatField) => {
-        // Only full datetime fields should get date range filters
-        // Separate date/time fields should be treated as text
-        return field.type === 'datetime' && ['timestamp', 'datetime'].includes(field.name.toLowerCase());
+        // Any field declared as datetime should render as a date-range control.
+        return field.type === 'datetime';
     };
 
     const isLevelField = (field: LogFormatField) => {
@@ -370,31 +369,34 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
         </Box>
     );
 
+    const isNoFilterState = visibleFieldDefinitions.length === 0 && !anomalyFilterEnabled;
+
     const content = (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            {/* Render filters in format field order */}
-            {visibleFieldDefinitions.length === 0 && !anomalyFilterEnabled ? (
+            {isNoFilterState ? (
                 <Typography
                     variant="body2"
                     color="text.secondary"
                 >
-                    No filters available. Format detection in progress...
+                    Фильтрация для неопознанного формата невозможна.
+                    <br />
+                    Выберите один из доступных форматов или создайте свой собственный.
                 </Typography>
             ) : (
                 <>
                     {visibleFieldDefinitions.map(field => renderFieldFilter(field))}
                     {renderAnomalyFilter()}
+                    <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
+                        <Chip
+                            label="Apply"
+                            color="primary"
+                            onClick={handleApplyFilters}
+                            clickable
+                            sx={{ height: 32 }}
+                        />
+                    </Box>
                 </>
             )}
-            <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
-                <Chip
-                    label="Apply"
-                    color="primary"
-                    onClick={handleApplyFilters}
-                    clickable
-                    sx={{ height: 32 }}
-                />
-            </Box>
         </Box>
     );
 

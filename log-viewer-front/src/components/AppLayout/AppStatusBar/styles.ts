@@ -30,6 +30,11 @@ export const statusBarLeftGroupSx: SxProps<Theme> = {
     gap: GROUP_GAP,
 };
 
+export const statusBarRightGroupSx: SxProps<Theme> = {
+    ...statusBarLeftGroupSx,
+    minWidth: 0,
+};
+
 export const statusBarDividerSx: SxProps<Theme> = {
     borderColor: STATUS_BAR_TEXT,
     height: DIVIDER_HEIGHT,

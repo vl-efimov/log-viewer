@@ -1,17 +1,22 @@
 import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
 import LinearProgress from '@mui/material/LinearProgress';
 import CircularProgress from '@mui/material/CircularProgress';
-import Popover from '@mui/material/Popover';
-import MenuItem from '@mui/material/MenuItem';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CloseIcon from '@mui/icons-material/Close';
 import StorageIcon from '@mui/icons-material/Storage';
 import DataObjectIcon from '@mui/icons-material/DataObject';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RootState } from '../../../redux/store';
@@ -29,6 +34,7 @@ import {
     iconRaisedSx,
     statusBarIconSx,
     statusBarLeftGroupSx,
+    statusBarRightGroupSx,
     statusBarSx,
     textSx,
 } from './styles';
@@ -46,7 +52,7 @@ type AnomalyStatusText = {
     compact: string;
     full: string;
     detailsCompact?: string;
-    detailsFull?: string;
+    detailsFull?: React.ReactNode;
     showSpinner?: boolean;
 };
 
@@ -93,8 +99,9 @@ const AppStatusBar: React.FC = () => {
     const normalizedFormatId = (format || '').trim() || 'unknown';
     const formatDisplayName = getLogFormatById(normalizedFormatId)?.name ?? normalizedFormatId;
     const formatChangeDisabled = !isViewLogsRoute || !loaded || isIndexing || isServerUploadInProgress;
-    const [formatAnchorEl, setFormatAnchorEl] = useState<HTMLElement | null>(null);
-    const isFormatMenuOpen = Boolean(formatAnchorEl);
+    const [isFormatDialogOpen, setIsFormatDialogOpen] = useState(false);
+    const [formatSearchQuery, setFormatSearchQuery] = useState('');
+    const formatSearchInputRef = useRef<HTMLInputElement | null>(null);
     const availableFormatOptions = getAvailableLogFormats()
         .slice()
         .sort((left, right) => left.name.localeCompare(right.name))
@@ -108,21 +115,60 @@ const AppStatusBar: React.FC = () => {
         availableFormatOptions.unshift({ id: normalizedFormatId, name: formatDisplayName });
     }
 
-    const handleFormatMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    const orderedFormatOptions = useMemo(() => {
+        const currentOption = availableFormatOptions.find((option) => option.id === normalizedFormatId);
+        const otherOptions = availableFormatOptions.filter((option) => option.id !== normalizedFormatId);
+
+        return currentOption ? [currentOption, ...otherOptions] : availableFormatOptions;
+    }, [availableFormatOptions, normalizedFormatId]);
+
+    const filteredFormatOptions = useMemo(() => {
+        const normalizedQuery = formatSearchQuery.trim().toLocaleLowerCase();
+        if (!normalizedQuery) {
+            return orderedFormatOptions;
+        }
+
+        return orderedFormatOptions.filter((option) => option.name.toLocaleLowerCase().includes(normalizedQuery));
+    }, [orderedFormatOptions, formatSearchQuery]);
+
+    const handleFormatDialogOpen = () => {
         if (formatChangeDisabled) {
             return;
         }
-        setFormatAnchorEl(event.currentTarget);
+        setFormatSearchQuery('');
+        setIsFormatDialogOpen(true);
     };
 
-    const handleFormatMenuClose = () => {
-        setFormatAnchorEl(null);
+    const handleFormatDialogClose = () => {
+        setIsFormatDialogOpen(false);
+        setFormatSearchQuery('');
     };
 
     const handleFormatSelect = (formatId: string) => {
         dispatch(requestFormatChange(formatId));
-        setFormatAnchorEl(null);
+        setIsFormatDialogOpen(false);
     };
+
+    useEffect(() => {
+        if (formatChangeDisabled) {
+            setIsFormatDialogOpen(false);
+        }
+    }, [formatChangeDisabled]);
+
+    useEffect(() => {
+        if (!isFormatDialogOpen) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            formatSearchInputRef.current?.focus();
+            formatSearchInputRef.current?.select();
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [isFormatDialogOpen]);
 
     useEffect(() => {
         if (!anomalyIsRunning) {
@@ -255,11 +301,33 @@ const AppStatusBar: React.FC = () => {
             const ratioText = anomalyTotalRows > 0
                 ? `${ratio.toFixed(2)}%`
                 : '--%';
+            const modeLabel = anomalyLastModelId.toUpperCase();
+            const threshold = anomalyLastRunParams.threshold;
+            const stepSize = anomalyLastRunParams.stepSize;
+            const minRegionLines = anomalyLastRunParams.minRegionLines;
             return {
                 compact: `Anomaly: ${ratioText}`,
                 full: `Anomaly rows: ${anomalyRowsCount} (${ratioText} of ${anomalyTotalRows})`,
-                detailsCompact: `${anomalyLastModelId.toUpperCase()} th ${anomalyLastRunParams.threshold} s ${anomalyLastRunParams.stepSize} r ${anomalyLastRunParams.minRegionLines}`,
-                detailsFull: `Model: ${anomalyLastModelId.toUpperCase()} | Params: threshold=${anomalyLastRunParams.threshold}, step=${anomalyLastRunParams.stepSize}, minRegion=${anomalyLastRunParams.minRegionLines}`,
+                detailsCompact: `${modeLabel} (${threshold}, ${stepSize}, ${minRegionLines})`,
+                detailsFull: (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, lineHeight: 1.2 }}>
+                        <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
+                            {`Model: ${modeLabel}`}
+                        </Typography>
+                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                            Parameters:
+                        </Typography>
+                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                            {`Threshold: ${threshold}`}
+                        </Typography>
+                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                            {`Step: ${stepSize}`}
+                        </Typography>
+                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                            {`Min Region: ${minRegionLines}`}
+                        </Typography>
+                    </Box>
+                ),
             };
         }
 
@@ -280,6 +348,17 @@ const AppStatusBar: React.FC = () => {
             dispatch(setAnomalyRunning({ running: false }));
         }
     };
+
+    const formatTooltipTitle = (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, lineHeight: 1.2 }}>
+            <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
+                Detected log format type
+            </Typography>
+            <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                Click this field to change format
+            </Typography>
+        </Box>
+    );
 
     return (
         <Box sx={statusBarSx}>
@@ -315,8 +394,8 @@ const AppStatusBar: React.FC = () => {
                         {format && (
                             <>
                                 <AppStatusBarItem
-                                    title="Detected log format type"
-                                    onClick={handleFormatMenuOpen}
+                                    title={formatTooltipTitle}
+                                    onClick={handleFormatDialogOpen}
                                     disabled={formatChangeDisabled}
                                 >
                                     <DataObjectIcon sx={statusBarIconSx} />
@@ -324,52 +403,73 @@ const AppStatusBar: React.FC = () => {
                                         {formatDisplayName}
                                     </Typography>
                                 </AppStatusBarItem>
-                                <Popover
-                                    open={isFormatMenuOpen}
-                                    anchorEl={formatAnchorEl}
-                                    onClose={handleFormatMenuClose}
-                                    anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-                                    transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                                <Dialog
+                                    open={isFormatDialogOpen}
+                                    onClose={handleFormatDialogClose}
+                                    maxWidth="sm"
+                                    fullWidth
                                     PaperProps={{
                                         sx: {
-                                            mt: -0.5,
-                                            minWidth: 220,
-                                            maxHeight: 320,
-                                            overflowY: 'auto',
+                                            maxWidth: 520,
                                         },
                                     }}
                                 >
-                                    {availableFormatOptions.map((formatOption) => (
-                                        <MenuItem
-                                            key={formatOption.id}
-                                            selected={formatOption.id === normalizedFormatId}
-                                            onClick={() => handleFormatSelect(formatOption.id)}
-                                        >
-                                            {formatOption.name}
-                                        </MenuItem>
-                                    ))}
-                                </Popover>
+                                    <DialogTitle>Выбор формата логов</DialogTitle>
+                                    <DialogContent sx={{ pt: 1 }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                                            Выберите формат для корректного парсинга и отображения полей в таблице.
+                                        </Typography>
+                                        <TextField
+                                            autoFocus
+                                            inputRef={formatSearchInputRef}
+                                            fullWidth
+                                            size="small"
+                                            label="Поиск формата"
+                                            placeholder="Введите название формата"
+                                            value={formatSearchQuery}
+                                            onChange={(event) => setFormatSearchQuery(event.target.value)}
+                                            sx={{ mb: 1.5 }}
+                                        />
+                                        <List sx={{ py: 0, maxHeight: 360, overflowY: 'auto' }}>
+                                            {filteredFormatOptions.map((formatOption) => (
+                                                <ListItemButton
+                                                    key={formatOption.id}
+                                                    selected={formatOption.id === normalizedFormatId}
+                                                    onClick={() => handleFormatSelect(formatOption.id)}
+                                                >
+                                                    <ListItemText
+                                                        primary={formatOption.name}
+                                                        secondary={formatOption.id === normalizedFormatId ? 'Текущий формат' : undefined}
+                                                    />
+                                                </ListItemButton>
+                                            ))}
+                                            {filteredFormatOptions.length === 0 && (
+                                                <ListItemText
+                                                    primary="Форматы не найдены"
+                                                    primaryTypographyProps={{ color: 'text.secondary', sx: { px: 2, py: 1 } }}
+                                                />
+                                            )}
+                                        </List>
+                                    </DialogContent>
+                                    <DialogActions sx={{ px: 3, pb: 2 }}>
+                                        <Button onClick={handleFormatDialogClose} variant="outlined">
+                                            Закрыть
+                                        </Button>
+                                    </DialogActions>
+                                </Dialog>
                             </>
                         )}
 
                     </>
                 )}
             </Box>
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                }}
-            >
+            <Box sx={statusBarRightGroupSx}>
                 {isIndexing && (
-                    <Tooltip
+                    <AppStatusBarItem
                         title={isServerUploadInProgress
                             ? `Идет загрузка на сервер ${indexingProgress}%`
                             : `Indexing ${indexingProgress}%`
                         }
-                        arrow
-                        placement="top"
                     >
                         <Box
                             sx={{
@@ -395,26 +495,22 @@ const AppStatusBar: React.FC = () => {
                                 }}
                             />
                         </Box>
-                    </Tooltip>
+                    </AppStatusBarItem>
                 )}
                 {anomalyStatus && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        {anomalyStatus.showSpinner && (
-                            <CircularProgress
-                                size={12}
-                                thickness={6}
-                                sx={{ color: 'inherit', opacity: 0.85 }}
-                            />
-                        )}
-                        <Tooltip
-                            title={anomalyStatus.full}
-                            arrow
-                            placement="top"
-                        >
+                    <>
+                        <AppStatusBarItem title={anomalyStatus.full}>
+                            {anomalyStatus.showSpinner && (
+                                <CircularProgress
+                                    size={12}
+                                    thickness={6}
+                                    sx={{ color: 'inherit', opacity: 0.85 }}
+                                />
+                            )}
                             <Typography sx={anomalyTextSx}>
                                 {anomalyStatus.compact}
                             </Typography>
-                        </Tooltip>
+                        </AppStatusBarItem>
                         {anomalyStatus.detailsCompact && (
                             <>
                                 <Divider
@@ -422,33 +518,29 @@ const AppStatusBar: React.FC = () => {
                                     flexItem
                                     sx={statusBarDividerSx}
                                 />
-                                <Tooltip
-                                    title={anomalyStatus.detailsFull ?? anomalyStatus.detailsCompact}
-                                    arrow
-                                    placement="top"
-                                >
+                                <AppStatusBarItem title={anomalyStatus.detailsFull ?? anomalyStatus.detailsCompact}>
                                     <Typography sx={anomalyTextSx}>
                                         {anomalyStatus.detailsCompact}
                                     </Typography>
-                                </Tooltip>
+                                </AppStatusBarItem>
                             </>
                         )}
                         {anomalyIsRunning && (
-                            <Tooltip
-                                title="Остановить расчет аномалий"
-                                arrow
-                                placement="top"
-                            >
-                                <IconButton
-                                    size="small"
-                                    sx={closeButtonSx}
+                            <>
+                                <Divider
+                                    orientation="vertical"
+                                    flexItem
+                                    sx={statusBarDividerSx}
+                                />
+                                <AppStatusBarItem
+                                    title="Остановить расчет аномалий"
                                     onClick={() => void handleCancelAnomaly()}
                                 >
-                                    <CloseIcon fontSize="inherit" />
-                                </IconButton>
-                            </Tooltip>
+                                    <CloseIcon sx={closeButtonSx} />
+                                </AppStatusBarItem>
+                            </>
                         )}
-                    </Box>
+                    </>
                 )}
             </Box>
         </Box>

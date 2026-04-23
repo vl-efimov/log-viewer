@@ -6,6 +6,7 @@ import {
     getRemoteLinesRange,
     queryRemoteFilteredLines,
 } from '../services/bglAnomalyApi';
+import { parseTimestamp } from './logTimestamp';
 
 const DB_NAME = 'log_viewer';
 const DB_VERSION = 3;
@@ -183,6 +184,47 @@ const normalizeFieldValue = (value: unknown): string | null => {
     }
 
     return trimmed;
+};
+
+const resolveTimestampMsFromRecord = (record: LogLineRecord): number | null => {
+    if (typeof record.timestampMs === 'number' && Number.isFinite(record.timestampMs)) {
+        return record.timestampMs;
+    }
+
+    const fields = record.fields || {};
+    const directCandidates = [fields.timestamp, fields.datetime];
+
+    for (const candidate of directCandidates) {
+        if (!candidate) {
+            continue;
+        }
+
+        const parsed = parseTimestamp(candidate);
+        if (parsed) {
+            return parsed.getTime();
+        }
+    }
+
+    if (fields.date && fields.time) {
+        const msPart = fields.milliseconds || fields.millisecond || fields.msec || fields.ms;
+        const combined = msPart
+            ? `${fields.date} ${fields.time},${msPart}`
+            : `${fields.date} ${fields.time}`;
+
+        const parsed = parseTimestamp(combined);
+        if (parsed) {
+            return parsed.getTime();
+        }
+    }
+
+    if (fields.date) {
+        const parsed = parseTimestamp(fields.date);
+        if (parsed) {
+            return parsed.getTime();
+        }
+    }
+
+    return null;
 };
 
 const transactionDone = (tx: IDBTransaction): Promise<void> => {
@@ -535,7 +577,7 @@ export const getLocalExactDashboardSnapshot = async (
                 const row = cursor.value as LogLineRecord;
 
                 if (hasTimeFilter) {
-                    const ts = row.timestampMs;
+                    const ts = resolveTimestampMsFromRecord(row);
                     if (ts == null) {
                         cursor.continue();
                         return;

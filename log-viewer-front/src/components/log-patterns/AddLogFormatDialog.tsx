@@ -58,7 +58,9 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [regex, setRegex] = useState('');
-    const [error, setError] = useState<string | null>(null);
+    const [nameError, setNameError] = useState<string | null>(null);
+    const [regexError, setRegexError] = useState<string | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [showHints, setShowHints] = useState(false);
 
@@ -70,7 +72,9 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         setName((initialValue?.name ?? '').trim());
         setDescription((initialValue?.description ?? '').trim());
         setRegex((initialValue?.regex ?? '').trim());
-        setError(null);
+        setNameError(null);
+        setRegexError(null);
+        setSubmitError(null);
         setSubmitting(false);
     }, [initialValue?.description, initialValue?.name, initialValue?.regex, open]);
 
@@ -252,20 +256,38 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         setName('');
         setDescription('');
         setRegex('');
-        setError(null);
+        setNameError(null);
+        setRegexError(null);
+        setSubmitError(null);
         setSubmitting(false);
         onClose();
     };
 
     const handleSubmit = async () => {
-        setError(null);
-        if (!name.trim() || !regex.trim()) {
-            setError('Name and regular expression are required.');
+        setNameError(null);
+        setRegexError(null);
+        setSubmitError(null);
+
+        const trimmedName = name.trim();
+        const trimmedRegex = regex.trim();
+
+        let hasValidationError = false;
+        if (!trimmedName) {
+            setNameError('Name is required.');
+            hasValidationError = true;
+        }
+
+        if (!trimmedRegex) {
+            setRegexError('Regular expression is required.');
+            hasValidationError = true;
+        }
+
+        if (hasValidationError) {
             return;
         }
 
         if (!regexValidation.valid) {
-            setError(regexValidation.error);
+            setRegexError(regexValidation.error ?? 'Invalid regular expression.');
             return;
         }
 
@@ -279,7 +301,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
             resetAndClose();
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Failed to save format.';
-            setError(message);
+            setSubmitError(message);
             setSubmitting(false);
         }
     };
@@ -288,25 +310,36 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         <Dialog
             open={open}
             onClose={resetAndClose}
-            maxWidth="md"
+            maxWidth={false}
             fullWidth
             PaperProps={{
                 sx: {
-                    maxWidth: 900,
+                    width: { xs: 'calc(100vw - 16px)', sm: '94vw' },
+                    maxWidth: { xs: 'calc(100vw - 16px)', sm: '94vw' },
+                    height: { xs: 'calc(100vh - 16px)', sm: '92vh' },
+                    maxHeight: { xs: 'calc(100vh - 16px)', sm: '92vh' },
+                    m: { xs: 1, sm: 2 },
                 },
             }}
         >
             <DialogTitle>{title}</DialogTitle>
-            <DialogContent>
+            <DialogContent sx={{ overflowY: 'auto' }}>
                 <TextField
                     autoFocus
                     margin="dense"
                     label="Name"
                     fullWidth
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={e => {
+                        setName(e.target.value);
+                        if (nameError) {
+                            setNameError(null);
+                        }
+                    }}
                     sx={{ mb: 2 }}
                     disabled={submitting}
+                    error={Boolean(nameError)}
+                    helperText={nameError}
                 />
                 <TextField
                     margin="dense"
@@ -324,10 +357,20 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                     multiline
                     minRows={2}
                     value={regex}
-                    onChange={e => setRegex(e.target.value)}
+                    onChange={e => {
+                        setRegex(e.target.value);
+                        if (regexError) {
+                            setRegexError(null);
+                        }
+                        if (submitError) {
+                            setSubmitError(null);
+                        }
+                    }}
                     sx={{ mb: 2 }}
                     placeholder={"e.g. ^(?<date>\\d{4}-\\d{2}-\\d{2}) (?<level>\\w+) (?<msg>.+)$"}
                     disabled={submitting}
+                    error={Boolean(regexError) || Boolean(submitError)}
+                    helperText={regexError ?? submitError}
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
                     <Button
@@ -433,7 +476,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 </Typography>
                             </Box>
                         ) : (
-                            <Box sx={{ maxHeight: 260, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                            <Box sx={{ maxHeight: { xs: '28vh', sm: '40vh' }, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
                                 {previewRows.map((row) => (
                                     <Box
                                         key={row.index}
@@ -500,16 +543,6 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                             </Box>
                         )}
                     </Box>
-                )}
-
-                {error && (
-                    <Typography
-                        color="error"
-                        variant="body2"
-                        sx={{ mt: 1 }}
-                    >
-                        {error}
-                    </Typography>
                 )}
             </DialogContent>
             <DialogActions>

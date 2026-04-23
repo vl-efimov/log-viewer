@@ -428,31 +428,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             }];
         });
 
-        const validLines: TimedParsedLine[] = parsedWithRealTimestamps.length > 0
-            ? parsedWithRealTimestamps
-            : (() => {
-                const parsedOnly = parsedLines.flatMap((line) => {
-                    if (!line.parsed) {
-                        return [] as Array<{ lineNumber: number; parsed: ParsedLogLine; raw: string }>;
-                    }
-
-                    return [{
-                        lineNumber: line.lineNumber,
-                        parsed: line.parsed,
-                        raw: line.raw,
-                    }];
-                });
-
-                if (parsedOnly.length === 0) {
-                    return [];
-                }
-
-                const syntheticBaseMs = Date.now();
-                return parsedOnly.map((line, index) => ({
-                    ...line,
-                    timestampMs: syntheticBaseMs + index * 1000,
-                }));
-            })();
+        const validLines: TimedParsedLine[] = parsedWithRealTimestamps;
 
         if (validLines.length === 0) {
             return { validLines: [], timeRange: null };

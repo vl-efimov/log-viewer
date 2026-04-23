@@ -109,40 +109,127 @@ function applyCanonicalFieldAliases(fields: Record<string, string>): Record<stri
     return next;
 }
 
-function normalizeParsedFields(formatId: string, rawFields: Record<string, string>): Record<string, string> {
-    const fields = { ...rawFields };
+const MONTH_TO_NUMBER: Record<string, string> = {
+    jan: '01',
+    feb: '02',
+    mar: '03',
+    apr: '04',
+    may: '05',
+    jun: '06',
+    jul: '07',
+    aug: '08',
+    sep: '09',
+    oct: '10',
+    nov: '11',
+    dec: '12',
+};
 
-    // Special handling for syslog: combine month, day, time into timestamp.
-    if (formatId === 'syslog' && fields.month && fields.day && fields.time) {
-        const currentYear = new Date().getFullYear();
-        const monthMap: Record<string, string> = {
-            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-            'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
-            'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-        };
-        const month = monthMap[fields.month] || '01';
-        const day = fields.day.padStart(2, '0');
-        fields.timestamp = `${currentYear}-${month}-${day} ${fields.time}`;
+function normalizeDateToken(value: string): string | null {
+    const date = value.trim();
+    if (!date) {
+        return null;
     }
 
-    // Special handling for HDFS v1: combine date (YYMMDD), time (HHMMSS), optional milliseconds.
-    if (formatId === 'hdfs-v1' && fields.date && fields.time) {
-        const yy = fields.date.substring(0, 2);
-        const mm = fields.date.substring(2, 4);
-        const dd = fields.date.substring(4, 6);
-        const year = parseInt(yy, 10) < 50 ? `20${yy}` : `19${yy}`;
+    const normalizedSeparators = date.replace(/[./]/g, '-');
+    const ymdMatch = normalizedSeparators.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymdMatch) {
+        const [, year, month, day] = ymdMatch;
+        return `${year}-${month}-${day}`;
+    }
 
-        const hh = fields.time.substring(0, 2);
-        const min = fields.time.substring(2, 4);
-        const ss = fields.time.substring(4, 6);
+    const compactYmdMatch = date.match(/^(\d{8})$/);
+    if (compactYmdMatch) {
+        const digits = compactYmdMatch[1];
+        return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+    }
 
-        const msRaw = (fields.milliseconds || fields.ms || '').trim();
-        if (msRaw) {
-            const ms = msRaw.padStart(3, '0').slice(0, 3);
-            fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}.${ms}`;
-        } else {
-            fields.timestamp = `${year}-${mm}-${dd} ${hh}:${min}:${ss}`;
+    const compactYyMmDd = date.match(/^(\d{6})$/);
+    if (compactYyMmDd) {
+        const digits = compactYyMmDd[1];
+        const yy = parseInt(digits.slice(0, 2), 10);
+        const year = yy < 50 ? `20${digits.slice(0, 2)}` : `19${digits.slice(0, 2)}`;
+        return `${year}-${digits.slice(2, 4)}-${digits.slice(4, 6)}`;
+    }
+
+    return null;
+}
+
+function normalizeTimeToken(value: string): string | null {
+    const time = value.trim();
+    if (!time) {
+        return null;
+    }
+
+    const hhmmss = time.match(/^(\d{2}):(\d{2}):(\d{2})([.,]\d{1,6})?$/);
+    if (hhmmss) {
+        const [, hh, mm, ss, fraction] = hhmmss;
+        if (!fraction) {
+            return `${hh}:${mm}:${ss}`;
         }
+
+        const digits = fraction.slice(1);
+        const millis = digits.padEnd(3, '0').slice(0, 3);
+        return `${hh}:${mm}:${ss}.${millis}`;
+    }
+
+    const compact = time.match(/^(\d{6})$/);
+    if (compact) {
+        const digits = compact[1];
+        return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4, 6)}`;
+    }
+
+    return null;
+}
+
+function buildSyntheticTimestamp(fields: Record<string, string>): string | null {
+    const existing = fields.timestamp?.trim() || fields.datetime?.trim();
+    if (existing) {
+        return null;
+    }
+
+    const monthRaw = fields.month?.trim();
+    const dayRaw = fields.day?.trim();
+    const timeRaw = fields.time?.trim();
+    if (monthRaw && dayRaw && timeRaw) {
+        const month = MONTH_TO_NUMBER[monthRaw.slice(0, 3).toLowerCase()];
+        const dayNumber = Number(dayRaw);
+        const normalizedTime = normalizeTimeToken(timeRaw);
+
+        if (month && Number.isFinite(dayNumber) && dayNumber >= 1 && dayNumber <= 31 && normalizedTime) {
+            const currentYear = String(new Date().getFullYear());
+            return `${currentYear}-${month}-${String(dayNumber).padStart(2, '0')} ${normalizedTime}`;
+        }
+    }
+
+    const dateRaw = fields.date?.trim();
+    if (!dateRaw || !timeRaw) {
+        return null;
+    }
+
+    const normalizedDate = normalizeDateToken(dateRaw);
+    const normalizedTime = normalizeTimeToken(timeRaw);
+    if (!normalizedDate || !normalizedTime) {
+        return null;
+    }
+
+    const alreadyHasFraction = normalizedTime.includes('.');
+    const msToken = (fields.milliseconds || fields.millisecond || fields.msec || fields.ms || '').trim();
+
+    if (!alreadyHasFraction && msToken && /^\d{1,6}$/.test(msToken)) {
+        const millis = msToken.padEnd(3, '0').slice(0, 3);
+        return `${normalizedDate} ${normalizedTime}.${millis}`;
+    }
+
+    return `${normalizedDate} ${normalizedTime}`;
+}
+
+function normalizeParsedFields(formatId: string, rawFields: Record<string, string>): Record<string, string> {
+    void formatId;
+    const fields = { ...rawFields };
+
+    const syntheticTimestamp = buildSyntheticTimestamp(fields);
+    if (syntheticTimestamp) {
+        fields.timestamp = syntheticTimestamp;
     }
 
     return applyCanonicalFieldAliases(fields);
@@ -200,6 +287,24 @@ function getFieldType(name: string): LogFormatField['type'] {
 function toCustomFormatPattern(format: StoredUserLogFormat): LogFormatPattern | null {
     try {
         const groups = extractNamedGroups(format.regex);
+        const normalizedGroupNames = new Set(groups.map((group) => group.toLowerCase()));
+        const hasExplicitTimestamp = normalizedGroupNames.has('timestamp') || normalizedGroupNames.has('datetime');
+        const canBuildTimestamp = (normalizedGroupNames.has('date') && normalizedGroupNames.has('time'))
+            || (normalizedGroupNames.has('month') && normalizedGroupNames.has('day') && normalizedGroupNames.has('time'));
+
+        const fields: LogFormatField[] = groups.map((group) => ({
+            name: group,
+            description: `Custom field: ${group}`,
+            type: getFieldType(group),
+        }));
+
+        if (!hasExplicitTimestamp && canBuildTimestamp) {
+            fields.unshift({
+                name: 'timestamp',
+                description: 'Combined date and time',
+                type: 'datetime',
+            });
+        }
 
         return {
             id: format.id,
@@ -208,11 +313,7 @@ function toCustomFormatPattern(format: StoredUserLogFormat): LogFormatPattern | 
             priority: CUSTOM_FORMAT_PRIORITY,
             patterns: [new RegExp(format.regex, 'm')],
             source: 'custom',
-            fields: groups.map((group) => ({
-                name: group,
-                description: `Custom field: ${group}`,
-                type: getFieldType(group),
-            })),
+            fields,
         };
     } catch {
         return null;
