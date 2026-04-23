@@ -5,18 +5,19 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
+import IconButton from '@mui/material/IconButton';
+import MenuItem from '@mui/material/MenuItem';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
+import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import CloseIcon from '@mui/icons-material/Close';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import MemoryIcon from '@mui/icons-material/Memory';
-import StorageIcon from '@mui/icons-material/Storage';
 import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../redux/store';
 import {
@@ -37,7 +38,6 @@ import {
 } from '../services/bglAnomalyApi';
 import {
     ANOMALY_MIN_REGION_LINES_RANGE,
-    ANOMALY_SETTINGS_DEFAULTS,
     ANOMALY_STEP_SIZE_RANGE,
     ANOMALY_THRESHOLD_RANGE,
     type AnomalySettings,
@@ -46,6 +46,7 @@ import {
     saveAnomalySettings,
     saveSelectedAnomalyModelId,
 } from '../utils/anomalySettings';
+import ConfirmActionDialog from './common/ConfirmActionDialog';
 
 type AnomalySourceRow = {
     lineNumber: number;
@@ -155,6 +156,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
+    const [isAnalyzeConfirmOpen, setIsAnalyzeConfirmOpen] = useState(false);
     const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
     const cancelRequestSeqRef = useRef(cancelRequestSeq);
 
@@ -264,15 +266,6 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         };
         updateAnomalySettings(profiles[profileId]);
     }, [updateAnomalySettings]);
-
-    const resetAnomalySettings = useCallback(() => {
-        const reset: AnomalySettings = {
-            ...ANOMALY_SETTINGS_DEFAULTS,
-            modelId: selectedModelId,
-        };
-        setAnomalySettings(reset);
-        saveAnomalySettings(reset);
-    }, [selectedModelId]);
 
     const runAnomalyAnalysis = useCallback(async (prefetchedFile?: File | null) => {
         if (!isModelReady) {
@@ -409,10 +402,27 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         stepSize: anomalySettings.stepSize,
     }), [anomalySettings.stepSize]);
 
-    const handleModelChange = (_event: MouseEvent<HTMLElement>, value: 'bgl' | 'hdfs' | null) => {
-        if (value) {
-            handleSelectedModelChange(value);
-        }
+    const setThresholdValue = useCallback((value: number) => {
+        updateAnomalySettings({
+            threshold: Math.max(ANOMALY_THRESHOLD_RANGE.min, Math.min(ANOMALY_THRESHOLD_RANGE.max, value)),
+        });
+    }, [updateAnomalySettings]);
+
+    const setStepSizeValue = useCallback((value: number) => {
+        updateAnomalySettings({
+            stepSize: Math.max(ANOMALY_STEP_SIZE_RANGE.min, Math.min(ANOMALY_STEP_SIZE_RANGE.max, Math.round(value))),
+        });
+    }, [updateAnomalySettings]);
+
+    const setMinRegionLinesValue = useCallback((value: number) => {
+        updateAnomalySettings({
+            minRegionLines: Math.max(ANOMALY_MIN_REGION_LINES_RANGE.min, Math.min(ANOMALY_MIN_REGION_LINES_RANGE.max, Math.round(value))),
+        });
+    }, [updateAnomalySettings]);
+
+    const handleModelChange = (event: SelectChangeEvent<'bgl' | 'hdfs'>) => {
+        const value = event.target.value as 'bgl' | 'hdfs';
+        handleSelectedModelChange(value);
     };
 
     const hasAnalyzableRows = totalRowsHint > 0;
@@ -440,100 +450,91 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         ? anomalyDisabledReason
         : 'Analyze anomalies';
 
+    const confirmAnalyzeMessage = parameterLoadWarning?.shouldConfirmBeforeAnalyze
+        ? `${parameterLoadWarning.message} Продолжить анализ с текущими параметрами?`
+        : 'Продолжить анализ с текущими параметрами?';
+
     const handleAnalyzeClick = useCallback(async () => {
         if (isAnalyzeDisabled) {
             return;
         }
 
-        let prefetchedFile: File | null | undefined;
-        if (!remoteIngestId && parameterLoadWarning?.shouldConfirmBeforeAnalyze) {
-            // Keep file request in the original click chain before confirm to preserve user-activation APIs.
-            prefetchedFile = await requestFileForAnomalyAnalysis();
-            if (!prefetchedFile) {
-                return;
-            }
-        }
-
         if (parameterLoadWarning?.shouldConfirmBeforeAnalyze) {
-            const shouldContinue = window.confirm(
-                `${parameterLoadWarning.message}\n\nПродолжить анализ с текущими параметрами?`,
-            );
-            if (!shouldContinue) {
-                return;
-            }
+            setIsAnalyzeConfirmOpen(true);
+            return;
         }
 
-        await runAnomalyAnalysis(prefetchedFile);
+        await runAnomalyAnalysis();
     }, [
         isAnalyzeDisabled,
         parameterLoadWarning,
-        remoteIngestId,
-        requestFileForAnomalyAnalysis,
         runAnomalyAnalysis,
     ]);
 
+    const handleConfirmAnalyze = useCallback(async () => {
+        setIsAnalyzeConfirmOpen(false);
+        if (isAnalyzeDisabled) {
+            return;
+        }
+        await runAnomalyAnalysis();
+    }, [isAnalyzeDisabled, runAnomalyAnalysis]);
+
+    const handleCancelAnalyzeConfirm = useCallback(() => {
+        setIsAnalyzeConfirmOpen(false);
+    }, []);
+
+    useEffect(() => {
+        if (!open || !parameterLoadWarning?.shouldConfirmBeforeAnalyze) {
+            setIsAnalyzeConfirmOpen(false);
+        }
+    }, [open, parameterLoadWarning?.shouldConfirmBeforeAnalyze]);
+
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            fullWidth
-            maxWidth="sm"
-        >
-            <DialogTitle>Anomaly Analysis</DialogTitle>
-            <DialogContent sx={{ pt: 1 }}>
-                <Stack spacing={1.5}>
+        <>
+            <Dialog
+                open={open}
+                onClose={onClose}
+                maxWidth="xs"
+                PaperProps={{
+                    sx: {
+                        width: { xs: '92vw', sm: 360 },
+                    },
+                }}
+            >
+                <DialogTitle sx={{ pr: 6 }}>
+                    Anomaly Analysis
+                    <IconButton
+                        aria-label="close"
+                        onClick={onClose}
+                        size="small"
+                        sx={{ position: 'absolute', right: 8, top: 8 }}
+                    >
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    <Stack spacing={1.5}>
                     <Stack
                         direction={{ xs: 'column', sm: 'row' }}
                         spacing={1}
                         alignItems={{ sm: 'center' }}
                     >
-                        <ToggleButtonGroup
-                            size="small"
-                            value={selectedModelId}
-                            exclusive
-                            onChange={handleModelChange}
-                            aria-label="model"
+                        <Stack
+                            spacing={0.5}
+                            sx={{ width: 220 }}
                         >
-                            <ToggleButton
-                                value="bgl"
-                                aria-label="model bgl"
-                            >
-                                <Tooltip
-                                    title="Model: BGL"
-                                    arrow
+                            <Typography variant="caption">Model</Typography>
+                            <FormControl size="small">
+                                <Select
+                                    value={selectedModelId}
+                                    onChange={handleModelChange}
+                                    aria-label="model"
                                 >
-                                    <MemoryIcon fontSize="small" />
-                                </Tooltip>
-                            </ToggleButton>
-                            <ToggleButton
-                                value="hdfs"
-                                aria-label="model hdfs"
-                            >
-                                <Tooltip
-                                    title="Model: HDFS"
-                                    arrow
-                                >
-                                    <StorageIcon fontSize="small" />
-                                </Tooltip>
-                            </ToggleButton>
-                        </ToggleButtonGroup>
-
-                        <Tooltip
-                            title={analyzeTooltip}
-                            arrow
-                        >
-                            <span>
-                                <Button
-                                    size="small"
-                                    variant="contained"
-                                    onClick={handleAnalyzeClick}
-                                    startIcon={<TroubleshootIcon />}
-                                    disabled={isAnalyzeDisabled}
-                                >
-                                    Analyze
-                                </Button>
-                            </span>
-                        </Tooltip>
+                                    <MenuItem value="bgl">BGL</MenuItem>
+                                    <MenuItem value="hdfs">HDFS</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Stack>
                     </Stack>
 
                     <Stack spacing={0.5}>
@@ -550,20 +551,10 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 <InfoOutlinedIcon fontSize="inherit" />
                             </Tooltip>
                         </Stack>
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                        >
-                            {selectedModelId.toUpperCase()} parameters used for anomaly calculation.
-                        </Typography>
                     </Stack>
 
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={1}
-                        sx={{ alignItems: { md: 'flex-start' } }}
-                    >
-                        <Box sx={{ minWidth: 150 }}>
+                    <Stack spacing={1.5}>
+                        <Box sx={{ width: 220 }}>
                             <Stack
                                 direction="row"
                                 spacing={0.5}
@@ -579,21 +570,31 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 </Tooltip>
                             </Stack>
                             <TextField
-                                fullWidth
                                 size="small"
                                 type="number"
                                 value={anomalySettings.threshold}
                                 onChange={(event) => {
                                     const next = Number(event.target.value);
                                     if (!Number.isFinite(next)) return;
-                                    updateAnomalySettings({
-                                        threshold: Math.max(ANOMALY_THRESHOLD_RANGE.min, Math.min(ANOMALY_THRESHOLD_RANGE.max, next)),
-                                    });
+                                    setThresholdValue(next);
                                 }}
+                                sx={{ width: 110 }}
                                 inputProps={{ min: ANOMALY_THRESHOLD_RANGE.min, max: ANOMALY_THRESHOLD_RANGE.max, step: ANOMALY_THRESHOLD_RANGE.step }}
                             />
+                            <Slider
+                                size="small"
+                                value={anomalySettings.threshold}
+                                min={ANOMALY_THRESHOLD_RANGE.min}
+                                max={ANOMALY_THRESHOLD_RANGE.max}
+                                step={ANOMALY_THRESHOLD_RANGE.step}
+                                onChange={(_event, value) => {
+                                    const next = Array.isArray(value) ? value[0] : value;
+                                    setThresholdValue(next);
+                                }}
+                                sx={{ mt: 0.75, width: 220 }}
+                            />
                         </Box>
-                        <Box sx={{ minWidth: 130 }}>
+                        <Box>
                             <Stack
                                 direction="row"
                                 spacing={0.5}
@@ -609,21 +610,45 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 </Tooltip>
                             </Stack>
                             <TextField
-                                fullWidth
                                 size="small"
                                 type="number"
                                 value={anomalySettings.stepSize}
                                 onChange={(event) => {
                                     const next = Number(event.target.value);
                                     if (!Number.isFinite(next)) return;
-                                    updateAnomalySettings({
-                                        stepSize: Math.max(ANOMALY_STEP_SIZE_RANGE.min, Math.min(ANOMALY_STEP_SIZE_RANGE.max, Math.round(next))),
-                                    });
+                                    setStepSizeValue(next);
                                 }}
+                                sx={{ width: 110 }}
                                 inputProps={{ min: ANOMALY_STEP_SIZE_RANGE.min, max: ANOMALY_STEP_SIZE_RANGE.max, step: ANOMALY_STEP_SIZE_RANGE.step }}
                             />
+                            <Slider
+                                size="small"
+                                value={anomalySettings.stepSize}
+                                min={ANOMALY_STEP_SIZE_RANGE.min}
+                                max={ANOMALY_STEP_SIZE_RANGE.max}
+                                step={ANOMALY_STEP_SIZE_RANGE.step}
+                                onChange={(_event, value) => {
+                                    const next = Array.isArray(value) ? value[0] : value;
+                                    setStepSizeValue(next);
+                                }}
+                                sx={{ mt: 0.75, width: 220 }}
+                            />
+                            {parameterLoadWarning && (
+                                <Alert
+                                    severity={parameterLoadWarning.severity === 'critical' ? 'warning' : 'info'}
+                                    variant="outlined"
+                                    sx={{ mt: 1, py: 0.25, px: 1 }}
+                                >
+                                    <Typography variant="caption">
+                                        {parameterLoadWarning.message}
+                                        {parameterLoadWarning.shouldConfirmBeforeAnalyze
+                                            ? ' Перед запуском потребуется подтверждение.'
+                                            : ''}
+                                    </Typography>
+                                </Alert>
+                            )}
                         </Box>
-                        <Box sx={{ minWidth: 130 }}>
+                        <Box sx={{ width: 220 }}>
                             <Stack
                                 direction="row"
                                 spacing={0.5}
@@ -639,41 +664,36 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 </Tooltip>
                             </Stack>
                             <TextField
-                                fullWidth
                                 size="small"
                                 type="number"
                                 value={anomalySettings.minRegionLines}
                                 onChange={(event) => {
                                     const next = Number(event.target.value);
                                     if (!Number.isFinite(next)) return;
-                                    updateAnomalySettings({
-                                        minRegionLines: Math.max(ANOMALY_MIN_REGION_LINES_RANGE.min, Math.min(ANOMALY_MIN_REGION_LINES_RANGE.max, Math.round(next))),
-                                    });
+                                    setMinRegionLinesValue(next);
                                 }}
+                                sx={{ width: 110 }}
                                 inputProps={{ min: ANOMALY_MIN_REGION_LINES_RANGE.min, max: ANOMALY_MIN_REGION_LINES_RANGE.max, step: ANOMALY_MIN_REGION_LINES_RANGE.step }}
+                            />
+                            <Slider
+                                size="small"
+                                value={anomalySettings.minRegionLines}
+                                min={ANOMALY_MIN_REGION_LINES_RANGE.min}
+                                max={ANOMALY_MIN_REGION_LINES_RANGE.max}
+                                step={ANOMALY_MIN_REGION_LINES_RANGE.step}
+                                onChange={(_event, value) => {
+                                    const next = Array.isArray(value) ? value[0] : value;
+                                    setMinRegionLinesValue(next);
+                                }}
+                                sx={{ mt: 0.75, width: 220 }}
                             />
                         </Box>
                     </Stack>
 
-                    {parameterLoadWarning && (
-                        <Alert
-                            severity={parameterLoadWarning.severity === 'critical' ? 'warning' : 'info'}
-                            variant="outlined"
-                            sx={{ py: 0.25, px: 1 }}
+                        <Stack
+                            direction={{ xs: 'column', md: 'row' }}
+                            spacing={1}
                         >
-                            <Typography variant="caption">
-                                {parameterLoadWarning.message}
-                                {parameterLoadWarning.shouldConfirmBeforeAnalyze
-                                    ? ' Перед запуском потребуется подтверждение.'
-                                    : ''}
-                            </Typography>
-                        </Alert>
-                    )}
-
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={1}
-                    >
                         <Tooltip
                             title="High sensitivity: catches more anomalies, may include noise."
                             arrow
@@ -710,23 +730,44 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 Strict
                             </Button>
                         </Tooltip>
+                        </Stack>
                     </Stack>
-                </Stack>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button
-                    size="small"
-                    variant="text"
-                    onClick={resetAnomalySettings}
-                >Reset
-                </Button>
-                <Button
-                    size="small"
-                    onClick={onClose}
-                >Close
-                </Button>
-            </DialogActions>
-        </Dialog>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        size="small"
+                        onClick={onClose}
+                    >Close
+                    </Button>
+                    <Tooltip
+                        title={analyzeTooltip}
+                        arrow
+                    >
+                        <span>
+                            <Button
+                                size="small"
+                                variant="contained"
+                                onClick={handleAnalyzeClick}
+                                startIcon={<TroubleshootIcon />}
+                                disabled={isAnalyzeDisabled}
+                            >
+                                Analyze
+                            </Button>
+                        </span>
+                    </Tooltip>
+                </DialogActions>
+            </Dialog>
+            <ConfirmActionDialog
+                open={isAnalyzeConfirmOpen}
+                message={confirmAnalyzeMessage}
+                onConfirm={() => {
+                    void handleConfirmAnalyze();
+                }}
+                onCancel={handleCancelAnalyzeConfirm}
+                confirmLabel="OK"
+                cancelLabel="Отмена"
+            />
+        </>
     );
 };
 export default AnomalySettingsDialog;

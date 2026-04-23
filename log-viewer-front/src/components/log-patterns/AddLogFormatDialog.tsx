@@ -7,6 +7,8 @@ import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useMemo, useState } from 'react';
 import { extractNamedGroups } from '../../utils/logFormatDetector';
 
@@ -390,7 +392,17 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 },
             }}
         >
-            <DialogTitle>{title}</DialogTitle>
+            <DialogTitle sx={{ pr: 6 }}>
+                {title}
+                <IconButton
+                    aria-label="close"
+                    onClick={resetAndClose}
+                    size="small"
+                    sx={{ position: 'absolute', right: 8, top: 8 }}
+                >
+                    <CloseIcon fontSize="small" />
+                </IconButton>
+            </DialogTitle>
             <DialogContent sx={{ overflowY: 'auto' }}>
                 <TextField
                     autoFocus

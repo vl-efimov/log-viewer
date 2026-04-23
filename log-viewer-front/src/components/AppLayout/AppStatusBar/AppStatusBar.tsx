@@ -7,6 +7,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import List from '@mui/material/List';
@@ -424,7 +425,17 @@ const AppStatusBar: React.FC = () => {
                                         },
                                     }}
                                 >
-                                    <DialogTitle>Выбор формата логов</DialogTitle>
+                                    <DialogTitle sx={{ pr: 6 }}>
+                                        Выбор формата логов
+                                        <IconButton
+                                            aria-label="close"
+                                            onClick={handleFormatDialogClose}
+                                            size="small"
+                                            sx={{ position: 'absolute', right: 8, top: 8 }}
+                                        >
+                                            <CloseIcon fontSize="small" />
+                                        </IconButton>
+                                    </DialogTitle>
                                     <DialogContent sx={{ pt: 1 }}>
                                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                                             Выберите формат для корректного парсинга и отображения полей в таблице.

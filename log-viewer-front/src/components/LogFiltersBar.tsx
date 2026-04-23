@@ -5,10 +5,12 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Typography from '@mui/material/Typography';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useMemo, useState } from 'react';
 import type {
     LogFilters,
@@ -342,30 +344,20 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                     color="primary"
                 />
             )}
-            {hasActiveFilters() && (
-                <Box
-                    component="span"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleClearFilters();
-                    }}
-                    sx={{
-                        ml: 'auto',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        cursor: 'pointer',
-                        color: 'primary.main',
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                            textDecoration: 'underline'
-                        }
-                    }}
-                >
-                    <ClearIcon fontSize="small" />
-                    <Typography variant="body2">Clear All</Typography>
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {onCloseRequested && (
+                    <IconButton
+                        size="small"
+                        aria-label="close"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onCloseRequested();
+                        }}
+                    >
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                )}
                 </Box>
-            )}
         </Box>
     );
 
@@ -387,6 +379,16 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                     {visibleFieldDefinitions.map(field => renderFieldFilter(field))}
                     {renderAnomalyFilter()}
                     <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
+                        {hasActiveFilters() && (
+                            <Chip
+                                label="Clear All"
+                                variant="outlined"
+                                onClick={handleClearFilters}
+                                clickable
+                                icon={<ClearIcon fontSize="small" />}
+                                sx={{ height: 32 }}
+                            />
+                        )}
                         <Chip
                             label="Apply"
                             color="primary"

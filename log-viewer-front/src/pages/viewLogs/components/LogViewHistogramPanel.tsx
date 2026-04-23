@@ -24,6 +24,8 @@ interface LogViewHistogramPanelProps {
     }>;
     anomalyLineNumbers?: number[];
     onAnomalyRangeSelect?: (startLine: number, endLine: number) => void;
+    onTimeRangeChange?: (startTime: number | null, endTime: number | null) => void;
+    selectedTimeRange?: { start: number | null; end: number | null };
 }
 
 const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
@@ -35,6 +37,8 @@ const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
     anomalyRegions,
     anomalyLineNumbers,
     onAnomalyRangeSelect,
+    onTimeRangeChange,
+    selectedTimeRange,
 }) => {
     const showLoading = (isIndexing || isHistogramLoading) && !isLargeFile;
 
@@ -73,6 +77,8 @@ const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
                 anomalyRegions={anomalyRegions}
                 anomalyLineNumbers={anomalyLineNumbers}
                 onAnomalyRangeSelect={onAnomalyRangeSelect}
+                onTimeRangeChange={onTimeRangeChange}
+                selectedTimeRange={selectedTimeRange}
                 showQuickRangeButtons={false}
             />
         );

@@ -73,6 +73,8 @@ const LINE_INDEX_PROGRESS_MIN_NEW_LINES = 2_000;
 const TAIL_LOAD_BYTES = 768 * 1024;
 const TAIL_LOAD_MAX_LINES = 400;
 const ANOMALY_FILTER_KEY = 'anomalyStatus';
+const TIMELINE_FILTER_DEBOUNCE_MS = 300;
+const TIMELINE_FILTER_FALLBACK_FIELD = 'timestamp';
 
 type ViewParsedLine = {
     lineNumber: number;
@@ -347,6 +349,8 @@ export const useViewLogsController = () => {
     const [indexedHistogramLines, setIndexedHistogramLines] = useState<ViewParsedLine[]>([]);
     const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [filters, setFilters] = useState<LogFilters>({});
+    const timelineFilterFieldRef = useRef<string>(TIMELINE_FILTER_FALLBACK_FIELD);
+    const timelineFilterTimerRef = useRef<number | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const lastModifiedRef = useRef<number>(0);
     const lastSizeRef = useRef<number>(0);
@@ -2654,6 +2658,101 @@ export const useViewLogsController = () => {
         return [];
     }, [content, format]);
 
+    const timelineFilterField = useMemo(() => {
+        const dateField = fieldDefinitions.find((field) => field.type === 'datetime' && field.name.trim().length > 0);
+        return dateField?.name ?? TIMELINE_FILTER_FALLBACK_FIELD;
+    }, [fieldDefinitions]);
+
+    const selectedHistogramTimeRange = useMemo<{ start: number | null; end: number | null }>(() => {
+        const value = filters[timelineFilterField];
+        if (!value || typeof value !== 'object' || Array.isArray(value) || (!('start' in value) && !('end' in value))) {
+            return { start: null, end: null };
+        }
+
+        const range = value as { start?: unknown; end?: unknown };
+        const startMs = range.start instanceof Date && Number.isFinite(range.start.getTime())
+            ? range.start.getTime()
+            : null;
+        const endMs = range.end instanceof Date && Number.isFinite(range.end.getTime())
+            ? range.end.getTime()
+            : null;
+
+        return { start: startMs, end: endMs };
+    }, [filters, timelineFilterField]);
+
+    const handleHistogramTimeRangeChange = useCallback((startTime: number | null, endTime: number | null) => {
+        if (timelineFilterTimerRef.current !== null) {
+            window.clearTimeout(timelineFilterTimerRef.current);
+        }
+
+        const normalizedStart = typeof startTime === 'number' && Number.isFinite(startTime)
+            ? startTime
+            : null;
+        const normalizedEnd = typeof endTime === 'number' && Number.isFinite(endTime)
+            ? endTime
+            : null;
+
+        timelineFilterTimerRef.current = window.setTimeout(() => {
+            timelineFilterTimerRef.current = null;
+
+            setFilters((prev) => {
+                let changed = false;
+                const next: LogFilters = { ...prev };
+                const previousTimelineField = timelineFilterFieldRef.current;
+
+                if (previousTimelineField !== timelineFilterField && previousTimelineField in next) {
+                    delete next[previousTimelineField];
+                    changed = true;
+                }
+
+                timelineFilterFieldRef.current = timelineFilterField;
+
+                if (normalizedStart === null && normalizedEnd === null) {
+                    if (timelineFilterField in next) {
+                        delete next[timelineFilterField];
+                        changed = true;
+                    }
+
+                    return changed ? next : prev;
+                }
+
+                const existing = next[timelineFilterField];
+                const existingIsDateRange = (
+                    typeof existing === 'object'
+                    && existing !== null
+                    && !Array.isArray(existing)
+                    && ('start' in existing || 'end' in existing)
+                );
+
+                const existingStartMs = existingIsDateRange
+                    ? (existing.start ? existing.start.getTime() : null)
+                    : null;
+                const existingEndMs = existingIsDateRange
+                    ? (existing.end ? existing.end.getTime() : null)
+                    : null;
+
+                if (existingStartMs === normalizedStart && existingEndMs === normalizedEnd) {
+                    return changed ? next : prev;
+                }
+
+                next[timelineFilterField] = {
+                    start: normalizedStart !== null ? new Date(normalizedStart) : null,
+                    end: normalizedEnd !== null ? new Date(normalizedEnd) : null,
+                };
+                return next;
+            });
+        }, TIMELINE_FILTER_DEBOUNCE_MS);
+    }, [timelineFilterField]);
+
+    useEffect(() => {
+        return () => {
+            if (timelineFilterTimerRef.current !== null) {
+                window.clearTimeout(timelineFilterTimerRef.current);
+                timelineFilterTimerRef.current = null;
+            }
+        };
+    }, []);
+
     useEffect(() => {
         if (!isStreamView) return;
 
@@ -3052,6 +3151,8 @@ export const useViewLogsController = () => {
         parsedLines: isStreamView ? [] : indexedHistogramLines,
         anomalyRegions,
         onAnomalyRangeSelect: handleAnomalyRangeSelect,
+        onTimeRangeChange: handleHistogramTimeRangeChange,
+        selectedTimeRange: selectedHistogramTimeRange,
     };
 
     const toolbarProps = {
@@ -3131,6 +3232,7 @@ export const useViewLogsController = () => {
         fileSelection,
         monitoringBanner,
         tableServerConnectionState,
+        isTableFilteringRows: isFilteringRows,
         histogram,
         toolbarProps,
         listProps,

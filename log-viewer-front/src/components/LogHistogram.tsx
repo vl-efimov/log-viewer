@@ -120,6 +120,8 @@ interface LogHistogramProps {
     height?: number;
     /** Callback when time range changes via slider */
     onTimeRangeChange?: (startTime: number | null, endTime: number | null) => void;
+    /** External time range selection (e.g. from filter panel) */
+    selectedTimeRange?: { start: number | null; end: number | null };
     /** Callback when legend category visibility changes */
     onCategoryFilterChange?: (payload: { field: string | null; selectedCategories: string[] | null }) => void;
     /** Optional anomaly regions from backend */
@@ -383,6 +385,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     defaultCollapsed = false,
     height = 180,
     onTimeRangeChange,
+    selectedTimeRange,
     onCategoryFilterChange,
     anomalyRegions,
     anomalyLineNumbers,
@@ -407,6 +410,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     const [activeQuickRange, setActiveQuickRange] = useState<QuickRangePreset | null>(null);
     const zoomSliderRef = useRef<ReactECharts | null>(null);
     const quickRangeDispatchRef = useRef(false);
+    const externalRangeSyncRef = useRef(false);
 
     const { validLines, timeRange } = useMemo(() => {
         // Extract lines with valid timestamps from any known time fields.
@@ -611,6 +615,90 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             return { start: null, end: null };
         });
     }, [timeRange?.min, timeRange?.max]);
+
+    useEffect(() => {
+        if (!timeRange) {
+            return;
+        }
+
+        const hasExternalStart = typeof selectedTimeRange?.start === 'number' && Number.isFinite(selectedTimeRange.start);
+        const hasExternalEnd = typeof selectedTimeRange?.end === 'number' && Number.isFinite(selectedTimeRange.end);
+
+        let targetStart: number | null = null;
+        let targetEnd: number | null = null;
+
+        if (hasExternalStart || hasExternalEnd) {
+            const requestedStart = hasExternalStart ? (selectedTimeRange?.start as number) : timeRange.min;
+            const requestedEnd = hasExternalEnd ? (selectedTimeRange?.end as number) : timeRange.max;
+
+            let normalizedStart = Math.min(requestedStart, requestedEnd);
+            let normalizedEnd = Math.max(requestedStart, requestedEnd);
+
+            normalizedStart = Math.max(timeRange.min, Math.min(timeRange.max, normalizedStart));
+            normalizedEnd = Math.max(timeRange.min, Math.min(timeRange.max, normalizedEnd));
+
+            if (normalizedEnd <= normalizedStart) {
+                const minWindowMs = Math.max(1, Math.min(60_000, Math.floor((timeRange.max - timeRange.min) / 250)));
+                normalizedEnd = Math.min(timeRange.max, normalizedStart + minWindowMs);
+                if (normalizedEnd <= normalizedStart) {
+                    normalizedStart = Math.max(timeRange.min, normalizedEnd - minWindowMs);
+                }
+            }
+
+            const total = Math.max(1, timeRange.max - timeRange.min);
+            const edgeToleranceMs = Math.max(1, Math.min(1000, Math.floor(total * 0.00001)));
+            const isFullRange = (
+                normalizedStart <= timeRange.min + edgeToleranceMs
+                && normalizedEnd >= timeRange.max - edgeToleranceMs
+            );
+
+            if (!isFullRange) {
+                targetStart = normalizedStart;
+                targetEnd = normalizedEnd;
+            }
+        }
+
+        setSelectedRange((prev) => {
+            if (prev.start === targetStart && prev.end === targetEnd) {
+                return prev;
+            }
+
+            return { start: targetStart, end: targetEnd };
+        });
+        if (targetStart === null || targetEnd === null) {
+            setZoomShade({ leftPercent: 0, rightPercent: 0 });
+        } else {
+            const total = Math.max(1, timeRange.max - timeRange.min);
+            const leftPercent = Math.max(0, Math.min(100, ((targetStart - timeRange.min) / total) * 100));
+            const rightPercent = Math.max(0, Math.min(100, ((timeRange.max - targetEnd) / total) * 100));
+            setZoomShade({ leftPercent, rightPercent });
+        }
+
+        setActiveQuickRange(null);
+
+        const chart = zoomSliderRef.current?.getEchartsInstance();
+        if (!chart) {
+            return;
+        }
+
+        externalRangeSyncRef.current = true;
+        if (targetStart === null || targetEnd === null) {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomIndex: 0,
+                start: 0,
+                end: 100,
+            });
+            return;
+        }
+
+        chart.dispatchAction({
+            type: 'dataZoom',
+            dataZoomIndex: 0,
+            startValue: targetStart,
+            endValue: targetEnd,
+        });
+    }, [selectedTimeRange?.end, selectedTimeRange?.start, sliderReadyVersion, timeRange]);
 
     const chartOption = useMemo(() => {
         const bucketMidOffset = Math.floor(mainHistogram.bucketSize / 2);
@@ -1226,9 +1314,12 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     }) => {
         if (!timeRange || zoomHistogram.chartData.length === 0) return;
 
+        const isExternalSyncDispatch = externalRangeSyncRef.current;
+        externalRangeSyncRef.current = false;
+
         const isQuickRangeDispatch = quickRangeDispatchRef.current;
         quickRangeDispatchRef.current = false;
-        if (!isQuickRangeDispatch) {
+        if (!isQuickRangeDispatch && !isExternalSyncDispatch) {
             setActiveQuickRange(null);
         }
 
@@ -1291,7 +1382,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         if (isFullRange) {
             setSelectedRange({ start: null, end: null });
             setZoomShade({ leftPercent: 0, rightPercent: 0 });
-            if (onTimeRangeChange) {
+            if (onTimeRangeChange && !isExternalSyncDispatch) {
                 onTimeRangeChange(null, null);
             }
             return;
@@ -1299,7 +1390,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
         setZoomShade({ leftPercent, rightPercent });
         setSelectedRange({ start: startTime, end: endTime });
-        if (onTimeRangeChange) {
+        if (onTimeRangeChange && !isExternalSyncDispatch) {
             onTimeRangeChange(startTime, endTime);
         }
     }, [onTimeRangeChange, timeRange, zoomHistogram]);
@@ -1471,9 +1562,9 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                             <Box
                                 sx={{
                                     position: 'absolute',
-                                    top: zoomChartGrid.top,
-                                    left: `${zoomSliderGrid.left + 6}px`,
-                                    right: `${zoomSliderGrid.right - 6}px`,
+                                    top: 0,
+                                    left: `${zoomSliderGrid.left}px`,
+                                    right: `${zoomSliderGrid.right}px`,
                                     bottom: 0,
                                     pointerEvents: 'none',
                                 }}

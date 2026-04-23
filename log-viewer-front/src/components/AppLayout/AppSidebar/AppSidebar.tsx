@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton';
 import Divider from '@mui/material/Divider';
 import ListSubheader from '@mui/material/ListSubheader';
+import Tooltip from '@mui/material/Tooltip';
 import PreviewIcon from '@mui/icons-material/Preview';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -117,20 +118,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     {category.items?.map((item, index) => (
                                         <Box key={`sidebar-item-${index}`}>
-                                            <ListItemButton
-                                                component={Link}
-                                                to={item.path}
-                                                selected={isSelected(item.path)}
-                                                sx={{
-                                                    borderRadius: 2,
-                                                    overflow: 'hidden',
-                                                    whiteSpace: 'nowrap',
-                                                    height: '48px',
-                                                }}
+                                            <Tooltip 
+                                                title={item.text}
+                                                placement="right"
+                                                disableHoverListener={isSidebarOpen}
+                                                arrow
                                             >
-                                                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                                                {isRendered && <ListItemText primary={item.text} />}
-                                            </ListItemButton>
+                                                <ListItemButton
+                                                    component={Link}
+                                                    to={item.path}
+                                                    selected={isSelected(item.path)}
+                                                    sx={{
+                                                        borderRadius: 2,
+                                                        overflow: 'hidden',
+                                                        whiteSpace: 'nowrap',
+                                                        height: '48px',
+                                                    }}
+                                                >
+                                                    <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                                                    {isRendered && <ListItemText primary={item.text} />}
+                                                </ListItemButton>
+                                            </Tooltip>
                                         </Box>
                                     ))}
                                 </Box>
@@ -141,35 +149,39 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                 </div>
 
                 <List>
-                    <ListItemButton
-                        component={Link}
-                        to={RouteAbout}
-                        selected={isSelected(RouteAbout)}
-                        sx={{
-                            borderRadius: 2,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon sx={{ minWidth: 40 }}><InfoOutlinedIcon /></ListItemIcon>
-                        {isRendered && <ListItemText primary={t('sidebar.items.about')} />}
-                    </ListItemButton>
+                    <Tooltip title={t('sidebar.items.about')} placement="right" disableHoverListener={isSidebarOpen} arrow>
+                        <ListItemButton
+                            component={Link}
+                            to={RouteAbout}
+                            selected={isSelected(RouteAbout)}
+                            sx={{
+                                borderRadius: 2,
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                height: '48px',
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40 }}><InfoOutlinedIcon /></ListItemIcon>
+                            {isRendered && <ListItemText primary={t('sidebar.items.about')} />}
+                        </ListItemButton>
+                    </Tooltip>
                     <Divider sx={{ marginY: 1 }} />
-                    <ListItemButton
-                        component={Link}
-                        to={RouteSettings}
-                        selected={isSelected(RouteSettings)}
-                        sx={{
-                            borderRadius: 2,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            height: '48px',
-                        }}
-                    >
-                        <ListItemIcon sx={{ minWidth: 40 }}><SettingsIcon /></ListItemIcon>
-                        {isRendered && <ListItemText primary={t('sidebar.items.settings')} />}
-                    </ListItemButton>
+                    <Tooltip title={t('sidebar.items.settings')} placement="right" disableHoverListener={isSidebarOpen} arrow>
+                        <ListItemButton
+                            component={Link}
+                            to={RouteSettings}
+                            selected={isSelected(RouteSettings)}
+                            sx={{
+                                borderRadius: 2,
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                height: '48px',
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40 }}><SettingsIcon /></ListItemIcon>
+                            {isRendered && <ListItemText primary={t('sidebar.items.settings')} />}
+                        </ListItemButton>
+                    </Tooltip>
                 </List>
             </Box>
         </Drawer>

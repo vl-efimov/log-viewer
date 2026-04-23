@@ -16,6 +16,7 @@ const ViewLogsPage: React.FC = () => {
         fileSelection,
         monitoringBanner,
         tableServerConnectionState,
+        isTableFilteringRows,
         histogram,
         toolbarProps,
         listProps,
@@ -28,6 +29,10 @@ const ViewLogsPage: React.FC = () => {
     const showTablePreparing = histogram.isLargeFile
         && toolbarProps.isStreamView
         && toolbarProps.totalRowsHintForAnomaly === 0;
+
+    const showTableRowsLoading = !showTablePreparing
+        && isTableFilteringRows
+        && (listProps.totalCount ?? 0) === 0;
 
     if (fileSelection.show) {
         return (
@@ -65,6 +70,8 @@ const ViewLogsPage: React.FC = () => {
                 parsedLines={histogram.parsedLines}
                 anomalyRegions={histogram.anomalyRegions}
                 onAnomalyRangeSelect={histogram.onAnomalyRangeSelect}
+                onTimeRangeChange={histogram.onTimeRangeChange}
+                selectedTimeRange={histogram.selectedTimeRange}
             />
 
             <LogToolbar {...toolbarProps} />
@@ -121,6 +128,28 @@ const ViewLogsPage: React.FC = () => {
                             align="center"
                         >
                             Подготавливаем таблицу для большого файла. Это может занять некоторое время.
+                        </Typography>
+                    </Box>
+                ) : showTableRowsLoading ? (
+                    <Box
+                        sx={{
+                            height: '100%',
+                            width: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 1,
+                            px: 2,
+                        }}
+                    >
+                        <CircularProgress size={26} />
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            align="center"
+                        >
+                            Загружаем строки таблицы...
                         </Typography>
                     </Box>
                 ) : showEmptyFilteredState ? (
