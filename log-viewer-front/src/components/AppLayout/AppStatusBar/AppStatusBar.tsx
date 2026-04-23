@@ -25,7 +25,9 @@ import { baseUrl } from '../../../constants/BaseUrl';
 import { RouteViewLogs } from '../../../routes/routePaths';
 import { requestFormatChange, setIndexingState } from '../../../redux/slices/logFileSlice';
 import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
+import { enqueueNotification } from '../../../redux/slices/notificationsSlice';
 import {
+    checkBackendAvailability,
     cancelActiveAnomalyPredictionSession,
     cancelActiveRemoteUploadSession,
     cancelBglAnomalyPrediction,
@@ -62,6 +64,8 @@ type AnomalyStatusText = {
     showSpinner?: boolean;
 };
 
+const SERVER_STATUS_POLL_MS = 5000;
+
 const AppStatusBar: React.FC = () => {
     const dispatch = useDispatch();
     const location = useLocation();
@@ -88,6 +92,7 @@ const AppStatusBar: React.FC = () => {
         lastRunParams: anomalyLastRunParams,
     } = useSelector((state: RootState) => state.anomaly);
     const [anomalyWindowProgress, setAnomalyWindowProgress] = useState<AnomalyWindowProgress | null>(null);
+    const [isServerOnline, setIsServerOnline] = useState<boolean>(false);
 
     const formatFileSize = (bytes: number): string => {
         if (bytes === 0) return '0 B';
@@ -243,6 +248,41 @@ const AppStatusBar: React.FC = () => {
         };
     }, [anomalyIsRunning, anomalyLastModelId, anomalyRunningModelId]);
 
+    useEffect(() => {
+        let cancelled = false;
+        let inFlight = false;
+
+        const checkConnection = async () => {
+            if (inFlight) {
+                return;
+            }
+
+            inFlight = true;
+            try {
+                const online = await checkBackendAvailability('bgl');
+                if (!cancelled) {
+                    setIsServerOnline(online);
+                }
+            } catch {
+                if (!cancelled) {
+                    setIsServerOnline(false);
+                }
+            } finally {
+                inFlight = false;
+            }
+        };
+
+        void checkConnection();
+        const timer = window.setInterval(() => {
+            void checkConnection();
+        }, SERVER_STATUS_POLL_MS);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, []);
+
     const anomalyStatus: AnomalyStatusText | null = (() => {
         const allowStatusOnCurrentRoute = anomalyIsRunning || (loaded && isViewLogsRoute);
         if (!allowStatusOnCurrentRoute) {
@@ -345,19 +385,41 @@ const AppStatusBar: React.FC = () => {
         const activeModelId = cancelActiveAnomalyPredictionSession();
         const modelId = activeModelId ?? fallbackModelId;
         dispatch(requestAnomalyCancel());
+        dispatch(enqueueNotification({
+            message: 'Останавливаем расчет аномалий...',
+            severity: 'info',
+            autoHideDuration: 2500,
+        }));
         try {
             await cancelBglAnomalyPrediction(modelId);
             dispatch(setAnomalyStopped());
+            dispatch(enqueueNotification({
+                message: 'Расчет аномалий отменен.',
+                severity: 'success',
+            }));
         } catch (error) {
-            dispatch(setAnomalyError(error instanceof Error ? error.message : 'Не удалось остановить расчет аномалий'));
+            const errorMessage = error instanceof Error ? error.message : 'Не удалось остановить расчет аномалий';
+            dispatch(setAnomalyError(errorMessage));
+            dispatch(enqueueNotification({
+                message: `Ошибка отмены расчета аномалий: ${errorMessage}`,
+                severity: 'error',
+                autoHideDuration: 7000,
+            }));
         } finally {
             dispatch(setAnomalyRunning({ running: false }));
         }
     };
 
     const handleCancelServerUpload = () => {
-        cancelActiveRemoteUploadSession();
+        const cancelledIngestId = cancelActiveRemoteUploadSession();
         dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+        dispatch(enqueueNotification({
+            message: cancelledIngestId
+                ? 'Загрузка на сервер отменена.'
+                : 'Активная загрузка на сервер не найдена.',
+            severity: cancelledIngestId ? 'success' : 'info',
+            autoHideDuration: 3500,
+        }));
     };
 
     const formatTooltipTitle = (
@@ -370,6 +432,12 @@ const AppStatusBar: React.FC = () => {
             </Typography>
         </Box>
     );
+
+    const serverStatusTitle = isServerOnline
+        ? 'Сервер доступен для работы'
+        : 'Сервер не доступен для работы';
+    const serverStatusLabel = isServerOnline ? 'Онлайн' : 'Офлайн';
+    const hasRightStatusItems = isIndexing || Boolean(anomalyStatus);
 
     return (
         <Box sx={statusBarSx}>
@@ -580,6 +648,29 @@ const AppStatusBar: React.FC = () => {
                         )}
                     </>
                 )}
+                {hasRightStatusItems && (
+                    <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={statusBarDividerSx}
+                    />
+                )}
+                <AppStatusBarItem title={serverStatusTitle}>
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: isServerOnline ? '#4ee476' : '#ff6b6b',
+                            boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.55)',
+                            flexShrink: 0,
+                        }}
+                    />
+                    <Typography sx={textSx}>
+                        {serverStatusLabel}
+                    </Typography>
+                </AppStatusBarItem>
             </Box>
         </Box>
     );

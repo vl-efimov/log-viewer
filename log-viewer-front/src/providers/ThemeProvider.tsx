@@ -5,7 +5,7 @@ import { ThemeContext } from '../contexts/ThemeContext';
 import { ColorModeEnum } from '../constants/ColorModeEnum';
 import { getCustomTheme } from '../theme';
 
-const DEFAULT_PRIMARY = '#1976d2';
+const DEFAULT_PRIMARY = '#3b82f6';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [mode, setMode] = useState<ColorModeEnum | null>(null);

@@ -70,6 +70,7 @@ interface LogToolbarProps {
     uploadProgress?: number;
     fileActionsDisabled?: boolean;
     uploadDisabledReason?: string;
+    refreshDisabledReason?: string;
 }
 
 const LogToolbar: React.FC<LogToolbarProps> = ({
@@ -107,6 +108,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     uploadProgress = 0,
     fileActionsDisabled = false,
     uploadDisabledReason,
+    refreshDisabledReason,
 }) => {
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
     const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null);
@@ -143,6 +145,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     const isSearchOpen = Boolean(searchAnchorEl);
     const isFiltersOpen = Boolean(filtersAnchorEl);
     const controlsDisabled = fileActionsDisabled || uploadInProgress;
+    const refreshControlsDisabled = controlsDisabled || Boolean(refreshDisabledReason);
 
     const focusSearchInput = useCallback(() => {
         window.requestAnimationFrame(() => {
@@ -351,7 +354,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             variant="contained"
                                             onClick={onUploadToServer}
                                             disabled={uploadInProgress || filtersDisabled || !onUploadToServer || Boolean(uploadDisabledReason)}
-                                            sx={compactButtonSx}
+                                            sx={{
+                                                ...compactButtonSx,
+                                                minHeight: 24,
+                                                px: 1,
+                                            }}
                                         >
                                             {uploadInProgress ? `Идет загрузка ${uploadProgress}%` : 'Загрузить на сервер'}
                                         </Button>
@@ -399,36 +406,40 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 }}
                             >
                                 <Tooltip
-                                    title="Refresh now"
+                                    title={refreshDisabledReason || 'Refresh now'}
                                     arrow
                                 >
-                                    <Button
-                                        size="small"
-                                        variant="outlined"
-                                        onClick={onManualRefresh}
-                                        disabled={controlsDisabled}
-                                        startIcon={<RefreshIcon fontSize="small" />}
-                                        sx={compactButtonSx}
-                                    >
-                                        Обновить
-                                    </Button>
+                                    <span>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={onManualRefresh}
+                                            disabled={refreshControlsDisabled}
+                                            startIcon={<RefreshIcon fontSize="small" />}
+                                            sx={compactButtonSx}
+                                        >
+                                            Обновить
+                                        </Button>
+                                    </span>
                                 </Tooltip>
 
                                 <Tooltip
-                                    title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'}
+                                    title={refreshDisabledReason || (autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off')}
                                     arrow
                                 >
-                                    <Button
-                                        size="small"
-                                        variant={autoRefresh ? 'contained' : 'outlined'}
-                                        color={autoRefresh ? 'success' : 'inherit'}
-                                        onClick={onToggleAutoRefresh}
-                                        disabled={controlsDisabled}
-                                        startIcon={<AutorenewIcon fontSize="small" />}
-                                        sx={compactButtonSx}
-                                    >
-                                        Авто
-                                    </Button>
+                                    <span>
+                                        <Button
+                                            size="small"
+                                            variant={autoRefresh ? 'contained' : 'outlined'}
+                                            color={autoRefresh ? 'success' : 'inherit'}
+                                            onClick={onToggleAutoRefresh}
+                                            disabled={refreshControlsDisabled}
+                                            startIcon={<AutorenewIcon fontSize="small" />}
+                                            sx={compactButtonSx}
+                                        >
+                                            Авто
+                                        </Button>
+                                    </span>
                                 </Tooltip>
                             </Box>
                         </Box>

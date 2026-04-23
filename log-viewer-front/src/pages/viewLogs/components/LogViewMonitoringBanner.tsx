@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -18,31 +19,46 @@ const LogViewMonitoringBanner: FC<LogViewMonitoringBannerProps> = ({
         <Box
             sx={{
                 mb: 1,
-                p: 2,
-                borderRadius: 1,
-                border: (theme) => `1px solid ${theme.palette.divider}`,
-                backgroundColor: (theme) => theme.palette.background.paper,
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: 2,
             }}
         >
-            <Typography
-                variant="body2"
-                color="text.secondary"
+            <Alert
+                severity="info"
+                variant="outlined"
+                action={actionLabel && onAction
+                    ? (
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={onAction}
+                        >
+                            {actionLabel}
+                        </Button>
+                    )
+                    : undefined}
+                sx={{
+                    width: '100%',
+                    minWidth: 0,
+                    alignItems: 'center',
+                    py: 0.25,
+                    '& .MuiAlert-message': {
+                        display: 'flex',
+                        alignItems: 'center',
+                        flex: 1,
+                        minWidth: 0,
+                    },
+                    '& .MuiAlert-action': {
+                        ml: 'auto',
+                        pl: 2,
+                        mr: 0,
+                        alignItems: 'center',
+                        display: 'flex',
+                    },
+                }}
             >
-                {message}
-            </Typography>
-            {actionLabel && onAction && (
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={onAction}
-                >
-                    {actionLabel}
-                </Button>
-            )}
+                <Typography variant="body2">
+                    {message}
+                </Typography>
+            </Alert>
         </Box>
     );
 };

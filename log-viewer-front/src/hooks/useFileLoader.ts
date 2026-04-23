@@ -41,6 +41,13 @@ type UnknownFormatContext = {
     previewLines: string[];
 };
 
+type MonitoringFileReplaceContext = {
+    expectedName?: string;
+    selectedName: string;
+    expectedSize?: number;
+    selectedSize: number;
+};
+
 type LoadFileOptions = {
     forcedFormatId?: string;
     skipUnknownPrompt?: boolean;
@@ -48,6 +55,7 @@ type LoadFileOptions = {
 
 type UseFileLoaderOptions = {
     resolveUnknownFormat?: (context: UnknownFormatContext) => Promise<UnknownFormatResolution>;
+    confirmMonitoringFileReplace?: (context: MonitoringFileReplaceContext) => Promise<boolean>;
     onFileLoadStart?: () => void;
 };
 
@@ -285,7 +293,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
 
     const handleFileSystemAccessForMonitoring = async (
         sessionId: string,
-        options: AttachOptions = {}
+        attachOptions: AttachOptions = {}
     ): Promise<ReattachResult> => {
         if (!('showOpenFilePicker' in window)) {
             return 'failed'; // Not supported
@@ -307,12 +315,17 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
             });
 
             const file = await handle.getFile();
-            const isDifferentFile = Boolean(options.expectedName && options.expectedName !== file.name);
+            const isDifferentFile = Boolean(attachOptions.expectedName && attachOptions.expectedName !== file.name);
 
             if (isDifferentFile) {
-                const shouldReplace = window.confirm(
-                    'Вы выбрали другой файл. Данные в IndexedDB будут перезаписаны. Продолжить?'
-                );
+                const shouldReplace = options.confirmMonitoringFileReplace
+                    ? await options.confirmMonitoringFileReplace({
+                        expectedName: attachOptions.expectedName,
+                        selectedName: file.name,
+                        expectedSize: attachOptions.expectedSize,
+                        selectedSize: file.size,
+                    })
+                    : window.confirm('Вы выбрали другой файл. Данные в IndexedDB будут перезаписаны. Продолжить?');
                 if (!shouldReplace) {
                     return 'cancelled';
                 }
@@ -321,20 +334,20 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                 return 'switched';
             }
 
-            if (options.expectedSize && file.size < options.expectedSize) {
+            if (attachOptions.expectedSize && file.size < attachOptions.expectedSize) {
                 await loadFile(file, handle);
                 return 'switched';
             }
 
-            if (options.expectedSize && options.expectedSize !== file.size) {
+            if (attachOptions.expectedSize && attachOptions.expectedSize !== file.size) {
                 console.warn('Selected file size differs from session:', {
-                    expected: options.expectedSize,
+                    expected: attachOptions.expectedSize,
                     actual: file.size,
                 });
             }
-            if (options.expectedLastModified && options.expectedLastModified !== file.lastModified) {
+            if (attachOptions.expectedLastModified && attachOptions.expectedLastModified !== file.lastModified) {
                 console.warn('Selected file lastModified differs from session:', {
-                    expected: options.expectedLastModified,
+                    expected: attachOptions.expectedLastModified,
                     actual: file.lastModified,
                 });
             }
@@ -352,10 +365,10 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                 name: file.name,
                 size: file.size,
                 content: previewText,
-                format: options.formatHint || detectedFormat || 'Unknown',
+                format: attachOptions.formatHint || detectedFormat || 'Unknown',
                 lastModified: file.lastModified,
                 hasFileHandle: true,
-                isLargeFile: options.isLargeFile ?? file.size >= LARGE_FILE_BYTES,
+                isLargeFile: attachOptions.isLargeFile ?? file.size >= LARGE_FILE_BYTES,
                 analyticsSessionId: sessionId,
             }));
 

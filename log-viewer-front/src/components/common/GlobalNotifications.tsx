@@ -1,7 +1,7 @@
 import Alert from '@mui/material/Alert';
 import Snackbar, { type SnackbarCloseReason } from '@mui/material/Snackbar';
 import { useDispatch, useSelector } from 'react-redux';
-import type { SyntheticEvent } from 'react';
+import { useCallback, type SyntheticEvent } from 'react';
 import type { RootState } from '../../redux/store';
 import { removeNotification } from '../../redux/slices/notificationsSlice';
 import { APP_LAYOUT_TOKENS } from '../../design-tokens';
@@ -11,17 +11,28 @@ const statusBarOffsetPx = APP_LAYOUT_TOKENS.statusBar.height + 8;
 const GlobalNotifications: React.FC = () => {
     const dispatch = useDispatch();
     const currentNotification = useSelector((state: RootState) => state.notifications.queue[0] ?? null);
+    const notificationId = currentNotification?.id ?? null;
+
+    const handleClose = useCallback((_event: Event | SyntheticEvent, reason?: SnackbarCloseReason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        if (!notificationId) {
+            return;
+        }
+        dispatch(removeNotification(notificationId));
+    }, [dispatch, notificationId]);
+
+    const handleAlertClose = useCallback(() => {
+        if (!notificationId) {
+            return;
+        }
+        dispatch(removeNotification(notificationId));
+    }, [dispatch, notificationId]);
 
     if (!currentNotification) {
         return null;
     }
-
-    const handleClose = (_event: Event | SyntheticEvent, reason?: SnackbarCloseReason) => {
-        if (reason === 'clickaway') {
-            return;
-        }
-        dispatch(removeNotification(currentNotification.id));
-    };
 
     return (
         <Snackbar
@@ -39,7 +50,7 @@ const GlobalNotifications: React.FC = () => {
             }}
         >
             <Alert
-                onClose={() => dispatch(removeNotification(currentNotification.id))}
+                onClose={handleAlertClose}
                 severity={currentNotification.severity}
                 variant="filled"
                 sx={{

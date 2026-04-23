@@ -9,6 +9,7 @@ import LogViewHistogramPanel from './viewLogs/components/LogViewHistogramPanel';
 import LogViewMonitoringBanner from './viewLogs/components/LogViewMonitoringBanner';
 import FormatChangeConfirmDialog from './viewLogs/components/FormatChangeConfirmDialog';
 import UnknownFormatConfirmDialog from './viewLogs/components/UnknownFormatConfirmDialog';
+import ConfirmActionDialog from '../components/common/ConfirmActionDialog';
 import { useViewLogsController } from './viewLogs/useViewLogsController';
 
 const ViewLogsPage: React.FC = () => {
@@ -22,6 +23,7 @@ const ViewLogsPage: React.FC = () => {
         listProps,
         showEmptyFilteredState,
         formatChangeDialog,
+        monitoringReplaceDialog,
         confirmDialog,
         customFormatDialog,
     } = useViewLogsController();
@@ -190,6 +192,13 @@ const ViewLogsPage: React.FC = () => {
                 message={formatChangeDialog.message}
                 onConfirm={formatChangeDialog.onConfirm}
                 onCancel={formatChangeDialog.onCancel}
+            />
+
+            <ConfirmActionDialog
+                open={monitoringReplaceDialog.open}
+                message={monitoringReplaceDialog.message}
+                onConfirm={monitoringReplaceDialog.onConfirm}
+                onCancel={monitoringReplaceDialog.onCancel}
             />
 
             <AddLogFormatDialog

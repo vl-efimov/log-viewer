@@ -676,6 +676,23 @@ export async function isBglModelReady(modelId: string = 'bgl'): Promise<boolean>
     return Boolean(payload.model_ready);
 }
 
+export async function checkBackendAvailability(modelId: string = 'bgl'): Promise<boolean> {
+    try {
+        const response = await fetch(`${backendBaseUrl}/health?model_id=${encodeURIComponent(modelId)}`, {
+            cache: 'no-store',
+        });
+
+        if (!response.ok) {
+            return false;
+        }
+
+        const payload = await response.json() as { ok?: boolean };
+        return payload.ok !== false;
+    } catch {
+        return false;
+    }
+}
+
 export async function cancelBglAnomalyPrediction(modelId: string = 'bgl'): Promise<void> {
     const response = await fetch(`${backendBaseUrl}/bgl/cancel?model_id=${encodeURIComponent(modelId)}`, {
         method: 'POST',

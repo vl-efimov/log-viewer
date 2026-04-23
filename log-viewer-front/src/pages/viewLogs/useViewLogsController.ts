@@ -171,6 +171,11 @@ type FormatChangeDialogState = {
     nextFormatId: string;
 };
 
+type MonitoringReplaceConfirmDialogState = {
+    open: boolean;
+    message: string;
+};
+
 const largeFileViewCache = new Map<string, LargeFileViewCacheEntry>();
 
 const setLargeFileViewCache = (key: string, value: LargeFileViewCacheEntry) => {
@@ -387,8 +392,13 @@ export const useViewLogsController = () => {
         message: '',
         nextFormatId: 'unknown',
     });
+    const [monitoringReplaceDialogState, setMonitoringReplaceDialogState] = useState<MonitoringReplaceConfirmDialogState>({
+        open: false,
+        message: '',
+    });
     const pendingUnknownFormatResolverRef = useRef<((resolution: { mode: 'continue-unknown' | 'use-format'; formatId?: string }) => void) | null>(null);
     const pendingFormatChangeResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
+    const pendingMonitoringReplaceResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
     const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
     const [dbVirtualWindowStart, setDbVirtualWindowStart] = useState<number>(0);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
@@ -451,6 +461,25 @@ export const useViewLogsController = () => {
         });
     }, []);
 
+    const confirmMonitoringFileReplace = useCallback(async (context: {
+        expectedName?: string;
+        selectedName: string;
+        expectedSize?: number;
+        selectedSize: number;
+    }) => {
+        const baseMessage = context.expectedName
+            ? `Вы выбрали другой файл (${context.selectedName}) вместо ${context.expectedName}. Данные в IndexedDB будут перезаписаны. Продолжить?`
+            : 'Вы выбрали другой файл. Данные в IndexedDB будут перезаписаны. Продолжить?';
+
+        return await new Promise<boolean>((resolve) => {
+            pendingMonitoringReplaceResolverRef.current = resolve;
+            setMonitoringReplaceDialogState({
+                open: true,
+                message: baseMessage,
+            });
+        });
+    }, []);
+
     const {
         indexing,
         handleFileInputChange,
@@ -459,6 +488,7 @@ export const useViewLogsController = () => {
         reloadCurrentFileWithFormat,
     } = useFileLoader({
         resolveUnknownFormat,
+        confirmMonitoringFileReplace,
         onFileLoadStart: () => {
             setFilters({});
             setSearchTerm('');
@@ -505,6 +535,11 @@ export const useViewLogsController = () => {
                 pendingUnknownFormatResolverRef.current({ mode: 'continue-unknown' });
                 pendingUnknownFormatResolverRef.current = null;
             }
+
+            if (pendingMonitoringReplaceResolverRef.current) {
+                pendingMonitoringReplaceResolverRef.current(false);
+                pendingMonitoringReplaceResolverRef.current = null;
+            }
         };
     }, [clearParsedRowCache]);
 
@@ -527,6 +562,18 @@ export const useViewLogsController = () => {
         setFormatChangeDialogState({ open: false, message: '', nextFormatId: 'unknown' });
         pendingFormatChangeResolverRef.current?.(false);
         pendingFormatChangeResolverRef.current = null;
+    }, []);
+
+    const handleMonitoringReplaceConfirm = useCallback(() => {
+        setMonitoringReplaceDialogState({ open: false, message: '' });
+        pendingMonitoringReplaceResolverRef.current?.(true);
+        pendingMonitoringReplaceResolverRef.current = null;
+    }, []);
+
+    const handleMonitoringReplaceCancel = useCallback(() => {
+        setMonitoringReplaceDialogState({ open: false, message: '' });
+        pendingMonitoringReplaceResolverRef.current?.(false);
+        pendingMonitoringReplaceResolverRef.current = null;
     }, []);
 
     const handleConfirmDialogConfirm = useCallback(() => {
@@ -3157,6 +3204,10 @@ export const useViewLogsController = () => {
         message: 'Нет связи с сервером. Повторяем подключение...',
     };
 
+    const refreshDisabledReason = monitoringBanner.show
+        ? 'Файл недоступен для обновлений. Выберите файл для мониторинга.'
+        : '';
+
     const histogram = {
         isLargeFile,
         isIndexing,
@@ -3588,6 +3639,7 @@ export const useViewLogsController = () => {
             : 0,
         fileActionsDisabled: requiresServerUpload,
         uploadDisabledReason,
+        refreshDisabledReason,
     };
 
     let totalCount = displayLines.length;
@@ -3639,6 +3691,12 @@ export const useViewLogsController = () => {
             message: formatChangeDialogState.message,
             onConfirm: handleFormatChangeDialogConfirm,
             onCancel: handleFormatChangeDialogCancel,
+        },
+        monitoringReplaceDialog: {
+            open: monitoringReplaceDialogState.open,
+            message: monitoringReplaceDialogState.message,
+            onConfirm: handleMonitoringReplaceConfirm,
+            onCancel: handleMonitoringReplaceCancel,
         },
         confirmDialog: {
             open: confirmDialogState.open,
