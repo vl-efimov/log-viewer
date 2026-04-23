@@ -581,7 +581,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
     const zoomChartGrid = {
         ...zoomSliderGrid,
-        top: 18,
+        top: 6,
         bottom: 22,
     };
 
@@ -1471,7 +1471,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                             <Box
                                 sx={{
                                     position: 'absolute',
-                                    top: 14,
+                                    top: zoomChartGrid.top,
                                     left: `${zoomSliderGrid.left + 6}px`,
                                     right: `${zoomSliderGrid.right - 6}px`,
                                     bottom: 0,

@@ -40,7 +40,6 @@ import {
 import { appendLogFileToIndex } from '../../utils/logIndexer';
 import {
     beginRemoteUploadSession,
-    cancelActiveRemoteUploadSession,
     deleteRemoteIngest,
     endRemoteUploadSession,
     finishRemoteIngest,
@@ -92,6 +91,12 @@ type DisplayLineItem = {
     displayLineNumber: number;
     sourceLineNumber: number;
     anomalyStatus?: 'anomaly' | 'normal';
+    parsedMeta?: {
+        formatId: string;
+        fields: Record<string, string>;
+        fieldOrder: string[];
+    };
+    parseState?: 'parsed' | 'unparsed' | 'loading';
 };
 
 type LineIndex = {
@@ -380,6 +385,25 @@ export const useViewLogsController = () => {
     const [virtualWindowStart, setVirtualWindowStart] = useState<number>(0);
     const [dbVirtualWindowStart, setDbVirtualWindowStart] = useState<number>(0);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
+    const buildLineParsePreview = useCallback((lineNumber: number, raw: string) => {
+        if (raw.startsWith('Loading...')) {
+            return { parseState: 'loading' as const };
+        }
+
+        const parsedLine = getParsedRow({ lineNumber, raw });
+        if (!parsedLine.parsed) {
+            return { parseState: 'unparsed' as const };
+        }
+
+        return {
+            parseState: 'parsed' as const,
+            parsedMeta: {
+                formatId: parsedLine.parsed.formatId,
+                fields: parsedLine.parsed.fields,
+                fieldOrder: Object.keys(parsedLine.parsed.fields),
+            },
+        };
+    }, [getParsedRow]);
     const rebaseAnchorRef = useRef<number | null>(null);
     const dbRebaseAnchorRef = useRef<number | null>(null);
     const rangeLoadStateRef = useRef<{ pending: { start: number; end: number } | null; isLoading: boolean }>({
@@ -669,9 +693,10 @@ export const useViewLogsController = () => {
                 raw,
                 displayLineNumber: rowNumber,
                 sourceLineNumber: rowNumber,
+                ...buildLineParsePreview(rowNumber, raw),
             };
         });
-    }, []);
+    }, [buildLineParsePreview]);
 
     useEffect(() => {
         if (loaded || fileName) {
@@ -1026,6 +1051,13 @@ export const useViewLogsController = () => {
             remoteExpectedLineCountRef.current = 0;
             if ((error as Error).name !== 'AbortError') {
                 console.error('Failed to upload large file to server:', error);
+                const message = error instanceof Error && error.message
+                    ? error.message
+                    : 'Не удалось загрузить файл на сервер.';
+                dispatch(enqueueNotification({
+                    message,
+                    severity: 'error',
+                }));
             }
 
             if (startedIngestId) {
@@ -1054,13 +1086,6 @@ export const useViewLogsController = () => {
         requiresServerUpload,
         serverUploadInProgress,
     ]);
-
-    const handleCancelUploadToServer = useCallback(() => {
-        cancelActiveRemoteUploadSession();
-        setServerUploadInProgress(false);
-        setServerUploadProgress(0);
-        dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
-    }, [dispatch]);
 
     const buildLineIndex = useCallback(async (
         file: File,
@@ -2075,18 +2100,21 @@ export const useViewLogsController = () => {
         if (fileIndex < 0 || fileIndex >= dbLineCount) return null;
 
         const rawEntry = dbLineCacheRef.current.get(fileIndex);
+        const sourceLineNumber = fileIndex + 1;
+        const raw = rawEntry?.text ?? 'Loading... ';
 
         const displayLineNumber = viewMode === ViewModeEnum.FromEnd
             ? dbLineCount - globalDisplayIndex
             : fileIndex + 1;
 
         return {
-            raw: rawEntry?.text ?? 'Loading... ',
+            raw,
             displayLineNumber,
-            sourceLineNumber: fileIndex + 1,
-            anomalyStatus: getAnomalyStatusForLine(fileIndex + 1),
+            sourceLineNumber,
+            anomalyStatus: getAnomalyStatusForLine(sourceLineNumber),
+            ...buildLineParsePreview(sourceLineNumber, raw),
         };
-    }, [dbLineCount, dbVirtualWindowStart, getAnomalyStatusForLine, isDbView, viewMode, dbLineCacheVersion]);
+    }, [buildLineParsePreview, dbLineCount, dbVirtualWindowStart, getAnomalyStatusForLine, isDbView, viewMode, dbLineCacheVersion]);
 
     const getLineAtIndex = useCallback((displayIndex: number) => {
         if (!isStreamView) {
@@ -2098,12 +2126,22 @@ export const useViewLogsController = () => {
                     displayLineNumber: row.lineNumber,
                     sourceLineNumber: row.lineNumber,
                     anomalyStatus: getAnomalyStatusForLine(row.lineNumber),
+                    ...buildLineParsePreview(row.lineNumber, row.raw),
                 };
             }
             if (isDbView && !hasActiveFiltersApplied) {
                 return getDbLineAtIndex(displayIndex);
             }
-            return displayLines[displayIndex] ?? null;
+            const row = displayLines[displayIndex];
+            if (!row) {
+                return null;
+            }
+
+            const sourceLineNumber = row.sourceLineNumber ?? row.displayLineNumber;
+            return {
+                ...row,
+                ...buildLineParsePreview(sourceLineNumber, row.raw),
+            };
         }
 
         if (lineCount === 0) return null;
@@ -2117,18 +2155,21 @@ export const useViewLogsController = () => {
         if (fileIndex < 0 || fileIndex >= lineCount) return null;
 
         const rawEntry = lineCacheRef.current.get(fileIndex);
+        const sourceLineNumber = fileIndex + 1;
+        const raw = rawEntry?.text ?? 'Loading...';
 
         const displayLineNumber = viewMode === ViewModeEnum.FromEnd
             ? lineCount - globalDisplayIndex
             : fileIndex + 1;
 
         return {
-            raw: rawEntry?.text ?? 'Loading...',
+            raw,
             displayLineNumber,
-            sourceLineNumber: fileIndex + 1,
-            anomalyStatus: getAnomalyStatusForLine(fileIndex + 1),
+            sourceLineNumber,
+            anomalyStatus: getAnomalyStatusForLine(sourceLineNumber),
+            ...buildLineParsePreview(sourceLineNumber, raw),
         };
-    }, [displayLines, getAnomalyStatusForLine, indexedFilteredRows, lineCount, viewMode, lineCacheVersion, virtualWindowStart, isStreamView, hasActiveFiltersApplied, getDbLineAtIndex, isDbView]);
+    }, [buildLineParsePreview, displayLines, getAnomalyStatusForLine, indexedFilteredRows, lineCount, viewMode, lineCacheVersion, virtualWindowStart, isStreamView, hasActiveFiltersApplied, getDbLineAtIndex, isDbView]);
 
     const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
         if (!isStreamView || lineCount === 0) return;
@@ -3018,7 +3059,6 @@ export const useViewLogsController = () => {
         autoRefresh,
         onToggleAutoRefresh: handleToggleAutoRefresh,
         onUploadToServer: requiresServerUpload && !uploadDisabledReason ? () => void handleUploadToServer() : undefined,
-        onCancelUploadToServer: isServerUploadActive ? handleCancelUploadToServer : undefined,
         viewMode,
         onViewModeChange: setViewMode,
         filters,

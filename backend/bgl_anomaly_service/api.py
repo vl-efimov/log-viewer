@@ -266,17 +266,22 @@ def ingest_start(
     format_id: str | None = Form(default=None),
     parser_pattern: str | None = Form(default=None),
 ) -> dict[str, Any]:
-    ingest_id = create_ingest(
-        file_name=file_name,
-        file_size=file_size,
-        format_id=format_id,
-        parser_pattern=parser_pattern,
-    )
-    return {
-        "ok": True,
-        "ingest_id": ingest_id,
-        "recommended_chunk_bytes": 4 * 1024 * 1024,
-    }
+    try:
+        ingest_id = create_ingest(
+            file_name=file_name,
+            file_size=file_size,
+            format_id=format_id,
+            parser_pattern=parser_pattern,
+        )
+        return {
+            "ok": True,
+            "ingest_id": ingest_id,
+            "recommended_chunk_bytes": 4 * 1024 * 1024,
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.put("/ingest/{ingest_id}/chunk")

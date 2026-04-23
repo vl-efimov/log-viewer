@@ -380,7 +380,13 @@ export async function startRemoteIngest(
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to start ingest (${response.status})`);
+        const errorText = await response.text();
+        try {
+            const parsed = JSON.parse(errorText) as { detail?: string };
+            throw new Error(parsed.detail || `Failed to start ingest (${response.status})`);
+        } catch {
+            throw new Error(errorText || `Failed to start ingest (${response.status})`);
+        }
     }
 
     return (await response.json()) as IngestStartResponse;

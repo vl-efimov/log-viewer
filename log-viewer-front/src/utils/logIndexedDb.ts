@@ -335,13 +335,42 @@ export const upsertCustomLogFormat = async (
     const tx = db.transaction(STORE_CUSTOM_FORMATS, 'readwrite');
     const store = tx.objectStore(STORE_CUSTOM_FORMATS);
 
+    const trimmedName = format.name.trim();
+    const trimmedDescription = format.description.trim();
+    const trimmedRegex = format.regex.trim();
+
+    if (!trimmedName) {
+        await transactionDone(tx);
+        throw new Error('Name is required.');
+    }
+
+    if (!trimmedRegex) {
+        await transactionDone(tx);
+        throw new Error('Regular expression is required.');
+    }
+
+    const allFormats = await requestToPromise<CustomLogFormatRecord[]>(store.getAll());
+    const normalizedName = trimmedName.toLowerCase();
+    const hasDuplicateName = allFormats.some((existingFormat) => {
+        if (existingFormat.id === format.id) {
+            return false;
+        }
+
+        return existingFormat.name.trim().toLowerCase() === normalizedName;
+    });
+
+    if (hasDuplicateName) {
+        await transactionDone(tx);
+        throw new Error(`Custom format with name "${trimmedName}" already exists.`);
+    }
+
     const existing = await requestToPromise<CustomLogFormatRecord | undefined>(store.get(format.id));
     const now = Date.now();
     const next: CustomLogFormatRecord = {
         id: format.id,
-        name: format.name,
-        description: format.description,
-        regex: format.regex,
+        name: trimmedName,
+        description: trimmedDescription,
+        regex: trimmedRegex,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
     };

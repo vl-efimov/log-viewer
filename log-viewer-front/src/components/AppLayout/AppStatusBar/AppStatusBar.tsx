@@ -22,9 +22,14 @@ import { useLocation } from 'react-router-dom';
 import { RootState } from '../../../redux/store';
 import { baseUrl } from '../../../constants/BaseUrl';
 import { RouteViewLogs } from '../../../routes/routePaths';
-import { requestFormatChange } from '../../../redux/slices/logFileSlice';
+import { requestFormatChange, setIndexingState } from '../../../redux/slices/logFileSlice';
 import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
-import { cancelActiveAnomalyPredictionSession, cancelBglAnomalyPrediction, getBglAnomalyProgress } from '../../../services/bglAnomalyApi';
+import {
+    cancelActiveAnomalyPredictionSession,
+    cancelActiveRemoteUploadSession,
+    cancelBglAnomalyPrediction,
+    getBglAnomalyProgress,
+} from '../../../services/bglAnomalyApi';
 import { getAvailableLogFormats, getLogFormatById } from '../../../utils/logFormatDetector';
 import AppStatusBarItem from '../AppStatusBarItem';
 import {
@@ -349,6 +354,11 @@ const AppStatusBar: React.FC = () => {
         }
     };
 
+    const handleCancelServerUpload = () => {
+        cancelActiveRemoteUploadSession();
+        dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
+    };
+
     const formatTooltipTitle = (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, lineHeight: 1.2 }}>
             <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
@@ -465,37 +475,54 @@ const AppStatusBar: React.FC = () => {
             </Box>
             <Box sx={statusBarRightGroupSx}>
                 {isIndexing && (
-                    <AppStatusBarItem
-                        title={isServerUploadInProgress
-                            ? `Идет загрузка на сервер ${indexingProgress}%`
-                            : `Indexing ${indexingProgress}%`
-                        }
-                    >
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                minWidth: 180,
-                            }}
+                    <>
+                        <AppStatusBarItem
+                            title={isServerUploadInProgress
+                                ? `Идет загрузка на сервер ${indexingProgress}%`
+                                : `Indexing ${indexingProgress}%`
+                            }
                         >
-                            <Typography sx={anomalyTextSx}>
-                                {isServerUploadInProgress
-                                    ? `Идет загрузка на сервер ${indexingProgress}%`
-                                    : `Indexing ${indexingProgress}%`
-                                }
-                            </Typography>
-                            <LinearProgress
-                                variant="determinate"
-                                value={Math.max(0, Math.min(indexingProgress, 100))}
+                            <Box
                                 sx={{
-                                    width: 120,
-                                    height: 6,
-                                    borderRadius: 3,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    minWidth: 180,
                                 }}
-                            />
-                        </Box>
-                    </AppStatusBarItem>
+                            >
+                                <Typography sx={anomalyTextSx}>
+                                    {isServerUploadInProgress
+                                        ? `Идет загрузка на сервер ${indexingProgress}%`
+                                        : `Indexing ${indexingProgress}%`
+                                    }
+                                </Typography>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={Math.max(0, Math.min(indexingProgress, 100))}
+                                    sx={{
+                                        width: 120,
+                                        height: 6,
+                                        borderRadius: 3,
+                                    }}
+                                />
+                            </Box>
+                        </AppStatusBarItem>
+                        {isServerUploadInProgress && (
+                            <>
+                                <Divider
+                                    orientation="vertical"
+                                    flexItem
+                                    sx={statusBarDividerSx}
+                                />
+                                <AppStatusBarItem
+                                    title="Отменить загрузку на сервер"
+                                    onClick={handleCancelServerUpload}
+                                >
+                                    <CloseIcon sx={closeButtonSx} />
+                                </AppStatusBarItem>
+                            </>
+                        )}
+                    </>
                 )}
                 {anomalyStatus && (
                     <>

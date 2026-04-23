@@ -1604,7 +1604,14 @@ const DashboardPage: React.FC = () => {
                     <>
                         {((useLocalLargeMode && isHistogramLoading) || hasTimelineData) && (
                             <Card>
-                                <CardContent>
+                                <CardContent
+                                    sx={{
+                                        pb: 1,
+                                        '&:last-child': {
+                                            pb: 1,
+                                        },
+                                    }}
+                                >
                                     {useLocalLargeMode && isHistogramLoading ? (
                                         <Box
                                             sx={{

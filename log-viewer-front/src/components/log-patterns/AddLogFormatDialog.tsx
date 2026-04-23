@@ -46,6 +46,50 @@ const RECOMMENDED_FIELDS = [
     'method',
 ];
 
+type RegexValidationErrorCode =
+    | 'required'
+    | 'missing-named-groups'
+    | 'duplicate-named-groups'
+    | 'invalid-regex';
+
+type RegexValidationResult = {
+    valid: boolean;
+    error: string | null;
+    errorCode: RegexValidationErrorCode | null;
+    namedGroups: string[];
+    duplicateNamedGroups: string[];
+    instance: RegExp | null;
+    hasIndices: boolean;
+};
+
+const NAMED_GROUP_REGEX = /\(\?<([A-Za-z_][A-Za-z0-9_]*)>/g;
+
+const extractNamedGroupOccurrences = (regexSource: string): string[] => {
+    const groups: string[] = [];
+    let match: RegExpExecArray | null = NAMED_GROUP_REGEX.exec(regexSource);
+
+    while (match) {
+        groups.push(match[1]);
+        match = NAMED_GROUP_REGEX.exec(regexSource);
+    }
+
+    NAMED_GROUP_REGEX.lastIndex = 0;
+
+    return groups;
+};
+
+const extractDuplicateGroupNames = (groupNames: string[]): string[] => {
+    const counts = new Map<string, number>();
+
+    groupNames.forEach((name) => {
+        counts.set(name, (counts.get(name) ?? 0) + 1);
+    });
+
+    return Array.from(counts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([name]) => name);
+};
+
 const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
     open,
     onClose,
@@ -78,14 +122,31 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         setSubmitting(false);
     }, [initialValue?.description, initialValue?.name, initialValue?.regex, open]);
 
-    const regexValidation = useMemo(() => {
+    const regexValidation = useMemo<RegexValidationResult>(() => {
         const value = regex.trim();
         if (!value) {
             return {
                 valid: false,
                 error: 'Regular expression is required.',
+                errorCode: 'required',
                 namedGroups: [] as string[],
+                duplicateNamedGroups: [] as string[],
                 instance: null as RegExp | null,
+                hasIndices: false,
+            };
+        }
+
+        const namedGroupOccurrences = extractNamedGroupOccurrences(value);
+        const duplicateNamedGroups = extractDuplicateGroupNames(namedGroupOccurrences);
+
+        if (duplicateNamedGroups.length > 0) {
+            return {
+                valid: false,
+                error: `Duplicate named capture groups: ${duplicateNamedGroups.join(', ')}. Use unique names for each group.`,
+                errorCode: 'duplicate-named-groups',
+                namedGroups: extractNamedGroups(value),
+                duplicateNamedGroups,
+                instance: null,
                 hasIndices: false,
             };
         }
@@ -106,7 +167,9 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 return {
                     valid: false,
                     error: 'Use named capture groups, for example (?<timestamp>...) (?<level>...) (?<message>...).',
+                    errorCode: 'missing-named-groups',
                     namedGroups,
+                    duplicateNamedGroups,
                     instance: null,
                     hasIndices: false,
                 };
@@ -115,15 +178,20 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
             return {
                 valid: true,
                 error: null,
+                errorCode: null,
                 namedGroups,
+                duplicateNamedGroups,
                 instance,
                 hasIndices,
             };
-        } catch {
+        } catch (error) {
+            const details = error instanceof Error && error.message ? ` ${error.message}` : '';
             return {
                 valid: false,
-                error: 'Invalid regular expression.',
+                error: `Invalid regular expression.${details}`,
+                errorCode: 'invalid-regex',
                 namedGroups: [] as string[],
+                duplicateNamedGroups,
                 instance: null as RegExp | null,
                 hasIndices: false,
             };
@@ -441,7 +509,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                             Preview parsing of first 5 lines
                         </Typography>
 
-                        {!regexValidation.instance && regex.trim() ? (
+                        {regexValidation.errorCode === 'missing-named-groups' && regex.trim() ? (
                             <Box
                                 sx={{
                                     p: 2,
@@ -473,6 +541,58 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
 ^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})
 \\s+(?<level>\\w+)
 \\s+(?<message>.+)$`}
+                                </Typography>
+                            </Box>
+                        ) : regexValidation.errorCode === 'duplicate-named-groups' && regex.trim() ? (
+                            <Box
+                                sx={{
+                                    p: 2,
+                                    border: '1px solid',
+                                    borderColor: 'error.main',
+                                    borderRadius: 1,
+                                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.10)' : 'rgba(244, 67, 54, 0.06)',
+                                }}
+                            >
+                                <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, mb: 1 }}>
+                                    Повторяющиеся имена групп
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                    Каждая именованная группа должна иметь уникальное имя. Найдены дубликаты:
+                                </Typography>
+                                <Typography
+                                    variant="caption"
+                                    component="pre"
+                                    sx={{
+                                        fontFamily: 'monospace',
+                                        display: 'block',
+                                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
+                                        p: 1,
+                                        borderRadius: 0.5,
+                                        overflow: 'auto',
+                                        mb: 1,
+                                    }}
+                                >
+                                    {regexValidation.duplicateNamedGroups.join(', ')}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    Пример: вместо (?&lt;level&gt;...) (?&lt;level&gt;...) используйте (?&lt;level&gt;...) (?&lt;subLevel&gt;...).
+                                </Typography>
+                            </Box>
+                        ) : regexValidation.errorCode === 'invalid-regex' && regex.trim() ? (
+                            <Box
+                                sx={{
+                                    p: 2,
+                                    border: '1px solid',
+                                    borderColor: 'error.main',
+                                    borderRadius: 1,
+                                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.10)' : 'rgba(244, 67, 54, 0.06)',
+                                }}
+                            >
+                                <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, mb: 0.75 }}>
+                                    Ошибка в регулярном выражении
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {regexValidation.error ?? 'Invalid regular expression.'}
                                 </Typography>
                             </Box>
                         ) : (

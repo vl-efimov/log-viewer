@@ -228,8 +228,8 @@ def _compile_parser_regex(parser_pattern: str | None) -> re.Pattern[str] | None:
     pattern_source = re.sub(r"\(\?<([A-Za-z_][A-Za-z0-9_]*)>", r"(?P<\1>", parser_pattern)
     try:
         return re.compile(pattern_source)
-    except re.error:
-        return None
+    except re.error as exc:
+        raise ValueError(f"Invalid parser_pattern: {exc}") from exc
 
 
 def _to_timestamp_ms(timestamp_iso: str | None) -> int | None:
@@ -327,7 +327,9 @@ def create_ingest(
 ) -> str:
     ingest_id = str(uuid.uuid4())
     created_at = _utc_now()
-    compiled_regex = _compile_parser_regex(parser_pattern)
+    normalized_format_id = format_id.strip() if format_id and format_id.strip() else None
+    normalized_parser_pattern = parser_pattern.strip() if parser_pattern and parser_pattern.strip() else None
+    compiled_regex = _compile_parser_regex(normalized_parser_pattern)
 
     state = IngestState(
         decoder=codecs.getincrementaldecoder("utf-8")("replace"),
@@ -337,8 +339,8 @@ def create_ingest(
         file_name=file_name,
         file_size=int(file_size),
         created_at=created_at,
-        format_id=(format_id.strip() if format_id and format_id.strip() else None),
-        parser_pattern=(parser_pattern.strip() if parser_pattern and parser_pattern.strip() else None),
+        format_id=normalized_format_id,
+        parser_pattern=normalized_parser_pattern,
         parser_regex=compiled_regex,
     )
     _insert_ingest_snapshot(ingest_id=ingest_id, state=state, status="uploading")
