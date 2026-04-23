@@ -899,14 +899,14 @@ export const useViewLogsController = () => {
         reloadCurrentFileWithFormat,
     ]);
 
-        useEffect(() => {
-            if (!requestedFormatId) {
-                return;
-            }
+    useEffect(() => {
+        if (!requestedFormatId) {
+            return;
+        }
 
-            dispatch(clearFormatChangeRequest());
-            void handleFormatChange(requestedFormatId);
-        }, [dispatch, handleFormatChange, requestedFormatId]);
+        dispatch(clearFormatChangeRequest());
+        void handleFormatChange(requestedFormatId);
+    }, [dispatch, handleFormatChange, requestedFormatId]);
 
     const handleUploadToServer = useCallback(async () => {
         if (!requiresServerUpload || serverUploadInProgress) {
