@@ -1,23 +1,23 @@
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
-import IconButton from '@mui/material/IconButton';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Typography from '@mui/material/Typography';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
-import CloseIcon from '@mui/icons-material/Close';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
     LogFilters,
     DateRangeFilter,
     TextFilter,
     AnomalyStatusFilterValue,
 } from '../types/filters';
+import { GLOBAL_SEARCH_FILTER_KEY } from '../types/filters';
 import type { LogFormatField } from '../utils/logFormatDetector';
 
 const LOG_LEVEL_OPTIONS = [
@@ -56,10 +56,6 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     onCloseRequested,
 }) => {
     const [pendingFilters, setPendingFilters] = useState<LogFilters>(filters);
-
-    useEffect(() => {
-        setPendingFilters(filters);
-    }, [filters]);
 
     // Get current year
     const currentYear = new Date().getFullYear();
@@ -103,6 +99,22 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
         return next;
     };
+
+    const mergeWithPreservedSearchFilter = useCallback((nextFilters: LogFilters): LogFilters => {
+        const preservedSearch = filters[GLOBAL_SEARCH_FILTER_KEY];
+        if (!preservedSearch) {
+            return nextFilters;
+        }
+
+        return {
+            ...nextFilters,
+            [GLOBAL_SEARCH_FILTER_KEY]: preservedSearch,
+        };
+    }, [filters]);
+
+    useEffect(() => {
+        setPendingFilters(sanitizeFilters(filters));
+    }, [anomalyFilterEnabled, fieldDefinitions, filters]);
 
     const handleTimestampStartChange = (field: string, value: string) => {
         const filterKey = field as keyof LogFilters;
@@ -150,12 +162,12 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
     const handleClearFilters = () => {
         setPendingFilters({});
-        onFiltersChange({});
+        onFiltersChange(mergeWithPreservedSearchFilter({}));
         onCloseRequested?.();
     };
 
     const handleApplyFilters = () => {
-        onFiltersChange(sanitizeFilters(pendingFilters));
+        onFiltersChange(mergeWithPreservedSearchFilter(sanitizeFilters(pendingFilters)));
         onCloseRequested?.();
     };
 
@@ -345,60 +357,48 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                 />
             )}
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {onCloseRequested && (
-                    <IconButton
-                        size="small"
-                        aria-label="close"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onCloseRequested();
-                        }}
-                    >
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                )}
-                </Box>
+                <Button
+                    variant="outlined"
+                    onClick={handleClearFilters}
+                    startIcon={<ClearIcon fontSize="small" />}
+                    size="small"
+                    disabled={!hasActiveFilters()}
+                    sx={{ textTransform: 'none' }}
+                >
+                    Clear All
+                </Button>
+            </Box>
         </Box>
     );
 
-    const isNoFilterState = visibleFieldDefinitions.length === 0 && !anomalyFilterEnabled;
+    const hasFieldSpecificFilters = visibleFieldDefinitions.length > 0 || anomalyFilterEnabled;
 
     const content = (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            {isNoFilterState ? (
+            {!hasFieldSpecificFilters ? (
                 <Typography
                     variant="body2"
                     color="text.secondary"
                 >
-                    Фильтрация для неопознанного формата невозможна.
-                    <br />
-                    Выберите один из доступных форматов или создайте свой собственный.
+                    Фильтрация по полям для неопознанного формата недоступна.
                 </Typography>
             ) : (
                 <>
                     {visibleFieldDefinitions.map(field => renderFieldFilter(field))}
                     {renderAnomalyFilter()}
-                    <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
-                        {hasActiveFilters() && (
-                            <Chip
-                                label="Clear All"
-                                variant="outlined"
-                                onClick={handleClearFilters}
-                                clickable
-                                icon={<ClearIcon fontSize="small" />}
-                                sx={{ height: 32 }}
-                            />
-                        )}
-                        <Chip
-                            label="Apply"
-                            color="primary"
-                            onClick={handleApplyFilters}
-                            clickable
-                            sx={{ height: 32 }}
-                        />
-                    </Box>
                 </>
             )}
+            <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
+                <Button
+                    color="primary"
+                    variant="contained"
+                    size="small"
+                    onClick={handleApplyFilters}
+                    sx={{ textTransform: 'none' }}
+                >
+                    Apply
+                </Button>
+            </Box>
         </Box>
     );
 

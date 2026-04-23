@@ -1,10 +1,13 @@
 import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
 import Badge from '@mui/material/Badge';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import Paper from '@mui/material/Paper';
 import Popover from '@mui/material/Popover';
+import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -15,12 +18,17 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import { useEffect, useState } from 'react';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ViewModeEnum } from '../constants/ViewModeEnum';
 import AnomalySettingsDialog from './AnomalySettingsDialog';
 import { LogFiltersBar } from './LogFiltersBar';
 import type { LogFilters } from '../types/filters';
 import type { LogFormatField } from '../utils/logFormatDetector';
+
+const LOG_TABLE_SEARCH_INPUT_ID = 'log-table-search-input';
 
 type AnomalySourceRow = {
     lineNumber: number;
@@ -34,6 +42,13 @@ interface LogToolbarProps {
     onUploadToServer?: () => void;
     viewMode: ViewModeEnum;
     onViewModeChange: (mode: ViewModeEnum) => void;
+    searchTerm: string;
+    onSearchTermChange: (value: string) => void;
+    onSearchSubmit?: (value: string) => boolean | Promise<boolean>;
+    onNavigateToPreviousSearchMatch?: () => void;
+    canNavigateToPreviousSearchMatch?: boolean;
+    onNavigateToNextSearchMatch?: () => void;
+    canNavigateToNextSearchMatch?: boolean;
     filters: LogFilters;
     onFiltersChange: (filters: LogFilters) => void;
     fieldDefinitions: LogFormatField[];
@@ -64,6 +79,13 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     onUploadToServer,
     viewMode,
     onViewModeChange,
+    searchTerm,
+    onSearchTermChange,
+    onSearchSubmit,
+    onNavigateToPreviousSearchMatch,
+    canNavigateToPreviousSearchMatch = false,
+    onNavigateToNextSearchMatch,
+    canNavigateToNextSearchMatch = false,
     filters,
     onFiltersChange,
     fieldDefinitions,
@@ -87,7 +109,12 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     uploadDisabledReason,
 }) => {
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
+    const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
+    const [searchDraft, setSearchDraft] = useState<string>(searchTerm);
+    const [searchNotFound, setSearchNotFound] = useState(false);
+    const searchButtonRef = useRef<HTMLButtonElement | null>(null);
+    const filtersButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const compactButtonSx = {
         minWidth: 0,
@@ -113,13 +140,117 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         return false;
     }).length;
 
-    const isFiltersOpen = Boolean(filtersAnchorEl) && !filtersDisabled;
+    const isSearchOpen = Boolean(searchAnchorEl);
+    const isFiltersOpen = Boolean(filtersAnchorEl);
     const controlsDisabled = fileActionsDisabled || uploadInProgress;
+
+    const focusSearchInput = useCallback(() => {
+        window.requestAnimationFrame(() => {
+            const input = document.getElementById(LOG_TABLE_SEARCH_INPUT_ID) as HTMLInputElement | null;
+            if (!input) {
+                return;
+            }
+
+            input.focus();
+            input.select();
+        });
+    }, []);
+
+    const openSearchPopover = useCallback((anchor?: HTMLElement | null) => {
+        if (controlsDisabled) {
+            return;
+        }
+
+        const nextAnchor = anchor ?? searchButtonRef.current;
+        if (!nextAnchor) {
+            return;
+        }
+
+        setSearchDraft(searchTerm);
+        setSearchNotFound(false);
+        setSearchAnchorEl(nextAnchor);
+        focusSearchInput();
+    }, [controlsDisabled, focusSearchInput, searchTerm]);
+
+    const applySearchDraft = useCallback(async () => {
+        const normalized = searchDraft.trim();
+
+        if (onSearchSubmit) {
+            const hasMatches = await Promise.resolve(onSearchSubmit(searchDraft));
+            if (hasMatches) {
+                setSearchNotFound(false);
+                setSearchAnchorEl(null);
+                return;
+            }
+
+            setSearchNotFound(normalized.length > 0);
+            focusSearchInput();
+            return;
+        }
+
+        onSearchTermChange(searchDraft);
+        setSearchNotFound(false);
+        focusSearchInput();
+    }, [focusSearchInput, onSearchSubmit, onSearchTermChange, searchDraft]);
+
+    const handleSearchInputKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key !== 'Enter') {
+            return;
+        }
+
+        event.preventDefault();
+        void applySearchDraft();
+    }, [applySearchDraft]);
+
+    const clearSearch = useCallback(() => {
+        setSearchDraft('');
+        onSearchTermChange('');
+        setSearchNotFound(false);
+        focusSearchInput();
+    }, [focusSearchInput, onSearchTermChange]);
+
+    const openFiltersPopover = useCallback((anchor?: HTMLElement | null) => {
+        if (filtersDisabled || controlsDisabled) {
+            return;
+        }
+
+        const nextAnchor = anchor ?? filtersButtonRef.current;
+        if (!nextAnchor) {
+            return;
+        }
+
+        setFiltersAnchorEl(nextAnchor);
+    }, [controlsDisabled, filtersDisabled]);
+
+    useEffect(() => {
+        if (!controlsDisabled) return;
+        setSearchAnchorEl(null);
+    }, [controlsDisabled]);
 
     useEffect(() => {
         if (!filtersDisabled) return;
         setFiltersAnchorEl(null);
     }, [filtersDisabled]);
+
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (!(event.ctrlKey || event.metaKey)) {
+                return;
+            }
+
+            if (event.key.toLowerCase() !== 'f') {
+                return;
+            }
+
+            event.preventDefault();
+            openSearchPopover();
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+        };
+    }, [openSearchPopover]);
 
     return (
         <>
@@ -376,9 +507,68 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     sx={{
                         ml: 'auto',
                         display: 'flex',
-                        alignItems: 'center'
+                        alignSelf: 'stretch',
+                        alignItems: 'center',
+                        gap: 1,
                     }}
                 >
+                    <Tooltip
+                        title="Поиск (Ctrl+F)"
+                        arrow
+                    >
+                        <span>
+                            <IconButton
+                                ref={searchButtonRef}
+                                size="small"
+                                onClick={(event) => openSearchPopover(event.currentTarget)}
+                                disabled={controlsDisabled}
+                                color={isSearchOpen || searchTerm.trim().length > 0 ? 'primary' : 'default'}
+                                sx={{ p: 0.5 }}
+                            >
+                                <SearchIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip
+                        title="Предыдущее совпадение"
+                        arrow
+                    >
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onNavigateToPreviousSearchMatch}
+                                disabled={controlsDisabled || !canNavigateToPreviousSearchMatch || !onNavigateToPreviousSearchMatch}
+                                color={canNavigateToPreviousSearchMatch ? 'primary' : 'default'}
+                                sx={{ p: 0.5 }}
+                            >
+                                <KeyboardArrowUpIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip
+                        title="Следующее совпадение"
+                        arrow
+                    >
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onNavigateToNextSearchMatch}
+                                disabled={controlsDisabled || !canNavigateToNextSearchMatch || !onNavigateToNextSearchMatch}
+                                color={canNavigateToNextSearchMatch ? 'primary' : 'default'}
+                                sx={{ p: 0.5 }}
+                            >
+                                <KeyboardArrowDownIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Divider
+                        orientation="vertical"
+                        flexItem
+                    />
+
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                         <Tooltip
                             title={filtersDisabled ? 'Filters disabled while indexing' : 'Filters'}
@@ -390,9 +580,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 invisible={activeFiltersCount === 0}
                             >
                                 <Button
+                                    ref={filtersButtonRef}
                                     size="small"
                                     variant='outlined'
-                                    onClick={(event) => setFiltersAnchorEl(event.currentTarget)}
+                                    onClick={(event) => openFiltersPopover(event.currentTarget)}
                                     disabled={filtersDisabled || controlsDisabled}
                                     startIcon={(
                                         <FilterAltIcon fontSize="small" />
@@ -407,6 +598,82 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     </Box>
                 </Box>
             </Paper >
+
+            <Popover
+                open={isSearchOpen}
+                anchorEl={searchAnchorEl}
+                onClose={() => {
+                    setSearchAnchorEl(null);
+                    setSearchNotFound(false);
+                }}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <Box sx={{ p: 1.5, width: 380 }}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                        <TextField
+                            id={LOG_TABLE_SEARCH_INPUT_ID}
+                            label="Поиск по таблице"
+                            value={searchDraft}
+                            onChange={(event) => {
+                                setSearchDraft(event.target.value);
+                                setSearchNotFound(false);
+                            }}
+                            onKeyDown={handleSearchInputKeyDown}
+                            placeholder="Введите слово или фразу"
+                            size="small"
+                            autoFocus
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            size="small"
+                                            onClick={clearSearch}
+                                            disabled={searchDraft.length === 0 && searchTerm.length === 0}
+                                            edge="end"
+                                            aria-label="Очистить поиск"
+                                        >
+                                            <CloseIcon fontSize="small" />
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                            fullWidth
+                        />
+                        <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => {
+                                void applySearchDraft();
+                            }}
+                            sx={{ minWidth: 86, height: 40 }}
+                        >
+                            Найти
+                        </Button>
+                    </Box>
+                    {searchNotFound && (
+                        <Alert
+                            severity="warning"
+                            variant="outlined"
+                            icon={<WarningAmberOutlinedIcon fontSize="inherit" />}
+                            sx={{
+                                mt: 0.75,
+                                py: 0.25,
+                                borderRadius: 1,
+                                borderColor: 'warning.main',
+                                backgroundColor: 'rgba(255, 167, 38, 0.08)',
+                                color: 'warning.dark',
+                                '& .MuiAlert-icon': {
+                                    color: 'warning.main',
+                                    alignItems: 'center',
+                                },
+                            }}
+                        >
+                            Совпадений не найдено
+                        </Alert>
+                    )}
+                </Box>
+            </Popover>
 
             <Popover
                 open={isFiltersOpen}

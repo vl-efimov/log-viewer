@@ -29,6 +29,11 @@ type HighlightSegment = {
     category: HighlightCategory;
 };
 
+type SearchChunk = {
+    text: string;
+    isMatch: boolean;
+};
+
 const LEVEL_ERROR_VALUES = new Set(['fatal', 'error', 'err', 'critical', 'crit', 'panic', 'alert']);
 const LEVEL_WARNING_VALUES = new Set(['warn', 'warning']);
 const LEVEL_INFO_VALUES = new Set(['info', 'notice']);
@@ -145,6 +150,36 @@ const getSegmentColor = (category: HighlightCategory, isDarkMode: boolean): stri
     return palette[category];
 };
 
+const splitBySearchTerm = (text: string, normalizedSearchTerm: string): SearchChunk[] => {
+    if (!normalizedSearchTerm) {
+        return [{ text, isMatch: false }];
+    }
+
+    const normalizedText = text.toLowerCase();
+    const chunks: SearchChunk[] = [];
+    let cursor = 0;
+
+    while (cursor < text.length) {
+        const foundAt = normalizedText.indexOf(normalizedSearchTerm, cursor);
+        if (foundAt < 0) {
+            if (cursor < text.length) {
+                chunks.push({ text: text.slice(cursor), isMatch: false });
+            }
+            break;
+        }
+
+        if (foundAt > cursor) {
+            chunks.push({ text: text.slice(cursor, foundAt), isMatch: false });
+        }
+
+        const end = foundAt + normalizedSearchTerm.length;
+        chunks.push({ text: text.slice(foundAt, end), isMatch: true });
+        cursor = end;
+    }
+
+    return chunks.length > 0 ? chunks : [{ text, isMatch: false }];
+};
+
 const resolveLineParsing = (row: DisplayLine): { parseState: ParseState; parsedMeta?: ParsedLinePreview } => {
     if (row.parseState === 'parsed' && row.parsedMeta) {
         return { parseState: 'parsed', parsedMeta: row.parsedMeta };
@@ -187,6 +222,7 @@ interface LogLinesListProps {
     totalCount?: number;
     getLineAtIndex?: (index: number) => DisplayLine | null;
     onRangeChange?: (startIndex: number, endIndex: number) => void;
+    globalSearchTerm?: string | null;
     selectedLine: number | null;
     onSelectLine: (lineNumber: number) => void;
     virtuosoRef: RefObject<VirtuosoHandle | null>;
@@ -197,11 +233,14 @@ const LogLinesList: FC<LogLinesListProps> = ({
     totalCount,
     getLineAtIndex,
     onRangeChange,
+    globalSearchTerm,
     selectedLine,
     onSelectLine,
     virtuosoRef,
 }) => {
     const resolvedTotalCount = totalCount ?? displayLines?.length ?? 0;
+    const normalizedGlobalSearchTerm = (globalSearchTerm ?? '').trim().toLowerCase();
+
     return (
         <Virtuoso
             ref={virtuosoRef}
@@ -237,12 +276,14 @@ const LogLinesList: FC<LogLinesListProps> = ({
                             alignItems: 'center',
                             px: 2,
                             cursor: 'pointer',
-                            backgroundColor: selectedLine === row.displayLineNumber ? '#e3f2fd' : 'transparent',
+                            backgroundColor: selectedLine === (row.sourceLineNumber ?? row.displayLineNumber) ? '#e3f2fd' : 'transparent',
                             '&:hover': {
-                                backgroundColor: selectedLine === row.displayLineNumber ? '#e3f2fd' : (theme) => theme.palette.action.hover,
+                                backgroundColor: selectedLine === (row.sourceLineNumber ?? row.displayLineNumber)
+                                    ? '#e3f2fd'
+                                    : (theme) => theme.palette.action.hover,
                             },
                         }}
-                        onClick={() => onSelectLine(row.displayLineNumber)}
+                        onClick={() => onSelectLine(row.sourceLineNumber ?? row.displayLineNumber)}
                     >
                         <Typography
                             variant="body2"
@@ -304,10 +345,46 @@ const LogLinesList: FC<LogLinesListProps> = ({
                                             color: getSegmentColor(segment.category, theme.palette.mode === 'dark'),
                                         })}
                                     >
-                                        {segment.text}
+                                        {normalizedGlobalSearchTerm
+                                            ? splitBySearchTerm(segment.text, normalizedGlobalSearchTerm).map((chunk, chunkIndex) => (
+                                                <Box
+                                                    component="span"
+                                                    key={`${row.displayLineNumber}-${segmentIndex}-${chunkIndex}-${chunk.isMatch ? 'match' : 'text'}`}
+                                                    sx={chunk.isMatch
+                                                        ? (theme) => ({
+                                                            backgroundColor: theme.palette.mode === 'dark'
+                                                                ? 'rgba(255, 235, 59, 0.35)'
+                                                                : 'rgba(255, 235, 59, 0.7)',
+                                                            borderRadius: '2px',
+                                                        })
+                                                        : undefined}
+                                                >
+                                                    {chunk.text}
+                                                </Box>
+                                            ))
+                                            : segment.text}
                                     </Box>
                                 ))
-                                : row.raw}
+                                : (
+                                    normalizedGlobalSearchTerm
+                                        ? splitBySearchTerm(row.raw, normalizedGlobalSearchTerm).map((chunk, chunkIndex) => (
+                                            <Box
+                                                component="span"
+                                                key={`${row.displayLineNumber}-raw-${chunkIndex}-${chunk.isMatch ? 'match' : 'text'}`}
+                                                sx={chunk.isMatch
+                                                    ? (theme) => ({
+                                                        backgroundColor: theme.palette.mode === 'dark'
+                                                            ? 'rgba(255, 235, 59, 0.35)'
+                                                            : 'rgba(255, 235, 59, 0.7)',
+                                                        borderRadius: '2px',
+                                                    })
+                                                    : undefined}
+                                            >
+                                                {chunk.text}
+                                            </Box>
+                                        ))
+                                        : row.raw
+                                )}
                         </Typography>
                     </Box>
                 );

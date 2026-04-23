@@ -7,6 +7,8 @@ export interface TextFilter {
     value: string;
 }
 
+export const GLOBAL_SEARCH_FILTER_KEY = '__globalSearch';
+
 export const ANOMALY_STATUS_VALUES = ['anomaly', 'normal', 'undefined'] as const;
 export type AnomalyStatusFilterValue = typeof ANOMALY_STATUS_VALUES[number];
 
@@ -20,6 +22,7 @@ export interface LogFilters {
     // Common fields
     level?: string[];
     message?: TextFilter;
+    globalSearch?: TextFilter;
     anomalyStatus?: AnomalyStatusFilterValue[];
     
     // Source/Class/Logger fields

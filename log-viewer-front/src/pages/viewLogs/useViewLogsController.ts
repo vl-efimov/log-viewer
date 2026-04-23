@@ -29,6 +29,7 @@ import { applyLogFilters } from '../../utils/logFilters';
 import { useFileLoader } from '../../hooks/useFileLoader';
 import { useParsedRowsCache } from '../../hooks/useParsedRowsCache';
 import {
+    findAdjacentLineMatch,
     getDashboardSnapshot,
     getSession,
     getLinesRange,
@@ -72,6 +73,7 @@ const LINE_INDEX_PROGRESS_REPORT_MS = 120;
 const LINE_INDEX_PROGRESS_MIN_NEW_LINES = 2_000;
 const TAIL_LOAD_BYTES = 768 * 1024;
 const TAIL_LOAD_MAX_LINES = 400;
+const SEARCH_SCAN_CHUNK_LINES = 256;
 const ANOMALY_FILTER_KEY = 'anomalyStatus';
 const TIMELINE_FILTER_DEBOUNCE_MS = 300;
 const TIMELINE_FILTER_FALLBACK_FIELD = 'timestamp';
@@ -349,6 +351,7 @@ export const useViewLogsController = () => {
     const [indexedHistogramLines, setIndexedHistogramLines] = useState<ViewParsedLine[]>([]);
     const [isHistogramLoading, setIsHistogramLoading] = useState<boolean>(false);
     const [filters, setFilters] = useState<LogFilters>({});
+    const [searchTerm, setSearchTerm] = useState<string>('');
     const timelineFilterFieldRef = useRef<string>(TIMELINE_FILTER_FALLBACK_FIELD);
     const timelineFilterTimerRef = useRef<number | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -454,7 +457,13 @@ export const useViewLogsController = () => {
         handleFileSystemAccess,
         handleFileSystemAccessForMonitoring,
         reloadCurrentFileWithFormat,
-    } = useFileLoader({ resolveUnknownFormat });
+    } = useFileLoader({
+        resolveUnknownFormat,
+        onFileLoadStart: () => {
+            setFilters({});
+            setSearchTerm('');
+        },
+    });
 
     const largeFileCacheKey = analyticsSessionId || `${fileName}|${fileSize}`;
 
@@ -1602,6 +1611,10 @@ export const useViewLogsController = () => {
         });
     }, [anomalySelection, getAnomalyStatusForLine, hasAnomalyResults]);
 
+    const applyClientSideRowFilters = useCallback((rows: ViewRow[]): ViewRow[] => {
+        return applyAnomalyFilterToRows(rows);
+    }, [applyAnomalyFilterToRows]);
+
     useEffect(() => {
         if (hasAnomalyResults) {
             return;
@@ -1698,7 +1711,7 @@ export const useViewLogsController = () => {
             const pageRowsDisplayRaw = queryIsDesc === displayIsDesc
                 ? result.lines
                 : result.lines.slice().reverse();
-            const pageRowsDisplay = applyAnomalyFilterToRows(pageRowsDisplayRaw);
+            const pageRowsDisplay = applyClientSideRowFilters(pageRowsDisplayRaw);
 
             if (pageRowsDisplay.length > 0) {
                 let prependedCount = 0;
@@ -1793,7 +1806,7 @@ export const useViewLogsController = () => {
         } finally {
             state.isLoading = false;
         }
-    }, [analyticsSessionId, applyAnomalyFilterToRows, dataFilters, mergeRemoteFilteredRows]);
+    }, [analyticsSessionId, applyClientSideRowFilters, dataFilters, mergeRemoteFilteredRows]);
 
     useEffect(() => {
         if (isStreamView || !analyticsSessionId || !hasActiveFiltersApplied) {
@@ -1857,7 +1870,7 @@ export const useViewLogsController = () => {
                     }
                     lastRawLine = rawPage[rawPage.length - 1].lineNumber;
 
-                    const filteredPage = applyAnomalyFilterToRows(rawPage);
+                    const filteredPage = applyClientSideRowFilters(rawPage);
                     if (filteredPage.length > 0) {
                         seedRows.push(...filteredPage);
                     }
@@ -1941,7 +1954,7 @@ export const useViewLogsController = () => {
         };
     }, [
         analyticsSessionId,
-        applyAnomalyFilterToRows,
+        applyClientSideRowFilters,
         dataFilters,
         hasActiveFiltersApplied,
         isStreamView,
@@ -2551,7 +2564,7 @@ export const useViewLogsController = () => {
         }
 
         const targetLine = displayLines[targetIndex];
-        setSelectedLine(targetLine.displayLineNumber);
+        setSelectedLine(targetLine.sourceLineNumber ?? targetLine.displayLineNumber);
         virtuosoRef.current.scrollToIndex({ index: targetIndex, align: 'center', behavior: 'auto' });
     }, [
         clampWindowStart,
@@ -3155,6 +3168,383 @@ export const useViewLogsController = () => {
         selectedTimeRange: selectedHistogramTimeRange,
     };
 
+    const isTailLoadedMode = (
+        isStreamView
+        && viewMode === ViewModeEnum.FromEnd
+        && lineCount === 0
+        && tailLoadedRows.length > 0
+    );
+
+    const collectSearchSourceRows = useCallback((): Array<{ lineNumber: number; raw: string }> => {
+        if (isTailLoadedMode) {
+            return tailLoadedRows.map((row) => ({
+                lineNumber: row.sourceLineNumber ?? row.displayLineNumber,
+                raw: row.raw,
+            }));
+        }
+
+        if (isDbView && hasActiveFiltersApplied) {
+            return indexedFilteredRows.map((row) => ({
+                lineNumber: row.lineNumber,
+                raw: row.raw,
+            }));
+        }
+
+        if (!isStreamView && !isDbView) {
+            return displayLines.map((row) => ({
+                lineNumber: row.sourceLineNumber ?? row.displayLineNumber,
+                raw: row.raw,
+            }));
+        }
+
+        if (isStreamView) {
+            const rows: Array<{ lineNumber: number; raw: string }> = [];
+            for (const [fileIndex, entry] of lineCacheRef.current.entries()) {
+                rows.push({
+                    lineNumber: fileIndex + 1,
+                    raw: entry.text,
+                });
+            }
+            return rows;
+        }
+
+        if (isDbView && !hasActiveFiltersApplied) {
+            const rows: Array<{ lineNumber: number; raw: string }> = [];
+            for (const [fileIndex, entry] of dbLineCacheRef.current.entries()) {
+                rows.push({
+                    lineNumber: fileIndex + 1,
+                    raw: entry.text,
+                });
+            }
+            return rows;
+        }
+
+        return [];
+    }, [
+        isTailLoadedMode,
+        tailLoadedRows,
+        isDbView,
+        hasActiveFiltersApplied,
+        indexedFilteredRows,
+        isStreamView,
+        displayLines,
+        lineCacheVersion,
+        dbLineCacheVersion,
+    ]);
+
+    const collectSearchMatchLines = useCallback((term: string): number[] => {
+        const normalizedTerm = term.toLowerCase().trim();
+        if (!normalizedTerm) {
+            return [];
+        }
+
+        const rows = collectSearchSourceRows();
+        if (rows.length === 0) {
+            return [];
+        }
+
+        const matched = rows
+            .filter((row) => row.raw.toLowerCase().includes(normalizedTerm))
+            .map((row) => row.lineNumber)
+            .filter((lineNumber) => Number.isFinite(lineNumber) && lineNumber > 0);
+
+        if (matched.length === 0) {
+            return [];
+        }
+
+        return Array.from(new Set(matched)).sort((a, b) => a - b);
+    }, [collectSearchSourceRows]);
+
+    const getAdjacentSearchMatchLine = useCallback((
+        direction: 'up' | 'down',
+        fromLine: number | null,
+        term: string = searchTerm,
+    ): number | null => {
+        const matchLines = collectSearchMatchLines(term);
+        if (matchLines.length === 0) {
+            return null;
+        }
+
+        const minLine = matchLines[0];
+        const maxLine = matchLines[matchLines.length - 1];
+
+        const moveTowardsGreaterLine = direction === 'down'
+            ? viewMode !== ViewModeEnum.FromEnd
+            : viewMode === ViewModeEnum.FromEnd;
+
+        const normalizedCurrent = fromLine !== null && Number.isFinite(fromLine)
+            ? Math.floor(fromLine)
+            : null;
+
+        if (!normalizedCurrent || normalizedCurrent <= 0) {
+            return moveTowardsGreaterLine ? minLine : maxLine;
+        }
+
+        if (moveTowardsGreaterLine) {
+            for (let i = 0; i < matchLines.length; i += 1) {
+                const line = matchLines[i];
+                if (normalizedCurrent < line) {
+                    return line;
+                }
+            }
+            return minLine;
+        }
+
+        for (let i = matchLines.length - 1; i >= 0; i -= 1) {
+            const line = matchLines[i];
+            if (normalizedCurrent > line) {
+                return line;
+            }
+        }
+
+        return maxLine;
+    }, [collectSearchMatchLines, searchTerm, viewMode]);
+
+    const resolveIndexedDirection = useCallback((direction: 'up' | 'down'): 'next' | 'previous' => {
+        const moveTowardsGreaterLine = direction === 'down'
+            ? viewMode !== ViewModeEnum.FromEnd
+            : viewMode === ViewModeEnum.FromEnd;
+
+        return moveTowardsGreaterLine ? 'next' : 'previous';
+    }, [viewMode]);
+
+    const readStreamLinesRange = useCallback(async (
+        file: File,
+        startLine: number,
+        endLine: number,
+    ): Promise<Array<{ lineNumber: number; raw: string }>> => {
+        const offsets = lineOffsetsRef.current;
+        if (offsets.length === 0 || endLine < startLine) {
+            return [];
+        }
+
+        const safeStartLine = Math.max(1, startLine);
+        const safeEndLine = Math.min(endLine, offsets.length);
+        if (safeEndLine < safeStartLine) {
+            return [];
+        }
+
+        const startIndex = safeStartLine - 1;
+        const endIndex = safeEndLine - 1;
+
+        const startOffset = getOffsetAt(offsets, startIndex);
+        const endOffset = endIndex + 1 < offsets.length
+            ? getOffsetAt(offsets, endIndex + 1)
+            : file.size;
+
+        const buffer = await file.slice(startOffset, endOffset).arrayBuffer();
+        const text = new TextDecoder('utf-8').decode(buffer);
+        const lines = text.split(/\r?\n/);
+
+        const expectedCount = safeEndLine - safeStartLine + 1;
+        if (lines.length > expectedCount) {
+            lines.length = expectedCount;
+        }
+
+        const result: Array<{ lineNumber: number; raw: string }> = [];
+        for (let i = 0; i < lines.length; i += 1) {
+            result.push({
+                lineNumber: safeStartLine + i,
+                raw: lines[i],
+            });
+        }
+
+        return result;
+    }, []);
+
+    const findAdjacentStreamLineMatch = useCallback(async (
+        term: string,
+        options: {
+            fromLine?: number | null;
+            direction?: 'next' | 'previous';
+            wrap?: boolean;
+        } = {},
+    ): Promise<number | null> => {
+        const normalizedTerm = term.toLowerCase().trim();
+        if (!normalizedTerm || lineCount <= 0) {
+            return null;
+        }
+
+        const file = await getActiveFile();
+        if (!file) {
+            return null;
+        }
+
+        const direction = options.direction ?? 'next';
+        const wrap = options.wrap ?? true;
+        const normalizedFromLine = (
+            options.fromLine !== undefined
+            && options.fromLine !== null
+            && Number.isFinite(options.fromLine)
+        )
+            ? Math.max(1, Math.min(lineCount, Math.floor(options.fromLine)))
+            : null;
+
+        const scanRange = async (startLine: number, endLine: number, scanDirection: 'next' | 'previous'): Promise<number | null> => {
+            if (endLine < startLine) {
+                return null;
+            }
+
+            if (scanDirection === 'next') {
+                for (let chunkStart = startLine; chunkStart <= endLine; chunkStart += SEARCH_SCAN_CHUNK_LINES) {
+                    const chunkEnd = Math.min(endLine, chunkStart + SEARCH_SCAN_CHUNK_LINES - 1);
+                    const rows = await readStreamLinesRange(file, chunkStart, chunkEnd);
+                    for (let i = 0; i < rows.length; i += 1) {
+                        if (rows[i].raw.toLowerCase().includes(normalizedTerm)) {
+                            return rows[i].lineNumber;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            for (let chunkEnd = endLine; chunkEnd >= startLine; chunkEnd -= SEARCH_SCAN_CHUNK_LINES) {
+                const chunkStart = Math.max(startLine, chunkEnd - SEARCH_SCAN_CHUNK_LINES + 1);
+                const rows = await readStreamLinesRange(file, chunkStart, chunkEnd);
+                for (let i = rows.length - 1; i >= 0; i -= 1) {
+                    if (rows[i].raw.toLowerCase().includes(normalizedTerm)) {
+                        return rows[i].lineNumber;
+                    }
+                }
+            }
+
+            return null;
+        };
+
+        if (direction === 'next') {
+            if (normalizedFromLine !== null) {
+                const foundForward = await scanRange(normalizedFromLine + 1, lineCount, 'next');
+                if (foundForward !== null) {
+                    return foundForward;
+                }
+
+                if (wrap) {
+                    return await scanRange(1, normalizedFromLine, 'next');
+                }
+
+                return null;
+            }
+
+            return await scanRange(1, lineCount, 'next');
+        }
+
+        if (normalizedFromLine !== null) {
+            const foundBackward = await scanRange(1, normalizedFromLine - 1, 'previous');
+            if (foundBackward !== null) {
+                return foundBackward;
+            }
+
+            if (wrap) {
+                return await scanRange(normalizedFromLine + 1, lineCount, 'previous');
+            }
+
+            return null;
+        }
+
+        return await scanRange(1, lineCount, 'previous');
+    }, [getActiveFile, lineCount, readStreamLinesRange]);
+
+    const findAdjacentSearchMatchLine = useCallback(async (
+        direction: 'up' | 'down',
+        fromLine: number | null,
+        term: string = searchTerm,
+    ): Promise<number | null> => {
+        const normalizedTerm = term.trim();
+        if (!normalizedTerm) {
+            return null;
+        }
+
+        const canUseIndexedLookup = (
+            isDbView
+            && !hasActiveFiltersApplied
+            && Boolean(analyticsSessionId)
+        );
+
+        if (canUseIndexedLookup && analyticsSessionId) {
+            return await findAdjacentLineMatch(analyticsSessionId, normalizedTerm, {
+                fromLine,
+                direction: resolveIndexedDirection(direction),
+                wrap: true,
+            });
+        }
+
+        if (isStreamView) {
+            return await findAdjacentStreamLineMatch(normalizedTerm, {
+                fromLine,
+                direction: resolveIndexedDirection(direction),
+                wrap: true,
+            });
+        }
+
+        return getAdjacentSearchMatchLine(direction, fromLine, term);
+    }, [
+        analyticsSessionId,
+        findAdjacentStreamLineMatch,
+        getAdjacentSearchMatchLine,
+        hasActiveFiltersApplied,
+        isDbView,
+        isStreamView,
+        resolveIndexedDirection,
+        searchTerm,
+    ]);
+
+    const nextSearchMatchTargetLine = useMemo<number | null>(() => {
+        return getAdjacentSearchMatchLine('down', selectedLine);
+    }, [getAdjacentSearchMatchLine, selectedLine]);
+
+    const previousSearchMatchTargetLine = useMemo<number | null>(() => {
+        return getAdjacentSearchMatchLine('up', selectedLine);
+    }, [getAdjacentSearchMatchLine, selectedLine]);
+
+    const submitSearch = useCallback(async (term: string): Promise<boolean> => {
+        const normalizedTerm = term.trim();
+        if (!normalizedTerm) {
+            setSearchTerm(term);
+            return false;
+        }
+
+        const targetLine = await findAdjacentSearchMatchLine('down', null, term);
+        setSearchTerm(term);
+
+        if (targetLine === null) {
+            return false;
+        }
+
+        handleAnomalyRangeSelect(targetLine, targetLine);
+        return true;
+    }, [findAdjacentSearchMatchLine, handleAnomalyRangeSelect]);
+
+    const navigateToNextSearchMatch = useCallback(() => {
+        void (async () => {
+            const targetLine = await findAdjacentSearchMatchLine('down', selectedLine);
+            if (targetLine === null) {
+                return;
+            }
+
+            handleAnomalyRangeSelect(targetLine, targetLine);
+        })();
+    }, [findAdjacentSearchMatchLine, handleAnomalyRangeSelect, selectedLine]);
+
+    const navigateToPreviousSearchMatch = useCallback(() => {
+        void (async () => {
+            const targetLine = await findAdjacentSearchMatchLine('up', selectedLine);
+            if (targetLine === null) {
+                return;
+            }
+
+            handleAnomalyRangeSelect(targetLine, targetLine);
+        })();
+    }, [findAdjacentSearchMatchLine, handleAnomalyRangeSelect, selectedLine]);
+
+    const hasSearchTerm = searchTerm.trim().length > 0;
+    const canUseFullSourceSearchNavigation = (
+        hasSearchTerm
+        && (
+            (isStreamView && lineCount > 0)
+            || (isDbView && !hasActiveFiltersApplied && dbLineCount > 0)
+        )
+    );
+
     const toolbarProps = {
         onManualRefresh: handleManualRefresh,
         autoRefresh,
@@ -3162,6 +3552,19 @@ export const useViewLogsController = () => {
         onUploadToServer: requiresServerUpload && !uploadDisabledReason ? () => void handleUploadToServer() : undefined,
         viewMode,
         onViewModeChange: setViewMode,
+        searchTerm,
+        onSearchTermChange: setSearchTerm,
+        onSearchSubmit: submitSearch,
+        onNavigateToPreviousSearchMatch: navigateToPreviousSearchMatch,
+        canNavigateToPreviousSearchMatch: (
+            previousSearchMatchTargetLine !== null
+            || canUseFullSourceSearchNavigation
+        ),
+        onNavigateToNextSearchMatch: navigateToNextSearchMatch,
+        canNavigateToNextSearchMatch: (
+            nextSearchMatchTargetLine !== null
+            || canUseFullSourceSearchNavigation
+        ),
         filters,
         onFiltersChange: setFilters,
         fieldDefinitions,
@@ -3186,13 +3589,6 @@ export const useViewLogsController = () => {
         fileActionsDisabled: requiresServerUpload,
         uploadDisabledReason,
     };
-
-    const isTailLoadedMode = (
-        isStreamView
-        && viewMode === ViewModeEnum.FromEnd
-        && lineCount === 0
-        && tailLoadedRows.length > 0
-    );
 
     let totalCount = displayLines.length;
     if (isTailLoadedMode) {
@@ -3223,6 +3619,7 @@ export const useViewLogsController = () => {
                         ? handleRemoteFilteredRangeChange
                         : handleDbRangeChange)
                     : undefined)),
+        globalSearchTerm: searchTerm,
         selectedLine,
         onSelectLine: setSelectedLine,
         virtuosoRef,

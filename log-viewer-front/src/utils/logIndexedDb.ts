@@ -1,4 +1,5 @@
 import type { LogFilters, DateRangeFilter, TextFilter } from '../types/filters';
+import { GLOBAL_SEARCH_FILTER_KEY } from '../types/filters';
 import type { HistogramLine, LargeFileAggregateStats } from './histogramSampling';
 import {
     getRemoteDashboardSnapshot,
@@ -132,7 +133,7 @@ const serializeFiltersForApi = (filters: LogFilters): Record<string, unknown> =>
     const result: Record<string, unknown> = {};
 
     Object.entries(filters).forEach(([key, value]) => {
-        if (key === 'anomalyStatus') {
+        if (key === 'anomalyStatus' || key === GLOBAL_SEARCH_FILTER_KEY) {
             return;
         }
         if (!value) return;
@@ -540,6 +541,153 @@ export const getLinesRange = async (
     return records;
 };
 
+export const findAdjacentLineMatch = async (
+    sessionId: string,
+    searchTerm: string,
+    options: {
+        fromLine?: number | null;
+        direction?: 'next' | 'previous';
+        wrap?: boolean;
+    } = {},
+): Promise<number | null> => {
+    const normalizedTerm = searchTerm.toLowerCase().trim();
+    if (!normalizedTerm) {
+        return null;
+    }
+
+    const direction = options.direction ?? 'next';
+    const wrap = options.wrap ?? true;
+    const normalizedFromLine = (
+        options.fromLine !== undefined
+        && options.fromLine !== null
+        && Number.isFinite(options.fromLine)
+    )
+        ? Math.max(1, Math.floor(options.fromLine))
+        : null;
+
+    if (isRemoteSessionId(sessionId)) {
+        const ingestId = toRemoteIngestId(sessionId);
+        const remoteFilters: Record<string, unknown> = {
+            raw: { value: normalizedTerm },
+        };
+
+        const queryRemote = async (order: 'asc' | 'desc', cursorLine?: number): Promise<number | null> => {
+            const response = await queryRemoteFilteredLines(ingestId, remoteFilters, 1, {
+                order,
+                afterLine: order === 'asc' ? cursorLine : undefined,
+                beforeLine: order === 'desc' ? cursorLine : undefined,
+            });
+            return response.lines[0]?.lineNumber ?? null;
+        };
+
+        if (direction === 'next') {
+            if (normalizedFromLine !== null) {
+                const forward = await queryRemote('asc', normalizedFromLine);
+                if (forward !== null) {
+                    return forward;
+                }
+
+                if (wrap) {
+                    return await queryRemote('asc');
+                }
+
+                return null;
+            }
+
+            return await queryRemote('asc');
+        }
+
+        if (normalizedFromLine !== null) {
+            const backward = await queryRemote('desc', normalizedFromLine);
+            if (backward !== null) {
+                return backward;
+            }
+
+            if (wrap) {
+                return await queryRemote('desc');
+            }
+
+            return null;
+        }
+
+        return await queryRemote('desc');
+    }
+
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_LINES, 'readonly');
+    const store = tx.objectStore(STORE_LINES);
+    const maxLine = Number.MAX_SAFE_INTEGER;
+
+    const searchRange = async (range: IDBKeyRange, cursorDirection: IDBCursorDirection): Promise<number | null> => {
+        return await new Promise<number | null>((resolve, reject) => {
+            const request = store.openCursor(range, cursorDirection);
+            request.onsuccess = () => {
+                const cursor = request.result;
+                if (!cursor) {
+                    resolve(null);
+                    return;
+                }
+
+                const value = cursor.value as LogLineRecord;
+                if (value.raw.toLowerCase().includes(normalizedTerm)) {
+                    resolve(value.lineNumber);
+                    return;
+                }
+
+                cursor.continue();
+            };
+            request.onerror = () => reject(request.error);
+        });
+    };
+
+    let found: number | null = null;
+
+    if (direction === 'next') {
+        if (normalizedFromLine !== null) {
+            found = await searchRange(
+                IDBKeyRange.bound([sessionId, normalizedFromLine + 1], [sessionId, maxLine]),
+                'next',
+            );
+
+            if (found === null && wrap) {
+                found = await searchRange(
+                    IDBKeyRange.bound([sessionId, 1], [sessionId, normalizedFromLine]),
+                    'next',
+                );
+            }
+        } else {
+            found = await searchRange(
+                IDBKeyRange.bound([sessionId, 1], [sessionId, maxLine]),
+                'next',
+            );
+        }
+    } else {
+        if (normalizedFromLine !== null) {
+            if (normalizedFromLine > 1) {
+                found = await searchRange(
+                    IDBKeyRange.bound([sessionId, 1], [sessionId, normalizedFromLine - 1]),
+                    'prev',
+                );
+            }
+
+            if (found === null && wrap) {
+                found = await searchRange(
+                    IDBKeyRange.bound([sessionId, normalizedFromLine + 1], [sessionId, maxLine]),
+                    'prev',
+                );
+            }
+        } else {
+            found = await searchRange(
+                IDBKeyRange.bound([sessionId, 1], [sessionId, maxLine]),
+                'prev',
+            );
+        }
+    }
+
+    await transactionDone(tx);
+    return found;
+};
+
 export const saveDashboardSnapshot = async (sessionId: string, snapshot: LogStatsRecord): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_STATS, 'readwrite');
@@ -934,7 +1082,8 @@ export const queryFilteredLines = async (
 
     throwIfAborted();
 
-    const entries = Object.entries(filters).filter(([, value]) => {
+    const entries = Object.entries(filters).filter(([key, value]) => {
+        if (key === GLOBAL_SEARCH_FILTER_KEY) return false;
         if (!value) return false;
         if (Array.isArray(value)) return value.length > 0;
         if (isTextFilter(value)) return Boolean(value.value);

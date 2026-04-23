@@ -1,4 +1,5 @@
 import type { LogFilters } from '../types/filters';
+import { GLOBAL_SEARCH_FILTER_KEY } from '../types/filters';
 import type { ParsedLogLine } from './logFormatDetector';
 
 interface LogLineWithRaw {
@@ -55,7 +56,8 @@ export function applyLogFilters(
  * Check if there are any active filters
  */
 function hasActiveFilters(filters: LogFilters): boolean {
-    for (const [, value] of Object.entries(filters)) {
+    for (const [key, value] of Object.entries(filters)) {
+        if (key === GLOBAL_SEARCH_FILTER_KEY) continue;
         if (!value) continue;
         
         // Check date range filters
@@ -89,6 +91,7 @@ function matchesFilters(line: LogLineWithRaw, filters: LogFilters): boolean {
     // Check each filter
     for (const [filterKey, filterValue] of Object.entries(filters)) {
         if (!filterValue) continue;
+        if (filterKey === GLOBAL_SEARCH_FILTER_KEY) continue;
 
         // Handle date range filters
         if (typeof filterValue === 'object' && ('start' in filterValue || 'end' in filterValue)) {

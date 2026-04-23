@@ -48,6 +48,7 @@ type LoadFileOptions = {
 
 type UseFileLoaderOptions = {
     resolveUnknownFormat?: (context: UnknownFormatContext) => Promise<UnknownFormatResolution>;
+    onFileLoadStart?: () => void;
 };
 
 export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
@@ -60,6 +61,8 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
     const loadFile = async (file: File, handle?: FileSystemFileHandle, loadOptions: LoadFileOptions = {}) => {
         const loadToken = ++loadTokenRef.current;
         const isLargeFile = file.size >= LARGE_FILE_BYTES;
+
+        options.onFileLoadStart?.();
 
         setIndexing(true);
         dispatch(setIndexingState({ isIndexing: true, progress: 0 }));
