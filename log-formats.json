@@ -162,7 +162,7 @@
       "description": "Blue Gene/L old format with extended fields",
       "priority": 75,
       "patterns": [
-        "^-?\\s*(?<id>\\d+)\\s+(?<date>\\d{4}\\.\\d{2}\\.\\d{2})\\s+(?<node>\\S+)\\s+(?<timestamp>\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{6})\\s+(?<node2>\\S+)\\s+(?<type>RAS|APP)\\s+(?<level>KERNEL|APP|FATAL|INFO)\\s+(?<message>.+)$"
+        "^(?:-|APPREAD|APPWRITE)?\\s*(?<id>\\d+)\\s+(?<date>\\d{4}\\.\\d{2}\\.\\d{2})\\s+(?<node>\\S+)\\s+(?<timestamp>\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{6})\\s+(?<node2>\\S+)\\s+(?<type>RAS|APP)\\s+(?<componentLevel>KERNEL|APP)\\s+(?<level>FATAL|INFO)\\s+(?<message>.+)$"
       ],
       "fields": [
         {
@@ -197,10 +197,16 @@
           "enum": ["RAS", "APP"]
         },
         {
-          "name": "level",
-          "description": "Level (KERNEL/APP/FATAL/INFO)",
+          "name": "componentLevel",
+          "description": "Component level (KERNEL/APP)",
           "type": "string",
-          "enum": ["KERNEL", "APP", "FATAL", "INFO"]
+          "enum": ["KERNEL", "APP"]
+        },
+        {
+          "name": "level",
+          "description": "Severity level (FATAL/INFO)",
+          "type": "string",
+          "enum": ["FATAL", "INFO"]
         },
         {
           "name": "message",
