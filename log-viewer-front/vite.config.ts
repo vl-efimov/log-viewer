@@ -5,8 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 const getBaseUrl = (mode: string) => {
     // Optional override (e.g. CI or custom hosting)
-    const env = ((globalThis as any).process?.env ?? {}) as Record<string, unknown>;
-    const override = env.VITE_BASE_PATH as string | undefined;
+    const override = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env
+        ?.VITE_BASE_PATH;
     if (override !== undefined) {
         return override;
     }
@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
             VitePWA({
                 workbox: {
                     globPatterns: ["**/*"],
+                    maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                 },
                 includeAssets: [
                     "**/*",
