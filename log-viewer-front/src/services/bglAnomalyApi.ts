@@ -170,8 +170,10 @@ export function setActiveRemoteUploadIngestId(ingestId: string): void {
 
 export function cancelActiveRemoteUploadSession(): string | null {
     if (!activeRemoteUploadState) return null;
+    const ingestId = activeRemoteUploadState.ingestId;
     activeRemoteUploadState.controller.abort();
-    return activeRemoteUploadState.ingestId;
+    activeRemoteUploadState = null;
+    return ingestId;
 }
 
 export function endRemoteUploadSession(controller?: AbortController): void {
@@ -193,8 +195,10 @@ export function beginAnomalyPredictionSession(modelId: string): AbortController 
 
 export function cancelActiveAnomalyPredictionSession(): string | null {
     if (!activeAnomalyPredictionState) return null;
+    const modelId = activeAnomalyPredictionState.modelId;
     activeAnomalyPredictionState.controller.abort();
-    return activeAnomalyPredictionState.modelId;
+    activeAnomalyPredictionState = null;
+    return modelId;
 }
 
 export function endAnomalyPredictionSession(controller?: AbortController): void {

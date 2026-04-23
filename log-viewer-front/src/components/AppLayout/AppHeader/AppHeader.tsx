@@ -22,7 +22,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { clearLogFile, setFileHandle, setFileObject } from '../../../redux/slices/logFileSlice';
 import { clearAnomalyResults, requestAnomalyCancel } from '../../../redux/slices/anomalySlice';
 import { deleteAllLogData } from '../../../utils/logIndexedDb';
-import { cancelIndexing } from '../../../utils/logIndexer';
+import { cancelAllIndexing, cancelIndexing, waitForIndexingIdle } from '../../../utils/logIndexer';
 import {
     cancelActiveAnomalyPredictionSession,
     cancelActiveRemoteUploadSession,
@@ -102,9 +102,12 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
         dispatch(clearAnomalyResults());
         setFileHandle(null);
         setFileObject(null);
+        cancelAllIndexing();
         if (analyticsSessionId) {
             cancelIndexing(analyticsSessionId);
         }
+
+        await waitForIndexingIdle();
 
         navigate(`/${RouteViewLogs}`, { replace: true });
 

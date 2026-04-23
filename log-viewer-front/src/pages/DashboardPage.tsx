@@ -53,6 +53,11 @@ type LargeFileDashboardCacheEntry = {
 const largeFileDashboardCache = new Map<string, LargeFileDashboardCacheEntry>();
 const normalDashboardCache = new Map<string, NormalDashboardSnapshot>();
 
+const clearDashboardMemoryCaches = () => {
+    largeFileDashboardCache.clear();
+    normalDashboardCache.clear();
+};
+
 const getLargeFileDashboardCacheKey = (
     analyticsSessionId: string,
     fileName: string,
@@ -810,10 +815,25 @@ const DashboardPage: React.FC = () => {
 
     useEffect(() => {
         return () => {
-            largeFileDashboardCache.clear();
-            normalDashboardCache.clear();
+            clearDashboardMemoryCaches();
         };
     }, []);
+
+    useEffect(() => {
+        if (loaded && fileName) {
+            return;
+        }
+
+        clearDashboardMemoryCaches();
+        setLargeFileHistogramLines([]);
+        setLargeFileStats(null);
+        setNormalSnapshot(null);
+        setExactFilteredSnapshot(null);
+        setIsHistogramLoading(false);
+        setIsNormalSnapshotLoading(false);
+        setIsExactFilteredLoading(false);
+        setHistogramProgress(0);
+    }, [fileName, loaded]);
 
     const analytics = useMemo(() => {
         if (requiresServerUploadForDashboard) {

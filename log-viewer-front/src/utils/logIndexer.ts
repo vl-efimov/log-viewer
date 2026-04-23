@@ -85,6 +85,35 @@ export const cancelIndexing = (sessionId: string) => {
     }
 };
 
+export const cancelAllIndexing = (): void => {
+    for (const [sessionId, controller] of activeIndexers.entries()) {
+        cancelledSessions.add(sessionId);
+        controller.abort();
+    }
+    activeIndexers.clear();
+};
+
+export const waitForIndexingIdle = async (timeoutMs: number = 3000): Promise<void> => {
+    if (activeIndexers.size === 0) {
+        return;
+    }
+
+    const startedAt = Date.now();
+
+    await new Promise<void>((resolve) => {
+        const check = () => {
+            if (activeIndexers.size === 0 || Date.now() - startedAt >= timeoutMs) {
+                resolve();
+                return;
+            }
+
+            window.setTimeout(check, 25);
+        };
+
+        check();
+    });
+};
+
 const isContinuationLine = (line: string): boolean => {
     const trimmed = line.trim();
     if (!trimmed) {
