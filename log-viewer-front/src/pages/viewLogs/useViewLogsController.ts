@@ -359,7 +359,6 @@ export const useViewLogsController = () => {
     const [isRemoteServerDisconnected, setIsRemoteServerDisconnected] = useState(false);
     const [serverUploadInProgress, setServerUploadInProgress] = useState(false);
     const [serverUploadProgress, setServerUploadProgress] = useState(0);
-    const [formatChangeInProgress, setFormatChangeInProgress] = useState(false);
     const [customFormatDialogState, setCustomFormatDialogState] = useState<UnknownFormatDialogState>({
         open: false,
         previewLines: [],
@@ -860,8 +859,6 @@ export const useViewLogsController = () => {
             return;
         }
 
-        setFormatChangeInProgress(true);
-
         try {
             if (isRemoteLargeSession && analyticsSessionId.startsWith('remote:')) {
                 const ingestId = analyticsSessionId.slice('remote:'.length);
@@ -891,8 +888,6 @@ export const useViewLogsController = () => {
                 message: 'Не удалось сменить формат логов.',
                 severity: 'error',
             }));
-        } finally {
-            setFormatChangeInProgress(false);
         }
     }, [
         analyticsSessionId,
