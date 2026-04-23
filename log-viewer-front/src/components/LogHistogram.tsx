@@ -8,6 +8,7 @@ import Tooltip from '@mui/material/Tooltip';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReactECharts from 'echarts-for-react';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import type { ParsedLogLine } from '../utils/logFormatDetector';
 import { extractTimestampFromParsedLine, parseTimestamp } from '../utils/logTimestamp';
@@ -393,6 +394,11 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     showQuickRangeButtons = true,
 }) => {
     const { i18n } = useTranslation();
+    const theme = useTheme();
+    const isDarkMode = theme.palette.mode === 'dark';
+    const chartLabelColor = isDarkMode ? '#cbd5e1' : '#475569';
+    const chartGridColor = isDarkMode ? 'rgba(148, 163, 184, 0.28)' : 'rgba(100, 116, 139, 0.22)';
+    const miniLineColor = isDarkMode ? alpha(theme.palette.primary.main, 0.92) : alpha(theme.palette.primary.main, 0.84);
     const locale = useMemo(() => resolveLocale(i18n.language), [i18n.language]);
     const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
     const [selectedRange, setSelectedRange] = useState<{ start: number | null; end: number | null }>({
@@ -730,10 +736,41 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                             : 12;
 
         return {
-            tooltip: { trigger: 'axis' },
+            tooltip: {
+                trigger: 'axis',
+                confine: true,
+                position: (
+                    point: [number, number],
+                    _params: unknown,
+                    _dom: HTMLElement,
+                    _rect: unknown,
+                    size: { contentSize: [number, number]; viewSize: [number, number] },
+                ) => {
+                    const [mouseX, mouseY] = point;
+                    const [tooltipWidth, tooltipHeight] = size.contentSize;
+                    const [viewWidth, viewHeight] = size.viewSize;
+
+                    const gap = 18;
+                    const minPadding = 8;
+
+                    let x = mouseX + gap;
+                    if (x + tooltipWidth > viewWidth - minPadding) {
+                        x = mouseX - tooltipWidth - gap;
+                    }
+                    x = Math.max(minPadding, Math.min(x, viewWidth - tooltipWidth - minPadding));
+
+                    let y = mouseY - (tooltipHeight / 2);
+                    y = Math.max(minPadding, Math.min(y, viewHeight - tooltipHeight - minPadding));
+
+                    return [x, y];
+                },
+            },
             legend: {
                 top: 0,
                 selected: legendSelection,
+                textStyle: {
+                    color: chartLabelColor,
+                },
             },
             grid: { top: 20, right: 20, left: 40, bottom: 10 },
             xAxis: {
@@ -741,8 +778,24 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 min: selectedStart,
                 max: selectedEnd,
                 splitNumber,
+                axisLine: {
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
+                axisTick: {
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
                 axisLabel: {
                     fontSize: 10,
+                    color: chartLabelColor,
                     hideOverlap: false,
                     showMinLabel: true,
                     showMaxLabel: true,
@@ -751,11 +804,29 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             },
             yAxis: {
                 type: 'value',
-                axisLabel: { fontSize: 10 },
+                axisLabel: {
+                    fontSize: 10,
+                    color: chartLabelColor,
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
+                axisTick: {
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
             },
             series,
         };
-    }, [categoryField, legendSelection, locale, mainHistogram, selectedRange, timeRange]);
+    }, [categoryField, chartGridColor, chartLabelColor, legendSelection, locale, mainHistogram, selectedRange, timeRange]);
 
     const resolvedAnomalyRanges = useMemo((): ResolvedAnomalyRange[] => {
         const zoomLineMinX = timeRange?.min ?? null;
@@ -1207,13 +1278,24 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 axisLabel: {
                     show: true,
                     fontSize: 10,
+                    color: chartLabelColor,
                     hideOverlap: false,
                     showMinLabel: true,
                     showMaxLabel: true,
                     formatter: (value: number) => formatAxisTimeLabel(value, zoomRangeMs, zoomHistogram.bucketSize, locale),
                 },
-                axisTick: { show: true },
-                axisLine: { show: true },
+                axisTick: {
+                    show: true,
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
+                axisLine: {
+                    show: true,
+                    lineStyle: {
+                        color: chartGridColor,
+                    },
+                },
                 splitLine: { show: false },
             },
             yAxis: {
@@ -1230,7 +1312,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     data: zoomHistogram.chartData.map((point, index) => [point.timestamp + zoomBucketMidOffset, totals[index]]),
                     smooth: true,
                     symbol: 'none',
-                    lineStyle: { width: 1, color: '#90caf9' },
+                    lineStyle: { width: 1, color: miniLineColor },
                     markArea: effectiveMarkAreaData.length > 0
                         ? {
                             silent: false,
@@ -1240,7 +1322,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 },
             ],
         };
-    }, [hoveredAnomalyRangeKey, locale, resolvedAnomalyRanges, timeRange, zoomHistogram]);
+    }, [chartGridColor, chartLabelColor, hoveredAnomalyRangeKey, locale, miniLineColor, resolvedAnomalyRanges, timeRange, zoomHistogram]);
 
     const zoomSliderOption = useMemo(() => {
         if (!timeRange) {
@@ -1289,21 +1371,21 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         areaStyle: { color: 'rgba(0, 0, 0, 0)' },
                     },
                     borderColor: 'rgba(0, 0, 0, 0.2)',
-                    moveHandleSize: 14,
+                    moveHandleSize: 20,
                     showDataShadow: false,
                     handleSize: '100%',
                     brushSelect: false,
                     zoomLock: false,
                     handleIcon: 'path://M50,0 L50,100 M44,40 L56,40 L56,60 L44,60 Z M47,44 L47,56 M53,44 L53,56',
                     handleStyle: {
-                        color: '#b0b0b0',
-                        borderColor: '#7a7a7a',
+                        color: isDarkMode ? 'rgba(148, 163, 184, 0.44)' : '#b0b0b0',
+                        borderColor: isDarkMode ? 'rgba(51, 65, 85, 0.9)' : '#7a7a7a',
                         opacity: 1,
                     },
                 },
             ],
         };
-    }, [timeRange, zoomSliderGrid]);
+    }, [isDarkMode, timeRange, zoomSliderGrid]);
 
     const handleZoom = useCallback((params: {
         start?: number;
@@ -1576,7 +1658,9 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                                         left: 0,
                                         bottom: 0,
                                         width: `${zoomShade.leftPercent}%`,
-                                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                        backgroundColor: (theme) => theme.palette.mode === 'dark'
+                                            ? 'rgba(255, 255, 255, 0.14)'
+                                            : 'rgba(0, 0, 0, 0.1)',
                                     }}
                                 />
                                 <Box
@@ -1586,7 +1670,9 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                                         right: 0,
                                         bottom: 0,
                                         width: `${zoomShade.rightPercent}%`,
-                                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                        backgroundColor: (theme) => theme.palette.mode === 'dark'
+                                            ? 'rgba(255, 255, 255, 0.14)'
+                                            : 'rgba(0, 0, 0, 0.1)',
                                     }}
                                 />
                             </Box>

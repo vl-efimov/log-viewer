@@ -146,6 +146,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     const isFiltersOpen = Boolean(filtersAnchorEl);
     const controlsDisabled = fileActionsDisabled || uploadInProgress;
     const refreshControlsDisabled = controlsDisabled || Boolean(refreshDisabledReason);
+    const sectionCaptionSx = {
+        color: (theme: { palette: { mode: string; text: { secondary: string } } }) => (
+            theme.palette.mode === 'dark' ? '#cbd5e1' : theme.palette.text.secondary
+        ),
+    };
 
     const focusSearchInput = useCallback(() => {
         window.requestAnimationFrame(() => {
@@ -281,7 +286,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 >
                     <Typography
                         variant="caption"
-                        sx={{ color: 'text.secondary' }}
+                        sx={sectionCaptionSx}
                     >
                         Порядок
                     </Typography>
@@ -336,7 +341,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                             <Typography
                                 variant="caption"
-                                sx={{ color: 'text.secondary' }}
+                                sx={sectionCaptionSx}
                             >
                                 Сервер
                             </Typography>
@@ -394,7 +399,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         >
                             <Typography
                                 variant="caption"
-                                sx={{ color: 'text.secondary' }}
+                                sx={sectionCaptionSx}
                             >
                                 Обновление
                             </Typography>
@@ -431,7 +436,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                         <Button
                                             size="small"
                                             variant={autoRefresh ? 'contained' : 'outlined'}
-                                            color={autoRefresh ? 'success' : 'inherit'}
+                                            color="primary"
                                             onClick={onToggleAutoRefresh}
                                             disabled={refreshControlsDisabled}
                                             startIcon={<AutorenewIcon fontSize="small" />}
@@ -454,7 +459,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                     <Typography
                         variant="caption"
-                        sx={{ color: 'text.secondary' }}
+                        sx={sectionCaptionSx}
                     >
                         Аномалии
                     </Typography>
@@ -586,7 +591,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                             arrow
                         >
                             <Badge
-                                color="secondary"
+                                color="primary"
                                 badgeContent={activeFiltersCount}
                                 invisible={activeFiltersCount === 0}
                             >
@@ -619,6 +624,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 }}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{
+                    sx: {
+                        backgroundImage: 'none',
+                    },
+                }}
             >
                 <Box sx={{ p: 1.5, width: 380 }}>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -692,6 +702,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 onClose={() => setFiltersAnchorEl(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{
+                    sx: {
+                        backgroundImage: 'none',
+                    },
+                }}
             >
                 <LogFiltersBar
                     filters={filters}

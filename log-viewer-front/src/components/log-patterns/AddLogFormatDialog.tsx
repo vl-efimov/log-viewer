@@ -608,7 +608,17 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 </Typography>
                             </Box>
                         ) : (
-                            <Box sx={{ maxHeight: { xs: '28vh', sm: '40vh' }, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                            <Box
+                                sx={{
+                                    maxHeight: { xs: '28vh', sm: '40vh' },
+                                    overflowY: 'auto',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1,
+                                    p: 1,
+                                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : 'transparent',
+                                }}
+                            >
                                 {previewRows.map((row) => (
                                     <Box
                                         key={row.index}
@@ -680,7 +690,6 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
             <DialogActions>
                 <Button
                     onClick={resetAndClose}
-                    color="secondary"
                     disabled={submitting}
                 >Cancel
                 </Button>

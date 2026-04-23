@@ -85,7 +85,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                     gutterBottom
                     sx={{ fontWeight: 600, mb: 3, mt: 2 }}
                 >
-                    Theme Settings
+                    Настройки темы
                 </Typography>
 
                 <Box sx={{ mb: 4 }}>
@@ -95,12 +95,10 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         sx={{
                             fontWeight: 600,
                             color: 'text.secondary',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
                             mb: 2
                         }}
                     >
-                        Theme Mode
+                        Режим темы
                     </Typography>
                     <Box
                         sx={{
@@ -141,7 +139,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         >
                             <LightModeIcon />
                             <Typography variant="body2">
-                                Light
+                                Светлая
                             </Typography>
                         </Box>
                         <Box
@@ -177,7 +175,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         >
                             <DarkModeIcon />
                             <Typography variant="body2">
-                                Dark
+                                Темная
                             </Typography>
                         </Box>
                     </Box>
@@ -189,12 +187,10 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                     sx={{
                         fontWeight: 600,
                         color: 'text.secondary',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
                         mb: 2
                     }}
                 >
-                    Primary Color
+                    Основной цвет
                 </Typography>
                 <Box
                     sx={{

@@ -9,6 +9,7 @@ import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { RootState } from '../redux/store';
@@ -685,8 +686,17 @@ const buildTimestampedRowsForWindow = (rows: ParsedRow[]): TimestampedDashboardR
 const toChartOption = (
     title: string,
     values: Array<{ label: string; count: number }>,
-    locale: string
+    locale: string,
+    isDarkMode: boolean,
+    scaleBaseColor: string,
 ) => {
+    const chartTextColor = isDarkMode ? '#cbd5e1' : '#334155';
+    const chartSecondaryTextColor = isDarkMode ? '#94a3b8' : '#64748b';
+    const chartValueLabelColor = isDarkMode ? '#e2e8f0' : '#1f2937';
+    const chartAxisColor = isDarkMode ? 'rgba(148, 163, 184, 0.55)' : 'rgba(100, 116, 139, 0.45)';
+    const chartSplitLineColor = isDarkMode ? 'rgba(148, 163, 184, 0.32)' : 'rgba(100, 116, 139, 0.2)';
+    const barColor = isDarkMode ? alpha(scaleBaseColor, 0.92) : alpha(scaleBaseColor, 0.82);
+
     return {
         animation: false,
         title: {
@@ -695,11 +705,15 @@ const toChartOption = (
             textStyle: {
                 fontSize: 13,
                 fontWeight: 600,
+                color: chartTextColor,
             },
         },
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
+            textStyle: {
+                color: chartTextColor,
+            },
             valueFormatter: (value: number | string) => {
                 if (typeof value === 'number') {
                     return value.toLocaleString(locale);
@@ -718,7 +732,23 @@ const toChartOption = (
             type: 'value',
             minInterval: 1,
             splitNumber: 4,
+            axisLine: {
+                lineStyle: {
+                    color: chartAxisColor,
+                },
+            },
+            axisTick: {
+                lineStyle: {
+                    color: chartAxisColor,
+                },
+            },
+            splitLine: {
+                lineStyle: {
+                    color: chartSplitLineColor,
+                },
+            },
             axisLabel: {
+                color: chartSecondaryTextColor,
                 hideOverlap: true,
                 formatter: (value: number) => formatCompactNumber(value, locale),
             },
@@ -727,7 +757,18 @@ const toChartOption = (
             type: 'category',
             data: values.map((item) => item.label),
             inverse: true,
+            axisLine: {
+                lineStyle: {
+                    color: chartAxisColor,
+                },
+            },
+            axisTick: {
+                lineStyle: {
+                    color: chartAxisColor,
+                },
+            },
             axisLabel: {
+                color: chartSecondaryTextColor,
                 width: 150,
                 overflow: 'truncate',
             },
@@ -740,12 +781,14 @@ const toChartOption = (
                     show: true,
                     position: 'right',
                     distance: 4,
+                    color: chartValueLabelColor,
                     formatter: (params: { value: number }) => formatCompactNumber(params.value, locale),
                 },
                 labelLayout: {
                     hideOverlap: true,
                 },
                 itemStyle: {
+                    color: barColor,
                     borderRadius: [0, 6, 6, 0],
                 },
             },
@@ -755,6 +798,11 @@ const toChartOption = (
 
 const DashboardPage: React.FC = () => {
     const { t, i18n } = useTranslation();
+    const theme = useTheme();
+    const isDarkMode = theme.palette.mode === 'dark';
+    const kpiCaptionColor = isDarkMode ? '#cbd5e1' : 'text.secondary';
+    const rebuildOverlayColor = isDarkMode ? 'rgba(2, 6, 23, 0.58)' : 'rgba(255, 255, 255, 0.45)';
+    const chartScaleBaseColor = theme.palette.primary.main;
     const locale = useMemo(() => resolveLocale(i18n.language), [i18n.language]);
     const {
         isMonitoring,
@@ -1524,7 +1572,7 @@ const DashboardPage: React.FC = () => {
                                     <CardContent>
                                         <Typography
                                             variant="body2"
-                                            color="text.secondary"
+                                            color={kpiCaptionColor}
                                         >{t('dashboard.metrics.totalLines')}
                                         </Typography>
                                         <Typography variant="h4">{kpiAnalytics.totalLines.toLocaleString(locale)}</Typography>
@@ -1536,7 +1584,7 @@ const DashboardPage: React.FC = () => {
                                     <CardContent>
                                         <Typography
                                             variant="body2"
-                                            color="text.secondary"
+                                            color={kpiCaptionColor}
                                         >{t('dashboard.metrics.parsedLines')}
                                         </Typography>
                                         <Typography variant="h4">{kpiAnalytics.parsedLines.toLocaleString(locale)}</Typography>
@@ -1548,7 +1596,7 @@ const DashboardPage: React.FC = () => {
                                     <CardContent>
                                         <Typography
                                             variant="body2"
-                                            color="text.secondary"
+                                            color={kpiCaptionColor}
                                         >{t('dashboard.metrics.unparsedLines')}
                                         </Typography>
                                         <Typography variant="h4">{kpiAnalytics.unparsedLines.toLocaleString(locale)}</Typography>
@@ -1560,7 +1608,7 @@ const DashboardPage: React.FC = () => {
                                     <CardContent>
                                         <Typography
                                             variant="body2"
-                                            color="text.secondary"
+                                            color={kpiCaptionColor}
                                         >{t('dashboard.metrics.parseRate')}
                                         </Typography>
                                         <Typography variant="h4">{kpiAnalytics.parseRate}%</Typography>
@@ -1574,7 +1622,7 @@ const DashboardPage: React.FC = () => {
                                 sx={{
                                     position: 'absolute',
                                     inset: 0,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                    backgroundColor: rebuildOverlayColor,
                                     backdropFilter: 'blur(1px)',
                                     borderRadius: 1,
                                     display: 'flex',
@@ -1701,7 +1749,7 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <ReactECharts
-                                                        option={toChartOption(t('dashboard.charts.levels'), chartAnalytics.levelValues, locale)}
+                                                        option={toChartOption(t('dashboard.charts.levels'), chartAnalytics.levelValues, locale, isDarkMode, chartScaleBaseColor)}
                                                         style={{ height: 260 }}
                                                     />
                                                 </CardContent>
@@ -1713,7 +1761,7 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <ReactECharts
-                                                        option={toChartOption(t('dashboard.charts.httpStatus'), chartAnalytics.statusValues, locale)}
+                                                        option={toChartOption(t('dashboard.charts.httpStatus'), chartAnalytics.statusValues, locale, isDarkMode, chartScaleBaseColor)}
                                                         style={{ height: 260 }}
                                                     />
                                                 </CardContent>
@@ -1725,7 +1773,7 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <ReactECharts
-                                                        option={toChartOption(t('dashboard.charts.httpMethods'), chartAnalytics.methodValues, locale)}
+                                                        option={toChartOption(t('dashboard.charts.httpMethods'), chartAnalytics.methodValues, locale, isDarkMode, chartScaleBaseColor)}
                                                         style={{ height: 260 }}
                                                     />
                                                 </CardContent>
@@ -1737,7 +1785,7 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <ReactECharts
-                                                        option={toChartOption(getFieldTitle('componentLevel', t), chartAnalytics.componentLevelValues, locale)}
+                                                        option={toChartOption(getFieldTitle('componentLevel', t), chartAnalytics.componentLevelValues, locale, isDarkMode, chartScaleBaseColor)}
                                                         style={{ height: 260 }}
                                                     />
                                                 </CardContent>
@@ -1751,7 +1799,7 @@ const DashboardPage: React.FC = () => {
                                         sx={{
                                             position: 'absolute',
                                             inset: 0,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                            backgroundColor: rebuildOverlayColor,
                                             backdropFilter: 'blur(1px)',
                                             borderRadius: 1,
                                             display: 'flex',
@@ -1789,7 +1837,7 @@ const DashboardPage: React.FC = () => {
                                                     size={{ xs: 12, md: 4 }}
                                                 >
                                                     <ReactECharts
-                                                        option={toChartOption(getFieldTitle(facet.field, t), facet.values, locale)}
+                                                        option={toChartOption(getFieldTitle(facet.field, t), facet.values, locale, isDarkMode, chartScaleBaseColor)}
                                                         style={{ height: 260 }}
                                                     />
                                                 </Grid>
@@ -1803,7 +1851,7 @@ const DashboardPage: React.FC = () => {
                                         sx={{
                                             position: 'absolute',
                                             inset: 0,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                            backgroundColor: rebuildOverlayColor,
                                             backdropFilter: 'blur(1px)',
                                             borderRadius: 1,
                                             display: 'flex',

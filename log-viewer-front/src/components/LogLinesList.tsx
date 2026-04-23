@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box';
+import { alpha } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { type FC, type RefObject } from 'react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
@@ -276,10 +277,12 @@ const LogLinesList: FC<LogLinesListProps> = ({
                             alignItems: 'center',
                             px: 2,
                             cursor: 'pointer',
-                            backgroundColor: selectedLine === (row.sourceLineNumber ?? row.displayLineNumber) ? '#e3f2fd' : 'transparent',
+                            backgroundColor: (theme) => selectedLine === (row.sourceLineNumber ?? row.displayLineNumber)
+                                ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.22 : 0.16)
+                                : 'transparent',
                             '&:hover': {
                                 backgroundColor: selectedLine === (row.sourceLineNumber ?? row.displayLineNumber)
-                                    ? '#e3f2fd'
+                                    ? ((theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.22 : 0.16))
                                     : (theme) => theme.palette.action.hover,
                             },
                         }}
