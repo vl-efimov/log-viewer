@@ -112,45 +112,56 @@ def _insert_ingest_snapshot(
 
 
 def init_db() -> None:
-    admin = _default_client("default")
-    admin.command(f"CREATE DATABASE IF NOT EXISTS {CLICKHOUSE_DB}")
+    max_wait_s = float(os.getenv("CLICKHOUSE_INIT_MAX_WAIT_S", "30") or "30")
+    started_at = time.time()
 
-    client = _get_client()
-    client.command(
-        """
-        CREATE TABLE IF NOT EXISTS ingest_batches (
-            ingest_id String,
-            file_name String,
-            file_size UInt64,
-            created_at DateTime64(3, 'UTC'),
-            status LowCardinality(String),
-            total_lines UInt64,
-            processed_bytes UInt64,
-            parser_version String,
-            version_ts DateTime64(3, 'UTC')
-        )
-        ENGINE = MergeTree
-        ORDER BY (ingest_id, version_ts)
-        """
-    )
-    client.command(
-        """
-        CREATE TABLE IF NOT EXISTS log_events (
-            ingest_id String,
-            line_number UInt64,
-            raw String,
-            message String,
-            timestamp_iso Nullable(String),
-            timestamp_ms Nullable(Int64),
-            level Nullable(String),
-            status Nullable(String),
-            method Nullable(String),
-            fields_json String
-        )
-        ENGINE = MergeTree
-        ORDER BY (ingest_id, line_number)
-        """
-    )
+    while True:
+        try:
+            admin = _default_client("default")
+            admin.command(f"CREATE DATABASE IF NOT EXISTS {CLICKHOUSE_DB}")
+
+            client = _get_client()
+            client.command(
+                """
+                CREATE TABLE IF NOT EXISTS ingest_batches (
+                    ingest_id String,
+                    file_name String,
+                    file_size UInt64,
+                    created_at DateTime64(3, 'UTC'),
+                    status LowCardinality(String),
+                    total_lines UInt64,
+                    processed_bytes UInt64,
+                    parser_version String,
+                    version_ts DateTime64(3, 'UTC')
+                )
+                ENGINE = MergeTree
+                ORDER BY (ingest_id, version_ts)
+                """
+            )
+            client.command(
+                """
+                CREATE TABLE IF NOT EXISTS log_events (
+                    ingest_id String,
+                    line_number UInt64,
+                    raw String,
+                    message String,
+                    timestamp_iso Nullable(String),
+                    timestamp_ms Nullable(Int64),
+                    level Nullable(String),
+                    status Nullable(String),
+                    method Nullable(String),
+                    fields_json String
+                )
+                ENGINE = MergeTree
+                ORDER BY (ingest_id, line_number)
+                """
+            )
+            return
+        except Exception as exc:  # pragma: no cover
+            elapsed = time.time() - started_at
+            if elapsed >= max_wait_s:
+                raise
+            time.sleep(min(1.0, max_wait_s - elapsed))
 
 
 def _extract_fields(raw: str) -> tuple[str | None, str | None, str | None, dict[str, str]]:

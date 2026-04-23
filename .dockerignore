@@ -1,0 +1,19 @@
+.git/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Python venvs
+**/.venv/
+
+# Frontend
+log-viewer-front/node_modules/
+log-viewer-front/dist/
+log-viewer-front/dev-dist/
+
+# IDE
+.vscode/
+
+# Logs/samples (not needed for build)
+log-samples/

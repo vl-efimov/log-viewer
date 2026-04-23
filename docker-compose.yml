@@ -1,0 +1,36 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.6
+    environment:
+      CLICKHOUSE_DB: log_viewer
+      CLICKHOUSE_USER: logviewer
+      CLICKHOUSE_PASSWORD: logviewer
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "8123:8123"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: "8001"
+      TF_USE_LEGACY_KERAS: "1"
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: logviewer
+      CLICKHOUSE_PASSWORD: logviewer
+      CLICKHOUSE_DB: log_viewer
+      # Optional: keep HF/transformers cache across restarts
+      # HF_HOME: /data/hf
+      # TRANSFORMERS_CACHE: /data/hf/transformers
+      # CLICKHOUSE_INIT_MAX_WAIT_S: "60"
+    ports:
+      - "8001:8001"
+    depends_on:
+      - clickhouse
+
+volumes:
+  clickhouse_data:

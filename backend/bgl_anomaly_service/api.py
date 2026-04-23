@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 import threading
 from typing import Any
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from .inference import NeuralLogAnomalyService, PredictionCancelledError
@@ -43,6 +45,32 @@ prepare_thread_lock = threading.Lock()
 prepare_threads: dict[str, threading.Thread] = {}
 
 init_db()
+
+
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        if response.status_code != 404:
+            return response
+
+        # If it's likely an asset request, keep 404.
+        filename = os.path.basename(path)
+        if "." in filename:
+            return response
+
+        # SPA fallback: serve index.html for client-side routes.
+        return await super().get_response("index.html", scope)
+
+
+def _maybe_mount_frontend(app: FastAPI) -> None:
+    serve_frontend = os.getenv("SERVE_FRONTEND", "0").strip().lower() in {"1", "true", "yes"}
+    dist_dir = os.getenv("FRONTEND_DIST_DIR")
+    if not serve_frontend or not dist_dir:
+        return
+    if not os.path.isdir(dist_dir):
+        return
+
+    app.mount("/", SPAStaticFiles(directory=dist_dir, html=True), name="frontend")
 
 
 def _normalize_model_id(model_id: str | None) -> str:
@@ -404,3 +432,6 @@ def predict_ingest(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+_maybe_mount_frontend(app)

@@ -3,7 +3,22 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-const getBaseUrl = (mode: string) => (mode === 'production' ? '/log-viewer' : '');
+const getBaseUrl = (mode: string) => {
+    // Optional override (e.g. CI or custom hosting)
+    const env = ((globalThis as any).process?.env ?? {}) as Record<string, unknown>;
+    const override = env.VITE_BASE_PATH as string | undefined;
+    if (override !== undefined) {
+        return override;
+    }
+
+    // GitHub Pages (project site)
+    if (mode === 'gh-pages') {
+        return '/log-viewer';
+    }
+
+    // Default: local/self-hosted at domain root
+    return '';
+};
 
 export default defineConfig(({ mode }) => {
     const BASE_URL = getBaseUrl(mode) + '/';
