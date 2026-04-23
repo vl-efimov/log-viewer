@@ -19,6 +19,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import type { RootState } from '../redux/store';
 import {
     clearAnomalyResults,
@@ -67,7 +68,10 @@ function formatMultiplier(multiplier: number): string {
     return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
-function getParameterLoadWarning(settings: Pick<AnomalySettings, 'stepSize'>): ParameterLoadWarning | null {
+function getParameterLoadWarning(
+    settings: Pick<AnomalySettings, 'stepSize'>,
+    t: (key: string, options?: Record<string, unknown>) => string,
+): ParameterLoadWarning | null {
     const stepSize = Math.max(1, Math.round(settings.stepSize));
 
     let severityScore = 0;
@@ -92,29 +96,14 @@ function getParameterLoadWarning(settings: Pick<AnomalySettings, 'stepSize'>): P
             ? 'high'
             : 'critical';
 
-    if (severity === 'critical') {
-        return {
-            severity,
-            message: `Эти параметры приведут к значительному увеличению расчета: шаг ${stepSize} дает примерно x${multiplierLabel} проверок относительно шага 20.`,
-            multiplierLabel,
-            shouldConfirmBeforeAnalyze: true,
-        };
-    }
-
-    if (severity === 'high') {
-        return {
-            severity,
-            message: `Текущие параметры заметно увеличат объем расчета (примерно x${multiplierLabel} проверок относительно шага 20).`,
-            multiplierLabel,
-            shouldConfirmBeforeAnalyze: false,
-        };
-    }
-
     return {
         severity,
-        message: `Текущие параметры увеличат объем расчета (примерно x${multiplierLabel} проверок относительно шага 20).`,
+        message: t(`anomaly.dialog.parameterLoad.${severity}`, {
+            stepSize,
+            multiplier: multiplierLabel,
+        }),
         multiplierLabel,
-        shouldConfirmBeforeAnalyze: false,
+        shouldConfirmBeforeAnalyze: severity === 'critical',
     };
 }
 
@@ -141,6 +130,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     anomalyStorageKey,
 }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation();
     const {
         isMonitoring,
         isIndexing,
@@ -341,14 +331,14 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 },
             }));
             dispatch(enqueueNotification({
-                message: `Расчет аномалий завершен. Найдено аномальных строк: ${result.meta.anomaly_rows}.`,
+                message: t('anomaly.dialog.resultNotification', { count: result.meta.anomaly_rows }),
                 severity: 'success',
             }));
         } catch (err) {
             if ((err as Error).name === 'AbortError') {
                 dispatch(setAnomalyStopped());
             } else {
-                const message = err instanceof Error ? err.message : 'Anomaly analysis failed';
+                const message = err instanceof Error ? err.message : t('anomaly.dialog.errors.failed');
                 if (message.toLowerCase().includes('cancelled')) {
                     dispatch(setAnomalyStopped());
                 } else {
@@ -372,6 +362,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         remoteIngestId,
         onClose,
         selectedModelId,
+        t,
     ]);
 
     useEffect(() => {
@@ -400,7 +391,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
 
     const parameterLoadWarning = useMemo(() => getParameterLoadWarning({
         stepSize: anomalySettings.stepSize,
-    }), [anomalySettings.stepSize]);
+    }, t), [anomalySettings.stepSize, t]);
 
     const setThresholdValue = useCallback((value: number) => {
         updateAnomalySettings({
@@ -435,24 +426,24 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         && !requiresMonitoringReattach;
     let anomalyDisabledReason: string | undefined;
     if (isSmallFileIndexing) {
-        anomalyDisabledReason = 'Дождитесь загрузки данных в базу.';
+        anomalyDisabledReason = t('anomaly.dialog.disabled.indexing');
     } else if (requiresMonitoringReattach) {
-        anomalyDisabledReason = 'Выберите файл для мониторинга.';
+        anomalyDisabledReason = t('anomaly.dialog.disabled.selectFile');
     } else if (!hasAnalyzableRows) {
-        anomalyDisabledReason = 'No log rows to analyze. Load or attach a log file first.';
+        anomalyDisabledReason = t('anomaly.dialog.disabled.noRows');
     } else if (isModelReadyLoading) {
-        anomalyDisabledReason = 'Checking model readiness...';
+        anomalyDisabledReason = t('anomaly.dialog.disabled.checkingModel');
     } else if (!isModelReady) {
-        anomalyDisabledReason = `Prepare selected model (${selectedModelId.toUpperCase()}) in Pretrained Models first.`;
+        anomalyDisabledReason = t('anomaly.dialog.disabled.prepareModel', { model: selectedModelId.toUpperCase() });
     }
     const isAnalyzeDisabled = anomalyIsRunning || !canRunAnomalyAnalysis;
     const analyzeTooltip = isAnalyzeDisabled && anomalyDisabledReason
         ? anomalyDisabledReason
-        : 'Analyze anomalies';
+        : t('anomaly.dialog.analyzeTooltip');
 
     const confirmAnalyzeMessage = parameterLoadWarning?.shouldConfirmBeforeAnalyze
-        ? `${parameterLoadWarning.message} Продолжить анализ с текущими параметрами?`
-        : 'Продолжить анализ с текущими параметрами?';
+        ? `${parameterLoadWarning.message} ${t('anomaly.dialog.parameterLoadConfirmSuffix')}`
+        : t('anomaly.dialog.parameterLoadConfirmSuffix');
 
     const handleAnalyzeClick = useCallback(async () => {
         if (isAnalyzeDisabled) {
@@ -502,9 +493,9 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 }}
             >
                 <DialogTitle sx={{ pr: 6 }}>
-                    Anomaly Analysis
+                    {t('anomaly.dialog.title')}
                     <IconButton
-                        aria-label="close"
+                        aria-label={t('common.closeAria')}
                         onClick={onClose}
                         size="small"
                         sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -523,12 +514,12 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             spacing={0.5}
                             sx={{ width: 220 }}
                         >
-                            <Typography variant="caption">Model</Typography>
+                            <Typography variant="caption">{t('anomaly.dialog.model')}</Typography>
                             <FormControl size="small">
                                 <Select
                                     value={selectedModelId}
                                     onChange={handleModelChange}
-                                    aria-label="model"
+                                    aria-label={t('anomaly.dialog.modelAria')}
                                 >
                                     <MenuItem value="bgl">BGL</MenuItem>
                                     <MenuItem value="hdfs">HDFS</MenuItem>
@@ -543,9 +534,9 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             spacing={0.5}
                             alignItems="center"
                         >
-                            <Typography variant="subtitle2">Model Analysis Settings</Typography>
+                            <Typography variant="subtitle2">{t('anomaly.dialog.settingsTitle')}</Typography>
                             <Tooltip
-                                title="These parameters are applied to anomaly calculation for the selected model."
+                                title={t('anomaly.dialog.settingsTooltip')}
                                 arrow
                             >
                                 <InfoOutlinedIcon fontSize="inherit" />
@@ -561,9 +552,9 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 alignItems="center"
                                 sx={{ mb: 0.5 }}
                             >
-                                <Typography variant="caption">Threshold</Typography>
+                                    <Typography variant="caption">{t('anomaly.dialog.threshold')}</Typography>
                                 <Tooltip
-                                    title="Lower value finds more anomalies, higher value is stricter."
+                                        title={t('anomaly.dialog.thresholdTooltip')}
                                     arrow
                                 >
                                     <InfoOutlinedIcon fontSize="inherit" />
@@ -601,9 +592,9 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 alignItems="center"
                                 sx={{ mb: 0.5 }}
                             >
-                                <Typography variant="caption">Step Size</Typography>
+                                <Typography variant="caption">{t('anomaly.dialog.stepSize')}</Typography>
                                 <Tooltip
-                                    title="Window shift between checks. Smaller is more detailed but slower."
+                                    title={t('anomaly.dialog.stepSizeTooltip')}
                                     arrow
                                 >
                                     <InfoOutlinedIcon fontSize="inherit" />
@@ -642,7 +633,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                     <Typography variant="caption">
                                         {parameterLoadWarning.message}
                                         {parameterLoadWarning.shouldConfirmBeforeAnalyze
-                                            ? ' Перед запуском потребуется подтверждение.'
+                                            ? ` ${t('anomaly.dialog.parameterLoadNeedsConfirm')}`
                                             : ''}
                                     </Typography>
                                 </Alert>
@@ -655,9 +646,9 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 alignItems="center"
                                 sx={{ mb: 0.5 }}
                             >
-                                <Typography variant="caption">Min Region</Typography>
+                                <Typography variant="caption">{t('anomaly.dialog.minRegion')}</Typography>
                                 <Tooltip
-                                    title="Minimum continuous anomaly block length to reduce noise."
+                                    title={t('anomaly.dialog.minRegionTooltip')}
                                     arrow
                                 >
                                     <InfoOutlinedIcon fontSize="inherit" />
@@ -695,7 +686,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             spacing={1}
                         >
                         <Tooltip
-                            title="High sensitivity: catches more anomalies, may include noise."
+                            title={t('anomaly.dialog.profileSensitiveTooltip')}
                             arrow
                         >
                             <Button
@@ -703,11 +694,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 variant={selectedSensitivityProfile === 'sensitive' ? 'contained' : 'outlined'}
                                 onClick={() => applySensitivityProfile('sensitive')}
                             >
-                                Sensitive
+                                {t('anomaly.dialog.profileSensitive')}
                             </Button>
                         </Tooltip>
                         <Tooltip
-                            title="Balanced mode: recommended default tradeoff."
+                            title={t('anomaly.dialog.profileBalancedTooltip')}
                             arrow
                         >
                             <Button
@@ -715,11 +706,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 variant={selectedSensitivityProfile === 'balanced' ? 'contained' : 'outlined'}
                                 onClick={() => applySensitivityProfile('balanced')}
                             >
-                                Balanced
+                                {t('anomaly.dialog.profileBalanced')}
                             </Button>
                         </Tooltip>
                         <Tooltip
-                            title="Strict mode: fewer false positives, stronger anomaly signal only."
+                            title={t('anomaly.dialog.profileStrictTooltip')}
                             arrow
                         >
                             <Button
@@ -727,7 +718,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 variant={selectedSensitivityProfile === 'strict' ? 'contained' : 'outlined'}
                                 onClick={() => applySensitivityProfile('strict')}
                             >
-                                Strict
+                                {t('anomaly.dialog.profileStrict')}
                             </Button>
                         </Tooltip>
                         </Stack>
@@ -737,7 +728,8 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     <Button
                         size="small"
                         onClick={onClose}
-                    >Close
+                    >
+                        {t('anomaly.dialog.close')}
                     </Button>
                     <Tooltip
                         title={analyzeTooltip}
@@ -751,7 +743,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 startIcon={<TroubleshootIcon />}
                                 disabled={isAnalyzeDisabled}
                             >
-                                Analyze
+                                {t('anomaly.dialog.analyze')}
                             </Button>
                         </span>
                     </Tooltip>
@@ -764,8 +756,8 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     void handleConfirmAnalyze();
                 }}
                 onCancel={handleCancelAnalyzeConfirm}
-                confirmLabel="OK"
-                cancelLabel="Отмена"
+                confirmLabel={t('common.ok')}
+                cancelLabel={t('common.cancel')}
             />
         </>
     );

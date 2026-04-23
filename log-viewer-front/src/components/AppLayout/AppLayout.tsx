@@ -7,9 +7,11 @@ import { useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useFileLoader } from '../../hooks/useFileLoader';
 import GlobalNotifications from '../common/GlobalNotifications';
+import { useTranslation } from 'react-i18next';
 
 
 export default function MainLayout () {
+    const { t } = useTranslation();
     const [isSidebarOpen, setSidebarOpen] = useState(() => {
         const saved = localStorage.getItem('sidebarOpen');
         return saved !== null ? saved === 'true' : false;
@@ -157,7 +159,7 @@ export default function MainLayout () {
                         letterSpacing: '0.08em',
                     }}
                 >
-                    Drop log file to open
+                    {t('appLayout.dropFileToOpen')}
                 </Box>
             )}
         </Box>

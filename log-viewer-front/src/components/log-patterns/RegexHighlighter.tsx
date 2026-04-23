@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { enqueueNotification } from '../../redux/slices/notificationsSlice';
 
 interface RegexHighlighterProps {
@@ -14,6 +15,7 @@ interface RegexHighlighterProps {
  */
 const RegexHighlighter: React.FC<RegexHighlighterProps> = ({ pattern }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation();
 
     const copyPatternToClipboard = useCallback(async () => {
         try {
@@ -36,17 +38,17 @@ const RegexHighlighter: React.FC<RegexHighlighterProps> = ({ pattern }) => {
             }
 
             dispatch(enqueueNotification({
-                message: 'Скопировано в буфер обмена',
+                message: t('clipboard.copied'),
                 severity: 'success',
                 autoHideDuration: 2500,
             }));
         } catch {
             dispatch(enqueueNotification({
-                message: 'Не удалось скопировать в буфер обмена',
+                message: t('clipboard.copyFailed'),
                 severity: 'error',
             }));
         }
-    }, [dispatch, pattern]);
+    }, [dispatch, pattern, t]);
 
     const tokenize = (regex: string): Array<{ text: string; type: string }> => {
         const tokens: Array<{ text: string; type: string }> = [];
@@ -223,7 +225,10 @@ const RegexHighlighter: React.FC<RegexHighlighterProps> = ({ pattern }) => {
                 },
             }}
         >
-            <Tooltip title="Копировать" arrow>
+            <Tooltip
+                title={t('clipboard.copy')}
+                arrow
+            >
                 <IconButton
                     size="small"
                     className="regex-copy-button"

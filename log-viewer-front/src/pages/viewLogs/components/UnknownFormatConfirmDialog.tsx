@@ -7,6 +7,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
 
 interface UnknownFormatConfirmDialogProps {
     open: boolean;
@@ -23,6 +24,8 @@ const UnknownFormatConfirmDialog: React.FC<UnknownFormatConfirmDialogProps> = ({
     onConfirm,
     onCancel,
 }) => {
+    const { t } = useTranslation();
+
     return (
         <Dialog
             open={open}
@@ -37,7 +40,7 @@ const UnknownFormatConfirmDialog: React.FC<UnknownFormatConfirmDialogProps> = ({
         >
             <DialogContent sx={{ pt: 4, position: 'relative' }}>
                 <IconButton
-                    aria-label="close"
+                    aria-label={t('common.closeAria')}
                     onClick={onCancel}
                     size="small"
                     sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -47,16 +50,16 @@ const UnknownFormatConfirmDialog: React.FC<UnknownFormatConfirmDialogProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                     <WarningIcon color="warning" sx={{ mt: 0.5 }} />
                     <Typography variant="body1">
-                        Формат логов для файла {fileName} не определен. Хотите добавить собственный формат?
+                        {t('viewLogs.unknownFormat.message', { fileName })}
                     </Typography>
                 </Box>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
                 <Button onClick={onCancel} variant="outlined">
-                    Отмена
+                    {t('common.cancel')}
                 </Button>
                 <Button onClick={onConfirm} variant="contained" autoFocus>
-                    OK
+                    {t('common.ok')}
                 </Button>
             </DialogActions>
         </Dialog>

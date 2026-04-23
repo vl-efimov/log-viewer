@@ -27,6 +27,7 @@ import AnomalySettingsDialog from './AnomalySettingsDialog';
 import { LogFiltersBar } from './LogFiltersBar';
 import type { LogFilters } from '../types/filters';
 import type { LogFormatField } from '../utils/logFormatDetector';
+import { useTranslation } from 'react-i18next';
 
 const LOG_TABLE_SEARCH_INPUT_ID = 'log-table-search-input';
 
@@ -110,6 +111,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     uploadDisabledReason,
     refreshDisabledReason,
 }) => {
+    const { t } = useTranslation();
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
     const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
@@ -118,17 +120,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     const searchButtonRef = useRef<HTMLButtonElement | null>(null);
     const filtersButtonRef = useRef<HTMLButtonElement | null>(null);
 
-    const compactButtonSx = {
-        minWidth: 0,
-        px: 0.75,
-        py: 0.25,
+    const compactButtonSx = {        
         textTransform: 'none' as const,
         fontSize: '0.75rem',
         lineHeight: 1,
-        '& .MuiButton-startIcon': {
-            marginRight: 0.5,
-            marginLeft: 0,
-        },
     };
 
     const activeFiltersCount = Object.keys(filters).filter((key) => {
@@ -288,7 +283,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         variant="caption"
                         sx={sectionCaptionSx}
                     >
-                        Порядок
+                        {t('toolbar.sections.order')}
                     </Typography>
                     <Box
                         sx={{
@@ -300,7 +295,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         }}
                     >
                         <Tooltip
-                            title="С начала"
+                            title={t('toolbar.order.fromStart')}
                             arrow
                         >
                             <Button
@@ -310,12 +305,12 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 startIcon={<VerticalAlignBottomIcon fontSize="small" />}
                                 sx={compactButtonSx}
                             >
-                                С начала
+                                {t('toolbar.order.fromStart')}
                             </Button>
                         </Tooltip>
 
                         <Tooltip
-                            title="С конца"
+                            title={t('toolbar.order.fromEnd')}
                             arrow
                         >
                             <Button
@@ -325,7 +320,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 startIcon={<VerticalAlignTopIcon fontSize="small" />}
                                 sx={compactButtonSx}
                             >
-                                С конца
+                                {t('toolbar.order.fromEnd')}
                             </Button>
                         </Tooltip>
                     </Box>
@@ -343,12 +338,12 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 variant="caption"
                                 sx={sectionCaptionSx}
                             >
-                                Сервер
+                                {t('toolbar.sections.server')}
                             </Typography>
                             <Tooltip
                                 title={uploadInProgress
-                                    ? `Загрузка на сервер: ${uploadProgress}%`
-                                    : 'Загрузить файл на сервер'
+                                    ? t('toolbar.server.uploadTooltipProgress', { progress: uploadProgress })
+                                    : t('toolbar.server.uploadTooltip')
                                 }
                                 arrow
                             >
@@ -365,7 +360,9 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                                 px: 1,
                                             }}
                                         >
-                                            {uploadInProgress ? `Идет загрузка ${uploadProgress}%` : 'Загрузить на сервер'}
+                                            {uploadInProgress
+                                                ? t('toolbar.server.uploadingButton', { progress: uploadProgress })
+                                                : t('toolbar.server.uploadButton')}
                                         </Button>
                                     </span>
                                 </Box>
@@ -401,7 +398,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 variant="caption"
                                 sx={sectionCaptionSx}
                             >
-                                Обновление
+                                {t('toolbar.sections.refresh')}
                             </Typography>
                             <Box
                                 sx={{
@@ -411,7 +408,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 }}
                             >
                                 <Tooltip
-                                    title={refreshDisabledReason || 'Refresh now'}
+                                    title={refreshDisabledReason || t('toolbar.refresh.refreshNow')}
                                     arrow
                                 >
                                     <span>
@@ -423,13 +420,13 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             startIcon={<RefreshIcon fontSize="small" />}
                                             sx={compactButtonSx}
                                         >
-                                            Обновить
+                                            {t('toolbar.refresh.refreshButton')}
                                         </Button>
                                     </span>
                                 </Tooltip>
 
                                 <Tooltip
-                                    title={refreshDisabledReason || (autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off')}
+                                    title={refreshDisabledReason || (autoRefresh ? t('toolbar.refresh.autoOn') : t('toolbar.refresh.autoOff'))}
                                     arrow
                                 >
                                     <span>
@@ -442,7 +439,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             startIcon={<AutorenewIcon fontSize="small" />}
                                             sx={compactButtonSx}
                                         >
-                                            Авто
+                                            {t('toolbar.refresh.autoButton')}
                                         </Button>
                                     </span>
                                 </Tooltip>
@@ -461,11 +458,11 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         variant="caption"
                         sx={sectionCaptionSx}
                     >
-                        Аномалии
+                        {t('toolbar.sections.anomalies')}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Tooltip
-                            title="Anomaly settings"
+                            title={t('toolbar.anomalies.settingsTooltip')}
                             arrow
                         >
                             <Button
@@ -476,12 +473,12 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 startIcon={<AutoAwesomeIcon fontSize="small" />}
                                 sx={compactButtonSx}
                             >
-                                Настройки
+                                {t('toolbar.anomalies.settings')}
                             </Button>
                         </Tooltip>
 
                         <Tooltip
-                            title="К предыдущей аномалии"
+                            title={t('toolbar.anomalies.prev')}
                             arrow
                         >
                             <span>
@@ -497,7 +494,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         </Tooltip>
 
                         <Tooltip
-                            title="К следующей аномалии"
+                            title={t('toolbar.anomalies.next')}
                             arrow
                         >
                             <span>
@@ -529,7 +526,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     }}
                 >
                     <Tooltip
-                        title="Поиск (Ctrl+F)"
+                        title={t('toolbar.search.open')}
                         arrow
                     >
                         <span>
@@ -547,7 +544,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     </Tooltip>
 
                     <Tooltip
-                        title="Предыдущее совпадение"
+                        title={t('toolbar.search.prev')}
                         arrow
                     >
                         <span>
@@ -564,7 +561,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     </Tooltip>
 
                     <Tooltip
-                        title="Следующее совпадение"
+                        title={t('toolbar.search.next')}
                         arrow
                     >
                         <span>
@@ -587,7 +584,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                         <Tooltip
-                            title={filtersDisabled ? 'Filters disabled while indexing' : 'Filters'}
+                            title={filtersDisabled ? t('toolbar.filters.disabledWhileIndexing') : t('toolbar.filters.tooltip')}
                             arrow
                         >
                             <Badge
@@ -606,7 +603,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                     )}
                                     sx={compactButtonSx}
                                 >
-                                    Фильтры
+                                    {t('toolbar.filters.button')}
                                 </Button>
                             </Badge>
 
@@ -634,14 +631,14 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                         <TextField
                             id={LOG_TABLE_SEARCH_INPUT_ID}
-                            label="Поиск по таблице"
+                            label={t('toolbar.search.label')}
                             value={searchDraft}
                             onChange={(event) => {
                                 setSearchDraft(event.target.value);
                                 setSearchNotFound(false);
                             }}
                             onKeyDown={handleSearchInputKeyDown}
-                            placeholder="Введите слово или фразу"
+                            placeholder={t('toolbar.search.placeholder')}
                             size="small"
                             autoFocus
                             InputProps={{
@@ -652,7 +649,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             onClick={clearSearch}
                                             disabled={searchDraft.length === 0 && searchTerm.length === 0}
                                             edge="end"
-                                            aria-label="Очистить поиск"
+                                            aria-label={t('toolbar.search.clearAria')}
                                         >
                                             <CloseIcon fontSize="small" />
                                         </IconButton>
@@ -669,7 +666,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                             }}
                             sx={{ minWidth: 86, height: 40 }}
                         >
-                            Найти
+                            {t('common.find')}
                         </Button>
                     </Box>
                     {searchNotFound && (
@@ -690,7 +687,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 },
                             }}
                         >
-                            Совпадений не найдено
+                            {t('toolbar.search.notFound')}
                         </Alert>
                     )}
                 </Box>

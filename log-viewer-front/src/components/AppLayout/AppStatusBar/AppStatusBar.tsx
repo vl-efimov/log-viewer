@@ -18,6 +18,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import StorageIcon from '@mui/icons-material/Storage';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RootState } from '../../../redux/store';
@@ -68,6 +69,7 @@ const SERVER_STATUS_POLL_MS = 5000;
 
 const AppStatusBar: React.FC = () => {
     const dispatch = useDispatch();
+    const { t } = useTranslation();
     const location = useLocation();
     const {
         name,
@@ -119,7 +121,7 @@ const AppStatusBar: React.FC = () => {
         .map((formatOption) => ({ id: formatOption.id, name: formatOption.name }));
 
     if (!availableFormatOptions.some((option) => option.id === 'unknown')) {
-        availableFormatOptions.unshift({ id: 'unknown', name: 'Unknown' });
+        availableFormatOptions.unshift({ id: 'unknown', name: t('common.unknown') });
     }
 
     if (normalizedFormatId !== 'unknown' && !availableFormatOptions.some((option) => option.id === normalizedFormatId)) {
@@ -296,28 +298,37 @@ const AppStatusBar: React.FC = () => {
             const progressText = hasVisiblePercent
                 ? `${Math.max(0, Math.min(100, progress?.percent ?? 0))}%`
                 : null;
+            const safeStage = stage === 'preprocessing' || stage === 'embedding' || stage === 'scoring' || stage === 'starting'
+                ? stage
+                : 'starting';
+
             const rowsText = progress && progress.totalRows > 0
-                ? `${Math.min(progress.processedRows, progress.totalRows)}/${progress.totalRows} строк`
-                : 'подготовка строк';
+                ? t('statusBar.anomaly.rowsText', {
+                    processed: Math.min(progress.processedRows, progress.totalRows),
+                    total: progress.totalRows,
+                })
+                : t('statusBar.anomaly.rowsPreparing');
+
             const windowsText = progress && progress.totalWindows > 0
-                ? `${Math.min(progress.processedWindows, progress.totalWindows)}/${progress.totalWindows} окон`
-                : 'подготовка окон';
-            const stageLabel = stage === 'preprocessing'
-                ? 'Идет подготовка данных'
-                : stage === 'embedding'
-                    ? 'Идет подготовка эмбеддингов'
-                    : stage === 'scoring'
-                        ? 'Расчет аномалий'
-                        : 'Ожидание запуска расчета';
-            const stageDetail = stage === 'scoring'
-                ? `Обработано ${windowsText}.`
-                : stage === 'starting'
-                    ? 'Сервер запускает задачу анализа.'
-                    : `Обработано ${rowsText}.`;
-            const compactText = progressText ? `${stageLabel}: ${progressText}` : `${stageLabel}`;
+                ? t('statusBar.anomaly.windowsText', {
+                    processed: Math.min(progress.processedWindows, progress.totalWindows),
+                    total: progress.totalWindows,
+                })
+                : t('statusBar.anomaly.windowsPreparing');
+
+            const stageLabel = t(`statusBar.anomaly.stage.${safeStage}`);
+            const stageDetail = safeStage === 'scoring'
+                ? t('statusBar.anomaly.detail.scoring', { windowsText })
+                : safeStage === 'starting'
+                    ? t('statusBar.anomaly.detail.starting')
+                    : t('statusBar.anomaly.detail.default', { rowsText });
+
+            const compactText = progressText
+                ? t('statusBar.anomaly.compactWithPercent', { stageLabel, progressText })
+                : t('statusBar.anomaly.compact', { stageLabel });
             const fullText = progressText
-                ? `${stageLabel}: ${progressText}. ${stageDetail}`
-                : `${stageLabel}. ${stageDetail}`;
+                ? t('statusBar.anomaly.fullWithPercent', { stageLabel, progressText, stageDetail })
+                : t('statusBar.anomaly.full', { stageLabel, stageDetail });
             return {
                 compact: compactText,
                 full: fullText,
@@ -327,16 +338,18 @@ const AppStatusBar: React.FC = () => {
 
         if (anomalyError) {
             return {
-                compact: 'Anomaly: error',
-                full: `Anomaly error: ${anomalyError}`,
+                compact: t('statusBar.anomaly.errorCompact'),
+                full: t('statusBar.anomaly.errorFull', { error: anomalyError }),
             };
         }
 
         if (anomalyIsStopped) {
             const time = anomalyStoppedAt ? new Date(anomalyStoppedAt).toLocaleTimeString() : '';
             return {
-                compact: time ? `Anomaly: stopped | ${time}` : 'Anomaly: stopped',
-                full: 'Anomaly analysis was stopped by user.',
+                compact: time
+                    ? t('statusBar.anomaly.stoppedCompactWithTime', { time })
+                    : t('statusBar.anomaly.stoppedCompact'),
+                full: t('statusBar.anomaly.stoppedFull'),
             };
         }
 
@@ -352,25 +365,25 @@ const AppStatusBar: React.FC = () => {
             const stepSize = anomalyLastRunParams.stepSize;
             const minRegionLines = anomalyLastRunParams.minRegionLines;
             return {
-                compact: `Anomaly: ${ratioText}`,
-                full: `Anomaly rows: ${anomalyRowsCount} (${ratioText} of ${anomalyTotalRows})`,
+                compact: t('statusBar.anomaly.ratioCompact', { ratio: ratioText }),
+                full: t('statusBar.anomaly.ratioFull', { rows: anomalyRowsCount, ratio: ratioText, total: anomalyTotalRows }),
                 detailsCompact: `${modeLabel} (${threshold}, ${stepSize}, ${minRegionLines})`,
                 detailsFull: (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, lineHeight: 1.2 }}>
                         <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
-                            {`Model: ${modeLabel}`}
+                            {t('statusBar.anomaly.model', { model: modeLabel })}
                         </Typography>
                         <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                            Parameters:
+                            {t('statusBar.anomaly.parameters')}
                         </Typography>
                         <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                            {`Threshold: ${threshold}`}
+                            {t('statusBar.anomaly.threshold', { value: threshold })}
                         </Typography>
                         <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                            {`Step: ${stepSize}`}
+                            {t('statusBar.anomaly.step', { value: stepSize })}
                         </Typography>
                         <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                            {`Min Region: ${minRegionLines}`}
+                            {t('statusBar.anomaly.minRegion', { value: minRegionLines })}
                         </Typography>
                     </Box>
                 ),
@@ -386,7 +399,7 @@ const AppStatusBar: React.FC = () => {
         const modelId = activeModelId ?? fallbackModelId;
         dispatch(requestAnomalyCancel());
         dispatch(enqueueNotification({
-            message: 'Останавливаем расчет аномалий...',
+            message: t('statusBar.notifications.cancellingAnomaly'),
             severity: 'info',
             autoHideDuration: 2500,
         }));
@@ -394,14 +407,14 @@ const AppStatusBar: React.FC = () => {
             await cancelBglAnomalyPrediction(modelId);
             dispatch(setAnomalyStopped());
             dispatch(enqueueNotification({
-                message: 'Расчет аномалий отменен.',
+                message: t('statusBar.notifications.anomalyCancelled'),
                 severity: 'success',
             }));
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Не удалось остановить расчет аномалий';
+            const errorMessage = error instanceof Error ? error.message : t('statusBar.notifications.anomalyCancelFailed');
             dispatch(setAnomalyError(errorMessage));
             dispatch(enqueueNotification({
-                message: `Ошибка отмены расчета аномалий: ${errorMessage}`,
+                message: t('statusBar.notifications.anomalyCancelError', { errorMessage }),
                 severity: 'error',
                 autoHideDuration: 7000,
             }));
@@ -415,8 +428,8 @@ const AppStatusBar: React.FC = () => {
         dispatch(setIndexingState({ isIndexing: false, progress: 0 }));
         dispatch(enqueueNotification({
             message: cancelledIngestId
-                ? 'Загрузка на сервер отменена.'
-                : 'Активная загрузка на сервер не найдена.',
+                ? t('statusBar.notifications.serverUploadCancelled')
+                : t('statusBar.notifications.serverUploadNotFound'),
             severity: cancelledIngestId ? 'success' : 'info',
             autoHideDuration: 3500,
         }));
@@ -425,18 +438,24 @@ const AppStatusBar: React.FC = () => {
     const formatTooltipTitle = (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, lineHeight: 1.2 }}>
             <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
-                Detected log format type
+                {t('statusBar.items.formatDetectedTitle')}
             </Typography>
             <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                Click this field to change format
+                {t('statusBar.items.formatDetectedHint')}
             </Typography>
         </Box>
     );
 
     const serverStatusTitle = isServerOnline
-        ? 'Сервер доступен для работы'
-        : 'Сервер не доступен для работы';
-    const serverStatusLabel = isServerOnline ? 'Онлайн' : 'Офлайн';
+        ? t('statusBar.server.onlineTitle')
+        : t('statusBar.server.offlineTitle');
+    const serverStatusLabel = isServerOnline ? t('statusBar.server.online') : t('statusBar.server.offline');
+    const indexingTitle = isServerUploadInProgress
+        ? t('statusBar.indexing.uploadingTitle', { progress: indexingProgress })
+        : t('statusBar.indexing.indexingTitle', { progress: indexingProgress });
+    const indexingLabel = isServerUploadInProgress
+        ? t('statusBar.indexing.uploadingLabel', { progress: indexingProgress })
+        : t('statusBar.indexing.indexingLabel', { progress: indexingProgress });
     const hasRightStatusItems = isIndexing || Boolean(anomalyStatus);
 
     return (
@@ -444,7 +463,7 @@ const AppStatusBar: React.FC = () => {
             <Box sx={statusBarLeftGroupSx}>
                 {loaded && (
                     <>
-                        <AppStatusBarItem title="Current log file name">
+                        <AppStatusBarItem title={t('statusBar.items.currentFileTitle')}>
                             <DescriptionIcon sx={iconRaisedSx} />
                             <Typography sx={textSx}>
                                 {name}
@@ -457,7 +476,7 @@ const AppStatusBar: React.FC = () => {
                             sx={statusBarDividerSx}
                         />
 
-                        <AppStatusBarItem title="Total file size on disk">
+                        <AppStatusBarItem title={t('statusBar.items.fileSizeTitle')}>
                             <StorageIcon sx={iconRaisedSx} />
                             <Typography sx={textSx}>
                                 {formatFileSize(size)}
@@ -494,9 +513,9 @@ const AppStatusBar: React.FC = () => {
                                     }}
                                 >
                                     <DialogTitle sx={{ pr: 6 }}>
-                                        Выбор формата логов
+                                        {t('statusBar.formatDialog.title')}
                                         <IconButton
-                                            aria-label="close"
+                                            aria-label={t('common.closeAria')}
                                             onClick={handleFormatDialogClose}
                                             size="small"
                                             sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -506,15 +525,15 @@ const AppStatusBar: React.FC = () => {
                                     </DialogTitle>
                                     <DialogContent sx={{ pt: 1 }}>
                                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                                            Выберите формат для корректного парсинга и отображения полей в таблице.
+                                            {t('statusBar.formatDialog.description')}
                                         </Typography>
                                         <TextField
                                             autoFocus
                                             inputRef={formatSearchInputRef}
                                             fullWidth
                                             size="small"
-                                            label="Поиск формата"
-                                            placeholder="Введите название формата"
+                                            label={t('statusBar.formatDialog.searchLabel')}
+                                            placeholder={t('statusBar.formatDialog.searchPlaceholder')}
                                             value={formatSearchQuery}
                                             onChange={(event) => setFormatSearchQuery(event.target.value)}
                                             sx={{ mb: 1.5 }}
@@ -528,13 +547,13 @@ const AppStatusBar: React.FC = () => {
                                                 >
                                                     <ListItemText
                                                         primary={formatOption.name}
-                                                        secondary={formatOption.id === normalizedFormatId ? 'Текущий формат' : undefined}
+                                                        secondary={formatOption.id === normalizedFormatId ? t('statusBar.formatDialog.current') : undefined}
                                                     />
                                                 </ListItemButton>
                                             ))}
                                             {filteredFormatOptions.length === 0 && (
                                                 <ListItemText
-                                                    primary="Форматы не найдены"
+                                                    primary={t('statusBar.formatDialog.empty')}
                                                     primaryTypographyProps={{ color: 'text.secondary', sx: { px: 2, py: 1 } }}
                                                 />
                                             )}
@@ -542,7 +561,7 @@ const AppStatusBar: React.FC = () => {
                                     </DialogContent>
                                     <DialogActions sx={{ px: 3, pb: 2 }}>
                                         <Button onClick={handleFormatDialogClose} variant="outlined">
-                                            Закрыть
+                                            {t('statusBar.formatDialog.close')}
                                         </Button>
                                     </DialogActions>
                                 </Dialog>
@@ -556,10 +575,7 @@ const AppStatusBar: React.FC = () => {
                 {isIndexing && (
                     <>
                         <AppStatusBarItem
-                            title={isServerUploadInProgress
-                                ? `Идет загрузка на сервер ${indexingProgress}%`
-                                : `Indexing ${indexingProgress}%`
-                            }
+                            title={indexingTitle}
                         >
                             <Box
                                 sx={{
@@ -570,10 +586,7 @@ const AppStatusBar: React.FC = () => {
                                 }}
                             >
                                 <Typography sx={anomalyTextSx}>
-                                    {isServerUploadInProgress
-                                        ? `Идет загрузка на сервер ${indexingProgress}%`
-                                        : `Indexing ${indexingProgress}%`
-                                    }
+                                    {indexingLabel}
                                 </Typography>
                                 <LinearProgress
                                     variant="determinate"
@@ -594,7 +607,7 @@ const AppStatusBar: React.FC = () => {
                                     sx={statusBarDividerSx}
                                 />
                                 <AppStatusBarItem
-                                    title="Отменить загрузку на сервер"
+                                    title={t('statusBar.items.cancelUploadTitle')}
                                     onClick={handleCancelServerUpload}
                                 >
                                     <CloseIcon sx={closeButtonSx} />
@@ -639,7 +652,7 @@ const AppStatusBar: React.FC = () => {
                                     sx={statusBarDividerSx}
                                 />
                                 <AppStatusBarItem
-                                    title="Остановить расчет аномалий"
+                                    title={t('statusBar.items.cancelAnomalyTitle')}
                                     onClick={() => void handleCancelAnomaly()}
                                 >
                                     <CloseIcon sx={closeButtonSx} />

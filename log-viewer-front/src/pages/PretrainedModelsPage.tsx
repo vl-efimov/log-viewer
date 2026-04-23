@@ -9,10 +9,12 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { getPretrainedModels, warmupBglModel, type PretrainedModelInfo } from '../services/bglAnomalyApi';
+import { useTranslation } from 'react-i18next';
 
 let cachedPretrainedModels: PretrainedModelInfo[] | null = null;
 
 const PretrainedModelsPage: React.FC = () => {
+    const { t } = useTranslation();
     const [models, setModels] = useState<PretrainedModelInfo[]>(() => cachedPretrainedModels ?? []);
     const [loading, setLoading] = useState<boolean>(() => cachedPretrainedModels == null);
     const [installing, setInstalling] = useState<boolean>(false);
@@ -33,7 +35,7 @@ const PretrainedModelsPage: React.FC = () => {
                 }
             } catch (err) {
                 if (!cancelled) {
-                    setError(err instanceof Error ? err.message : 'Failed to load model list');
+                    setError(err instanceof Error ? err.message : t('pretrainedModels.errors.loadList'));
                 }
             } finally {
                 if (!cancelled) {
@@ -76,7 +78,7 @@ const PretrainedModelsPage: React.FC = () => {
             await warmupBglModel(modelId);
             await refreshModels();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to prepare model');
+            setError(err instanceof Error ? err.message : t('pretrainedModels.errors.prepare'));
         } finally {
             setInstalling(false);
         }
@@ -84,12 +86,12 @@ const PretrainedModelsPage: React.FC = () => {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography variant="h5">Pretrained Models</Typography>
+            <Typography variant="h5">{t('pretrainedModels.title')}</Typography>
             <Typography
                 variant="body2"
                 color="text.secondary"
             >
-                Available backend models for anomaly detection.
+                {t('pretrainedModels.description')}
             </Typography>
 
             {loading && (
@@ -99,7 +101,7 @@ const PretrainedModelsPage: React.FC = () => {
                     alignItems="center"
                 >
                     <CircularProgress size={18} />
-                    <Typography variant="body2">Loading models...</Typography>
+                    <Typography variant="body2">{t('pretrainedModels.loading')}</Typography>
                 </Stack>
             )}
 
@@ -121,21 +123,21 @@ const PretrainedModelsPage: React.FC = () => {
                         <Chip
                             label={
                                 model.status === 'ready'
-                                    ? 'Ready'
+                                    ? t('pretrainedModels.status.ready')
                                     : model.status === 'installing'
-                                        ? 'Preparing'
-                                        : 'Unavailable'
+                                        ? t('pretrainedModels.status.installing')
+                                        : t('pretrainedModels.status.unavailable')
                             }
                             color={model.status === 'ready' ? 'success' : 'default'}
                             size="small"
                         />
                     </Stack>
-                    <Typography variant="body2"><strong>Dataset:</strong> {model.dataset}</Typography>
-                    <Typography variant="body2"><strong>Architecture:</strong> {model.architecture}</Typography>
+                    <Typography variant="body2"><strong>{t('pretrainedModels.labels.dataset')}:</strong> {model.dataset}</Typography>
+                    <Typography variant="body2"><strong>{t('pretrainedModels.labels.architecture')}:</strong> {model.architecture}</Typography>
                     {model.status === 'installing' && (
                         <>
-                            <Typography variant="body2"><strong>Stage:</strong> {model.prepareStage}</Typography>
-                            <Typography variant="body2"><strong>Status:</strong> {model.prepareMessage}</Typography>
+                            <Typography variant="body2"><strong>{t('pretrainedModels.labels.stage')}:</strong> {model.prepareStage}</Typography>
+                            <Typography variant="body2"><strong>{t('pretrainedModels.labels.status')}:</strong> {model.prepareMessage}</Typography>
                         </>
                     )}
                     {model.prepareError && (
@@ -168,7 +170,7 @@ const PretrainedModelsPage: React.FC = () => {
                                 onClick={() => handlePrepareModel(model.modelId)}
                                 disabled={installing}
                             >
-                                Prepare Model
+                                {t('pretrainedModels.actions.prepare')}
                             </Button>
                             {installing && <CircularProgress size={16} />}
                         </Box>

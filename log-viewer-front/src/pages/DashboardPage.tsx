@@ -1505,7 +1505,7 @@ const DashboardPage: React.FC = () => {
                         {t('dashboard.title')}
                     </Typography>
                     <Alert severity="info">
-                        Для больших файлов дашборд строится только после загрузки файла на сервер. Перейдите на страницу просмотра логов и нажмите "Загрузить на сервер".
+                        {t('dashboard.requiresServerUploadNotice')}
                     </Alert>
                 </Stack>
             </Box>
@@ -1655,7 +1655,7 @@ const DashboardPage: React.FC = () => {
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    Загрузка дашборда
+                                    {t('dashboard.loading')}
                                 </Typography>
                             </Box>
                         </CardContent>
@@ -1869,7 +1869,7 @@ const DashboardPage: React.FC = () => {
                             <Card>
                                 <CardContent>
                                     <Alert severity="info">
-                                        Нет данных для отображения
+                                        {t('dashboard.noDataToDisplay')}
                                     </Alert>
                                 </CardContent>
                             </Card>

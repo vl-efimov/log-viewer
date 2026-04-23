@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
     clearLogFile,
     getFileHandle,
@@ -61,6 +62,7 @@ type UseFileLoaderOptions = {
 
 export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation();
     const [indexing, setIndexing] = useState(false);
     const currentSessionId = useSelector((state: RootState) => state.logFile.analyticsSessionId);
     const activeSessionIdRef = useRef<string | null>(null);
@@ -189,7 +191,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                         return;
                     }
                     dispatch(enqueueNotification({
-                        message: `Индексация файла ${file.name} завершена`,
+                        message: t('fileSelection.indexingComplete', { fileName: file.name }),
                         severity: 'success',
                     }));
                 }).catch((error) => {
@@ -263,7 +265,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
             const [handle] = await (window as any).showOpenFilePicker({
                 types: [
                     {
-                        description: 'Log Files',
+                        description: t('fileSelection.filePickerDescription'),
                         accept: {
                             'text/plain': ['.txt', '.log'],
                             'application/json': ['.json'],
@@ -304,7 +306,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
             const [handle] = await (window as any).showOpenFilePicker({
                 types: [
                     {
-                        description: 'Log Files',
+                        description: t('fileSelection.filePickerDescription'),
                         accept: {
                             'text/plain': ['.txt', '.log'],
                             'application/json': ['.json'],
@@ -318,6 +320,12 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
             const isDifferentFile = Boolean(attachOptions.expectedName && attachOptions.expectedName !== file.name);
 
             if (isDifferentFile) {
+                const fallbackConfirmMessage = attachOptions.expectedName
+                    ? t('viewLogs.monitoringReplace.withNames', {
+                        expectedName: attachOptions.expectedName,
+                        selectedName: file.name,
+                    })
+                    : t('viewLogs.monitoringReplace.withoutNames');
                 const shouldReplace = options.confirmMonitoringFileReplace
                     ? await options.confirmMonitoringFileReplace({
                         expectedName: attachOptions.expectedName,
@@ -325,7 +333,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                         expectedSize: attachOptions.expectedSize,
                         selectedSize: file.size,
                     })
-                    : window.confirm('Вы выбрали другой файл. Данные в IndexedDB будут перезаписаны. Продолжить?');
+                    : window.confirm(fallbackConfirmMessage);
                 if (!shouldReplace) {
                     return 'cancelled';
                 }

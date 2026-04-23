@@ -50,6 +50,7 @@ import {
     uploadRemoteIngestChunk,
 } from '../../services/bglAnomalyApi';
 import { useAnomalySnapshot } from './hooks/useAnomalySnapshot';
+import { useTranslation } from 'react-i18next';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024;
 const LINE_INDEX_CHUNK_SIZE = 1_000_000;
@@ -321,6 +322,7 @@ export const useViewLogsController = () => {
     const viewModeRef = useRef<ViewModeEnum>(ViewModeEnum.FromEnd);
 
     const dispatch = useDispatch();
+    const { t } = useTranslation();
 
     const {
         content,
@@ -403,10 +405,6 @@ export const useViewLogsController = () => {
     const [dbVirtualWindowStart, setDbVirtualWindowStart] = useState<number>(0);
     const { getParsedRow, clearParsedRowCache } = useParsedRowsCache();
     const buildLineParsePreview = useCallback((lineNumber: number, raw: string) => {
-        if (raw.startsWith('Loading...')) {
-            return { parseState: 'loading' as const };
-        }
-
         const parsedLine = getParsedRow({ lineNumber, raw });
         if (!parsedLine.parsed) {
             return { parseState: 'unparsed' as const };
@@ -468,8 +466,11 @@ export const useViewLogsController = () => {
         selectedSize: number;
     }) => {
         const baseMessage = context.expectedName
-            ? `Вы выбрали другой файл (${context.selectedName}) вместо ${context.expectedName}. Данные в IndexedDB будут перезаписаны. Продолжить?`
-            : 'Вы выбрали другой файл. Данные в IndexedDB будут перезаписаны. Продолжить?';
+            ? t('viewLogs.monitoringReplace.withNames', {
+                selectedName: context.selectedName,
+                expectedName: context.expectedName,
+            })
+            : t('viewLogs.monitoringReplace.withoutNames');
 
         return await new Promise<boolean>((resolve) => {
             pendingMonitoringReplaceResolverRef.current = resolve;
@@ -478,7 +479,7 @@ export const useViewLogsController = () => {
                 message: baseMessage,
             });
         });
-    }, []);
+    }, [t]);
 
     const {
         indexing,
@@ -619,7 +620,7 @@ export const useViewLogsController = () => {
 
         const runtimeFormat = buildCustomFormatPattern(saved);
         if (!runtimeFormat) {
-            throw new Error('Не удалось зарегистрировать формат. Проверьте регулярное выражение.');
+            throw new Error(t('viewLogs.customFormatDialog.registerError'));
         }
 
         registerCustomLogFormat(runtimeFormat);
@@ -629,7 +630,7 @@ export const useViewLogsController = () => {
         setCustomFormatDialogState({ open: false, previewLines: [] });
 
         resolver?.({ mode: 'use-format', formatId: saved.id });
-    }, []);
+    }, [t]);
 
     const anomalyStorageKey = useMemo(() => {
         if (analyticsSessionId) {
@@ -662,7 +663,7 @@ export const useViewLogsController = () => {
     const normalizedFormatId = (format || '').trim() || 'unknown';
     const isFormatUnknown = normalizedFormatId === 'unknown';
     const uploadDisabledReason = requiresServerUpload && isFormatUnknown
-        ? 'Выберите формат логов'
+        ? t('viewLogs.uploadDisabledSelectFormat')
         : '';
     const isDbView = !isStreamView && Boolean(analyticsSessionId);
     const smallFileTotalRows = useMemo(() => countPhysicalLines(content ?? ''), [content]);
@@ -913,22 +914,22 @@ export const useViewLogsController = () => {
 
         if (nextFormatId !== 'unknown' && !getLogFormatById(nextFormatId)) {
             dispatch(enqueueNotification({
-                message: 'Выбранный формат не найден.',
+                message: t('viewLogs.formatChange.formatNotFound'),
                 severity: 'error',
             }));
             return;
         }
 
-        let confirmationMessage = 'Вы уверены, что хотите сменить формат логов?';
+        let confirmationMessage = t('viewLogs.formatChange.confirmDefault');
 
         if (isRemoteLargeSession && analyticsSessionId.startsWith('remote:')) {
-            confirmationMessage = 'Смена формата приведет к удалению загруженных данных на сервере и повторной загрузке файла. Вы уверены, что хотите сменить формат?';
+            confirmationMessage = t('viewLogs.formatChange.confirmRemote');
         } else if (analyticsSessionId) {
             const session = await getSession(analyticsSessionId);
             const hasIndexedData = Boolean(session && (session.lineCount > 0 || isIndexing));
             confirmationMessage = hasIndexedData
-                ? 'Смена формата приведет к удалению данных в IndexedDB и повторной индексации файла. Вы уверены, что хотите сменить формат?'
-                : 'Вы уверены, что хотите сменить формат логов?';
+                ? t('viewLogs.formatChange.confirmIndexedDb')
+                : t('viewLogs.formatChange.confirmDefault');
         }
 
         const confirmed = await new Promise<boolean>((resolve) => {
@@ -955,7 +956,7 @@ export const useViewLogsController = () => {
             const reloaded = await reloadCurrentFileWithFormat(nextFormatId);
             if (!reloaded) {
                 dispatch(enqueueNotification({
-                    message: 'Не удалось переоткрыть файл для смены формата.',
+                    message: t('viewLogs.formatChange.reloadFailed'),
                     severity: 'error',
                 }));
                 return;
@@ -963,14 +964,14 @@ export const useViewLogsController = () => {
 
             if (isRemoteLargeSession) {
                 dispatch(enqueueNotification({
-                    message: 'Формат изменен. Выполните повторную загрузку файла на сервер.',
+                    message: t('viewLogs.formatChange.changedUploadAgain'),
                     severity: 'warning',
                 }));
             }
         } catch (error) {
             console.error('Failed to change log format:', error);
             dispatch(enqueueNotification({
-                message: 'Не удалось сменить формат логов.',
+                message: t('viewLogs.formatChange.failed'),
                 severity: 'error',
             }));
         }
@@ -982,6 +983,7 @@ export const useViewLogsController = () => {
         loaded,
         normalizedFormatId,
         reloadCurrentFileWithFormat,
+        t,
     ]);
 
     useEffect(() => {
@@ -1000,7 +1002,7 @@ export const useViewLogsController = () => {
 
         if (isFormatUnknown) {
             dispatch(enqueueNotification({
-                message: 'Выберите формат логов перед загрузкой на сервер.',
+                message: t('viewLogs.serverUpload.selectFormatWarning'),
                 severity: 'warning',
             }));
             return;
@@ -1103,8 +1105,8 @@ export const useViewLogsController = () => {
 
             dispatch(enqueueNotification({
                 message: finishedLineCount > 0
-                    ? `Загрузка на сервер завершена: ${finishedLineCount.toLocaleString()} строк.`
-                    : 'Загрузка файла на сервер завершена.',
+                    ? t('viewLogs.serverUpload.successWithLines', { count: finishedLineCount as number })
+                    : t('viewLogs.serverUpload.success'),
                 severity: 'success',
             }));
         } catch (error) {
@@ -1113,7 +1115,7 @@ export const useViewLogsController = () => {
                 console.error('Failed to upload large file to server:', error);
                 const message = error instanceof Error && error.message
                     ? error.message
-                    : 'Не удалось загрузить файл на сервер.';
+                    : t('viewLogs.serverUpload.failed');
                 dispatch(enqueueNotification({
                     message,
                     severity: 'error',
@@ -2165,20 +2167,29 @@ export const useViewLogsController = () => {
 
         const rawEntry = dbLineCacheRef.current.get(fileIndex);
         const sourceLineNumber = fileIndex + 1;
-        const raw = rawEntry?.text ?? 'Loading... ';
 
         const displayLineNumber = viewMode === ViewModeEnum.FromEnd
             ? dbLineCount - globalDisplayIndex
             : fileIndex + 1;
 
+        if (!rawEntry) {
+            return {
+                raw: t('common.loading'),
+                displayLineNumber,
+                sourceLineNumber,
+                anomalyStatus: getAnomalyStatusForLine(sourceLineNumber),
+                parseState: 'loading' as const,
+            };
+        }
+
         return {
-            raw,
+            raw: rawEntry.text,
             displayLineNumber,
             sourceLineNumber,
             anomalyStatus: getAnomalyStatusForLine(sourceLineNumber),
-            ...buildLineParsePreview(sourceLineNumber, raw),
+            ...buildLineParsePreview(sourceLineNumber, rawEntry.text),
         };
-    }, [buildLineParsePreview, dbLineCount, dbVirtualWindowStart, getAnomalyStatusForLine, isDbView, viewMode, dbLineCacheVersion]);
+    }, [buildLineParsePreview, dbLineCount, dbVirtualWindowStart, getAnomalyStatusForLine, isDbView, viewMode, dbLineCacheVersion, t]);
 
     const getLineAtIndex = useCallback((displayIndex: number) => {
         if (!isStreamView) {
@@ -2220,20 +2231,29 @@ export const useViewLogsController = () => {
 
         const rawEntry = lineCacheRef.current.get(fileIndex);
         const sourceLineNumber = fileIndex + 1;
-        const raw = rawEntry?.text ?? 'Loading...';
 
         const displayLineNumber = viewMode === ViewModeEnum.FromEnd
             ? lineCount - globalDisplayIndex
             : fileIndex + 1;
 
+        if (!rawEntry) {
+            return {
+                raw: t('common.loading'),
+                displayLineNumber,
+                sourceLineNumber,
+                anomalyStatus: getAnomalyStatusForLine(sourceLineNumber),
+                parseState: 'loading' as const,
+            };
+        }
+
         return {
-            raw,
+            raw: rawEntry.text,
             displayLineNumber,
             sourceLineNumber,
             anomalyStatus: getAnomalyStatusForLine(sourceLineNumber),
-            ...buildLineParsePreview(sourceLineNumber, raw),
+            ...buildLineParsePreview(sourceLineNumber, rawEntry.text),
         };
-    }, [buildLineParsePreview, displayLines, getAnomalyStatusForLine, indexedFilteredRows, lineCount, viewMode, lineCacheVersion, virtualWindowStart, isStreamView, hasActiveFiltersApplied, getDbLineAtIndex, isDbView]);
+    }, [buildLineParsePreview, displayLines, getAnomalyStatusForLine, indexedFilteredRows, lineCount, viewMode, lineCacheVersion, virtualWindowStart, isStreamView, hasActiveFiltersApplied, getDbLineAtIndex, isDbView, t]);
 
     const handleRangeChange = useCallback((startIndex: number, endIndex: number) => {
         if (!isStreamView || lineCount === 0) return;
@@ -3194,18 +3214,18 @@ export const useViewLogsController = () => {
 
     const monitoringBanner = {
         show: isDbView && !hasFileHandle && !isRemoteLargeSession,
-        message: 'Для отслеживания новых строк выберите тот же файл снова.',
-        actionLabel: 'Выбрать файл для мониторинга',
+        message: t('viewLogs.monitoringBanner.message'),
+        actionLabel: t('viewLogs.monitoringBanner.actionLabel'),
         onAction: () => void handleReattachMonitoring(),
     };
 
     const tableServerConnectionState = {
         show: isRemoteLargeSession && isRemoteServerDisconnected,
-        message: 'Нет связи с сервером. Повторяем подключение...',
+        message: t('viewLogs.server.reconnecting'),
     };
 
     const refreshDisabledReason = monitoringBanner.show
-        ? 'Файл недоступен для обновлений. Выберите файл для мониторинга.'
+        ? t('viewLogs.refreshDisabledReason.monitoringRequired')
         : '';
 
     const histogram = {

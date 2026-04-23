@@ -6,6 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import { ColorModeEnum } from '../../constants/ColorModeEnum';
+import { useTranslation } from 'react-i18next';
 
 interface ThemePaletteDrawerProps {
     open: boolean;
@@ -38,6 +39,8 @@ const PRIMARY_COLORS = [
 ];
 
 const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, onPrimaryChange, currentPrimary, mode, onThemeToggle }) => {
+    const { t } = useTranslation();
+
     return (
         <Drawer
             anchor="right"
@@ -75,7 +78,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                             backgroundColor: 'rgba(0, 0, 0, 0.05)',
                         },
                     }}
-                    aria-label="close"
+                    aria-label={t('common.closeAria')}
                 >
                     <CloseIcon />
                 </IconButton>
@@ -85,7 +88,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                     gutterBottom
                     sx={{ fontWeight: 600, mb: 3, mt: 2 }}
                 >
-                    Настройки темы
+                    {t('theme.drawerTitle')}
                 </Typography>
 
                 <Box sx={{ mb: 4 }}>
@@ -98,7 +101,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                             mb: 2
                         }}
                     >
-                        Режим темы
+                        {t('theme.mode')}
                     </Typography>
                     <Box
                         sx={{
@@ -139,7 +142,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         >
                             <LightModeIcon />
                             <Typography variant="body2">
-                                Светлая
+                                {t('theme.light')}
                             </Typography>
                         </Box>
                         <Box
@@ -175,7 +178,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         >
                             <DarkModeIcon />
                             <Typography variant="body2">
-                                Темная
+                                {t('theme.dark')}
                             </Typography>
                         </Box>
                     </Box>
@@ -190,7 +193,7 @@ const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, 
                         mb: 2
                     }}
                 >
-                    Основной цвет
+                    {t('theme.primaryColor')}
                 </Typography>
                 <Box
                     sx={{

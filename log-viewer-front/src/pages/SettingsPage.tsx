@@ -1,6 +1,11 @@
+import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
+
 const SettingsPage: React.FC = () => {
+    const { t } = useTranslation();
+
     return (
-        <span>SettingsPage</span>
+        <Typography variant="h5">{t('settings.title')}</Typography>
     );
 }
 

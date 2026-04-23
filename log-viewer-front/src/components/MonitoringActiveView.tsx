@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Trans, useTranslation } from 'react-i18next';
 
 interface MonitoringActiveViewProps {
     fileName: string;
@@ -14,6 +15,8 @@ export const MonitoringActiveView: React.FC<MonitoringActiveViewProps> = ({
     onViewLogs,
     onStopMonitoring,
 }) => {
+    const { t } = useTranslation();
+
     return (
         <Box
             sx={{
@@ -31,7 +34,7 @@ export const MonitoringActiveView: React.FC<MonitoringActiveViewProps> = ({
                 variant="h4"
                 gutterBottom
             >
-                Monitoring Active
+                {t('monitoringActive.title')}
             </Typography>
             <Typography
                 variant="body1"
@@ -40,9 +43,13 @@ export const MonitoringActiveView: React.FC<MonitoringActiveViewProps> = ({
                     textAlign: 'center',
                 }}
             >
-                File: <strong>{fileName}</strong>
+                <Trans
+                    i18nKey="monitoringActive.fileLabel"
+                    values={{ fileName }}
+                    components={{ strong: <strong /> }}
+                />
                 <br />
-                The file is being monitored for changes. Edit it in your text editor to see live updates.
+                {t('monitoringActive.description')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button
@@ -50,7 +57,7 @@ export const MonitoringActiveView: React.FC<MonitoringActiveViewProps> = ({
                     onClick={onViewLogs}
                     size="large"
                 >
-                    View Logs
+                    {t('monitoringActive.viewLogs')}
                 </Button>
                 <Button
                     variant="outlined"
@@ -58,7 +65,7 @@ export const MonitoringActiveView: React.FC<MonitoringActiveViewProps> = ({
                     size="large"
                     color="error"
                 >
-                    Stop Monitoring
+                    {t('monitoringActive.stop')}
                 </Button>
             </Box>
         </Box>

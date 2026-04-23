@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import { alpha } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { type FC, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import { parseLogLineAuto } from '../utils/logFormatDetector';
 
@@ -186,7 +187,7 @@ const resolveLineParsing = (row: DisplayLine): { parseState: ParseState; parsedM
         return { parseState: 'parsed', parsedMeta: row.parsedMeta };
     }
 
-    if (row.parseState === 'loading' || row.raw.startsWith('Loading...')) {
+    if (row.parseState === 'loading') {
         return { parseState: 'loading' };
     }
 
@@ -239,6 +240,7 @@ const LogLinesList: FC<LogLinesListProps> = ({
     onSelectLine,
     virtuosoRef,
 }) => {
+    const { t } = useTranslation();
     const resolvedTotalCount = totalCount ?? displayLines?.length ?? 0;
     const normalizedGlobalSearchTerm = (globalSearchTerm ?? '').trim().toLowerCase();
 
@@ -321,10 +323,10 @@ const LogLinesList: FC<LogLinesListProps> = ({
                             }}
                         >
                             {row.anomalyStatus === 'anomaly'
-                                ? 'ANOMALY'
+                                ? t('viewLogs.lines.anomalyStatus.anomaly')
                                 : row.anomalyStatus === 'normal'
-                                    ? 'NORMAL'
-                                    : 'UNDEFINED'}
+                                    ? t('viewLogs.lines.anomalyStatus.normal')
+                                    : t('viewLogs.lines.anomalyStatus.undefined')}
                         </Typography>
                         <Typography
                             variant="body2"

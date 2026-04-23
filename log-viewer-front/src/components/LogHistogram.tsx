@@ -393,7 +393,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     onAnomalyRangeSelect,
     showQuickRangeButtons = true,
 }) => {
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
     const chartLabelColor = isDarkMode ? '#cbd5e1' : '#475569';
@@ -1560,13 +1560,16 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     variant="subtitle2"
                     sx={{ flexGrow: 1 }}
                 >
-                    Log Timeline
+                    {t('viewLogs.histogram.title')}
                     <Typography
                         component="span"
                         variant="caption"
                         sx={{ ml: 1, color: 'text.secondary' }}
                     >
-                        ({mainHistogram.chartData.length} intervals, {formatBucketSize(mainHistogram.bucketSize)} each)
+                        ({t('viewLogs.histogram.summary', {
+                            count: mainHistogram.chartData.length,
+                            bucketSize: formatBucketSize(mainHistogram.bucketSize),
+                        })})
                     </Typography>
                     {categoryField && (
                         <Typography
@@ -1574,11 +1577,11 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                             variant="caption"
                             sx={{ ml: 1, color: 'text.secondary' }}
                         >
-                            grouped by {categoryField}
+                            {t('viewLogs.histogram.groupedBy', { field: categoryField })}
                         </Typography>
                     )}
                 </Typography>
-                <Tooltip title={isCollapsed ? 'Expand histogram' : 'Collapse histogram'}>
+                <Tooltip title={isCollapsed ? t('viewLogs.histogram.expandTooltip') : t('viewLogs.histogram.collapseTooltip')}>
                     <IconButton size="small">
                         {isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
                     </IconButton>
@@ -1694,35 +1697,35 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                             variant={activeQuickRange === 'day' ? 'contained' : 'outlined'}
                             onClick={() => handleQuickRangeSelect('day')}
                         >
-                            День
+                            {t('viewLogs.histogram.quickRange.day')}
                         </Button>
                         <Button
                             size="small"
                             variant={activeQuickRange === 'week' ? 'contained' : 'outlined'}
                             onClick={() => handleQuickRangeSelect('week')}
                         >
-                            Неделя
+                            {t('viewLogs.histogram.quickRange.week')}
                         </Button>
                         <Button
                             size="small"
                             variant={activeQuickRange === 'month' ? 'contained' : 'outlined'}
                             onClick={() => handleQuickRangeSelect('month')}
                         >
-                            Месяц
+                            {t('viewLogs.histogram.quickRange.month')}
                         </Button>
                         <Button
                             size="small"
                             variant={activeQuickRange === 'quarter' ? 'contained' : 'outlined'}
                             onClick={() => handleQuickRangeSelect('quarter')}
                         >
-                            Квартал
+                            {t('viewLogs.histogram.quickRange.quarter')}
                         </Button>
                         <Button
                             size="small"
                             variant={activeQuickRange === 'all' ? 'contained' : 'outlined'}
                             onClick={() => handleQuickRangeSelect('all')}
                         >
-                            Весь период
+                            {t('viewLogs.histogram.quickRange.all')}
                         </Button>
 
                     </Box>

@@ -53,7 +53,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
-    const { i18n } = useTranslation();
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const themeCtx = useContext(ThemeContext);
@@ -121,7 +121,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     <Box sx={menuBoxSx}>
                         <IconButton
                             sx={iconButtonSx(textColor)}
-                            aria-label="menu"
+                            aria-label={t('common.menu')}
                             onClick={toggleSidebar}
                         >
                             {isSidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
@@ -133,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                             sx={titleSx(textColor)}
                             variant="h6"
                         >
-                            {i18n.t('appTitle')}
+                            {t('appTitle')}
                         </Typography>
                     </Box>
                 </Box>
@@ -145,7 +145,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                                 {fileName}
                             </Typography>
                             <Tooltip
-                                title="Close current file and stop monitoring"
+                                title={t('header.closeFileTooltip')}
                                 arrow
                                 placement="top"
                             >
@@ -168,7 +168,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     />
                     <IconButton
                         sx={iconButtonSx(textColor)}
-                        aria-label="theme palette"
+                        aria-label={t('common.themePalette')}
                         onClick={() => setDrawerOpen(true)}
                     >
                         <PaletteIcon />

@@ -4,6 +4,7 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface FileSelectionViewProps {
     indexing: boolean;
@@ -18,6 +19,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
     onFileInputChange,
     onFileDrop,
 }) => {
+    const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleButtonClick = async () => {
@@ -44,7 +46,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                 variant="h4"
                 gutterBottom
             >
-                Welcome to LogViewer!
+                {t('fileSelection.title')}
             </Typography>
             <Typography
                 variant="body1"
@@ -53,7 +55,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                     textAlign: 'center',
                 }}
             >
-                Select a log file to monitor in real-time. You can edit the file in any text editor, and changes will be reflected here automatically.
+                {t('fileSelection.description')}
             </Typography>
             {indexing ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -62,7 +64,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                         variant="body2"
                         color="text.secondary"
                     >
-                        Indexing file...
+                        {t('fileSelection.indexing')}
                     </Typography>
                 </Box>
             ) : (
@@ -72,7 +74,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                     size="large"
                     onClick={handleButtonClick}
                 >
-                    Select log file
+                    {t('fileSelection.selectButton')}
                 </Button>
             )}
             <input

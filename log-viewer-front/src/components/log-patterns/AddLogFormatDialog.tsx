@@ -11,6 +11,7 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useMemo, useState } from 'react';
 import { extractNamedGroups } from '../../utils/logFormatDetector';
+import { useTranslation } from 'react-i18next';
 
 type LogFormatFormPayload = {
     name: string;
@@ -97,10 +98,12 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
     onClose,
     onSubmit,
     initialValue,
-    title = 'Add Custom Log Format',
-    submitLabel = 'Save',
+    title,
+    submitLabel,
     previewLines,
 }) => {
+    const { t } = useTranslation();
+
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [regex, setRegex] = useState('');
@@ -109,6 +112,9 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [showHints, setShowHints] = useState(false);
+
+    const resolvedTitle = title ?? t('logFormats.dialog.title');
+    const resolvedSubmitLabel = submitLabel ?? t('logFormats.dialog.submit');
 
     useEffect(() => {
         if (!open) {
@@ -129,7 +135,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         if (!value) {
             return {
                 valid: false,
-                error: 'Regular expression is required.',
+                error: t('logFormats.dialog.validation.regexRequired'),
                 errorCode: 'required',
                 namedGroups: [] as string[],
                 duplicateNamedGroups: [] as string[],
@@ -144,7 +150,9 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         if (duplicateNamedGroups.length > 0) {
             return {
                 valid: false,
-                error: `Duplicate named capture groups: ${duplicateNamedGroups.join(', ')}. Use unique names for each group.`,
+                error: t('logFormats.dialog.validation.duplicateNamedGroups', {
+                    groups: duplicateNamedGroups.join(', '),
+                }),
                 errorCode: 'duplicate-named-groups',
                 namedGroups: extractNamedGroups(value),
                 duplicateNamedGroups,
@@ -168,7 +176,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
             if (namedGroups.length === 0) {
                 return {
                     valid: false,
-                    error: 'Use named capture groups, for example (?<timestamp>...) (?<level>...) (?<message>...).',
+                    error: t('logFormats.dialog.validation.missingNamedGroups'),
                     errorCode: 'missing-named-groups',
                     namedGroups,
                     duplicateNamedGroups,
@@ -187,10 +195,12 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 hasIndices,
             };
         } catch (error) {
-            const details = error instanceof Error && error.message ? ` ${error.message}` : '';
+            const details = error instanceof Error && error.message ? error.message : '';
             return {
                 valid: false,
-                error: `Invalid regular expression.${details}`,
+                error: details
+                    ? t('logFormats.dialog.validation.invalidRegexWithDetails', { details })
+                    : t('logFormats.dialog.validation.invalidRegex'),
                 errorCode: 'invalid-regex',
                 namedGroups: [] as string[],
                 duplicateNamedGroups,
@@ -198,7 +208,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 hasIndices: false,
             };
         }
-    }, [regex]);
+    }, [regex, t]);
 
     const recommendedMatches = useMemo(() => {
         const groups = new Set(regexValidation.namedGroups.map((group) => group.toLowerCase()));
@@ -343,12 +353,12 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
 
         let hasValidationError = false;
         if (!trimmedName) {
-            setNameError('Name is required.');
+            setNameError(t('logFormats.dialog.validation.nameRequired'));
             hasValidationError = true;
         }
 
         if (!trimmedRegex) {
-            setRegexError('Regular expression is required.');
+            setRegexError(t('logFormats.dialog.validation.regexRequired'));
             hasValidationError = true;
         }
 
@@ -357,7 +367,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         }
 
         if (!regexValidation.valid) {
-            setRegexError(regexValidation.error ?? 'Invalid regular expression.');
+            setRegexError(regexValidation.error ?? t('logFormats.dialog.validation.invalidRegex'));
             return;
         }
 
@@ -370,7 +380,9 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
             });
             resetAndClose();
         } catch (submitError) {
-            const message = submitError instanceof Error ? submitError.message : 'Failed to save format.';
+            const message = submitError instanceof Error
+                ? submitError.message
+                : t('logFormats.dialog.errors.saveFailed');
             setSubmitError(message);
             setSubmitting(false);
         }
@@ -393,9 +405,9 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
             }}
         >
             <DialogTitle sx={{ pr: 6 }}>
-                {title}
+                {resolvedTitle}
                 <IconButton
-                    aria-label="close"
+                    aria-label={t('common.closeAria')}
                     onClick={resetAndClose}
                     size="small"
                     sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -407,7 +419,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 <TextField
                     autoFocus
                     margin="dense"
-                    label="Name"
+                    label={t('logFormats.dialog.fields.name')}
                     fullWidth
                     value={name}
                     onChange={e => {
@@ -423,7 +435,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 />
                 <TextField
                     margin="dense"
-                    label="Description"
+                    label={t('logFormats.dialog.fields.description')}
                     fullWidth
                     value={description}
                     onChange={e => setDescription(e.target.value)}
@@ -432,7 +444,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 />
                 <TextField
                     margin="dense"
-                    label="Regular Expression"
+                    label={t('logFormats.dialog.fields.regex')}
                     fullWidth
                     multiline
                     minRows={2}
@@ -447,7 +459,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                         }
                     }}
                     sx={{ mb: 2 }}
-                    placeholder={"e.g. ^(?<date>\\d{4}-\\d{2}-\\d{2}) (?<level>\\w+) (?<msg>.+)$"}
+                    placeholder={t('logFormats.dialog.fields.regexPlaceholder')}
                     disabled={submitting}
                     error={Boolean(regexError) || Boolean(submitError)}
                     helperText={regexError ?? submitError}
@@ -458,7 +470,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                         variant={showHints ? 'contained' : 'outlined'}
                         onClick={() => setShowHints((prev) => !prev)}
                     >
-                        {showHints ? 'Скрыть подсказку' : 'Подсказка'}
+                        {showHints ? t('logFormats.dialog.hints.toggleHide') : t('logFormats.dialog.hints.toggleShow')}
                     </Button>
                 </Box>
 
@@ -474,10 +486,10 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                         }}
                     >
                         <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 600 }}>
-                            Подсказки по регулярным выражениям
+                            {t('logFormats.dialog.hints.title')}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                            Используйте именованные группы захвата: (?&lt;name&gt;...). Это нужно для подсветки и фильтров.
+                            {t('logFormats.dialog.hints.namedGroups')}
                         </Typography>
                         <Typography
                             variant="caption"
@@ -491,13 +503,13 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 mb: 0.75,
                             }}
                         >
-{`Пример:
+    {`${t('logFormats.dialog.hints.exampleLabel')}
 ^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})
 \\s+(?<level>\\w+)
 \\s+(?<message>.+)$`}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            Быстрые подсказки: \\d{4} — год, \\w+ — слово, .+ — все до конца строки.
+                                {t('logFormats.dialog.hints.quick')}
                         </Typography>
                     </Box>
                 )}
@@ -507,8 +519,8 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                     sx={{ display: 'block', mb: 2 }}
                 >
                     {recommendedMatches.length > 0
-                        ? `Detected recommended fields: ${recommendedMatches.join(', ')}`
-                        : 'No recommended fields detected yet. Add at least message and one time field for better analytics.'}
+                        ? t('logFormats.dialog.recommended.detected', { fields: recommendedMatches.join(', ') })
+                        : t('logFormats.dialog.recommended.missing')}
                 </Typography>
 
                 {previewRows.length > 0 && (
@@ -518,7 +530,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                             variant="subtitle2"
                             sx={{ mb: 1 }}
                         >
-                            Preview parsing of first 5 lines
+                            {t('logFormats.dialog.preview.title')}
                         </Typography>
 
                         {regexValidation.errorCode === 'missing-named-groups' && regex.trim() ? (
@@ -532,10 +544,10 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 }}
                             >
                                 <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600, mb: 1 }}>
-                                    Используйте именованные группы захвата
+                                    {t('logFormats.dialog.preview.useNamedGroupsTitle')}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                                    Вместо обычных групп () используйте именованные (?&lt;name&gt;...)
+                                    {t('logFormats.dialog.preview.useNamedGroupsBody')}
                                 </Typography>
                                 <Typography
                                     variant="caption"
@@ -549,7 +561,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                         overflow: 'auto',
                                     }}
                                 >
-{`Пример:
+{`${t('logFormats.dialog.hints.exampleLabel')}
 ^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})
 \\s+(?<level>\\w+)
 \\s+(?<message>.+)$`}
@@ -566,10 +578,10 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 }}
                             >
                                 <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, mb: 1 }}>
-                                    Повторяющиеся имена групп
+                                    {t('logFormats.dialog.preview.duplicateGroupsTitle')}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                                    Каждая именованная группа должна иметь уникальное имя. Найдены дубликаты:
+                                    {t('logFormats.dialog.preview.duplicateGroupsBody')}
                                 </Typography>
                                 <Typography
                                     variant="caption"
@@ -587,7 +599,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                     {regexValidation.duplicateNamedGroups.join(', ')}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    Пример: вместо (?&lt;level&gt;...) (?&lt;level&gt;...) используйте (?&lt;level&gt;...) (?&lt;subLevel&gt;...).
+                                    {t('logFormats.dialog.preview.duplicateGroupsExample')}
                                 </Typography>
                             </Box>
                         ) : regexValidation.errorCode === 'invalid-regex' && regex.trim() ? (
@@ -601,10 +613,10 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 }}
                             >
                                 <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, mb: 0.75 }}>
-                                    Ошибка в регулярном выражении
+                                    {t('logFormats.dialog.preview.invalidRegexTitle')}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {regexValidation.error ?? 'Invalid regular expression.'}
+                                    {regexValidation.error ?? t('logFormats.dialog.validation.invalidRegex')}
                                 </Typography>
                             </Box>
                         ) : (
@@ -676,7 +688,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                                     color="text.disabled"
                                                     sx={{ fontStyle: 'italic', mt: 0.5, display: 'block' }}
                                                 >
-                                                    Нет совпадений
+                                                    {t('logFormats.dialog.preview.noMatches')}
                                                 </Typography>
                                             )
                                         )}
@@ -691,14 +703,16 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                 <Button
                     onClick={resetAndClose}
                     disabled={submitting}
-                >Cancel
+                >
+                    {t('common.cancel')}
                 </Button>
                 <Button
                     onClick={() => void handleSubmit()}
                     color="primary"
                     variant="contained"
                     disabled={submitting}
-                >{submitLabel}
+                >
+                    {resolvedSubmitLabel}
                 </Button>
             </DialogActions>
         </Dialog>

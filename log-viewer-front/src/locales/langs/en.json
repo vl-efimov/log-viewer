@@ -1,7 +1,414 @@
 {
   "appTitle": "LogViewer",
+  "header": {
+    "closeFileTooltip": "Close current file and stop monitoring"
+  },
+  "appLayout": {
+    "dropFileToOpen": "Drop log file to open"
+  },
   "common": {
-    "unknown": "unknown"
+    "unknown": "unknown",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "retry": "Retry",
+    "apply": "Apply",
+    "clearAll": "Clear all",
+    "clear": "Clear",
+    "find": "Find",
+    "search": "Search",
+    "menu": "Menu",
+    "selectLanguage": "Select language",
+    "themePalette": "Theme palette",
+    "loading": "Loading...",
+    "closeAria": "close"
+  },
+  "clipboard": {
+    "copy": "Copy",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Failed to copy to clipboard"
+  },
+  "fileSelection": {
+    "title": "Welcome to LogViewer!",
+    "description": "Select a log file to monitor in real-time. You can edit the file in any text editor, and changes will be reflected here automatically.",
+    "indexing": "Indexing file...",
+    "indexingComplete": "Indexing completed: {{fileName}}",
+    "filePickerDescription": "Log files",
+    "selectButton": "Select log file"
+  },
+  "monitoringActive": {
+    "title": "Monitoring Active",
+    "fileLabel": "File: <strong>{{fileName}}</strong>",
+    "description": "The file is being monitored for changes. Edit it in your text editor to see live updates.",
+    "viewLogs": "View Logs",
+    "stop": "Stop Monitoring"
+  },
+  "noFileSelected": {
+    "title": "No file selected",
+    "description": "Please select a log file from the Home page to start monitoring.",
+    "buttonText": "Go to File Upload"
+  },
+  "viewLogs": {
+    "histogram": {
+      "title": "Log Timeline",
+      "summary": "{{count}} intervals, {{bucketSize}} each",
+      "groupedBy": "grouped by {{field}}",
+      "expandTooltip": "Expand histogram",
+      "collapseTooltip": "Collapse histogram",
+      "loadingMessage": "Indexing is in progress — the chart will appear soon.",
+      "quickRange": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "quarter": "Quarter",
+        "all": "All time"
+      }
+    },
+    "table": {
+      "preparingLargeFile": "Preparing the table for a large file. This may take some time.",
+      "loadingRows": "Loading table rows...",
+      "emptyFiltered": "No rows found for the selected filters."
+    },
+    "lines": {
+      "anomalyStatus": {
+        "anomaly": "ANOMALY",
+        "normal": "NORMAL",
+        "undefined": "UNDEFINED"
+      }
+    },
+    "server": {
+      "reconnecting": "No connection to the server. Reconnecting..."
+    },
+    "monitoringBanner": {
+      "message": "To monitor new lines, please re-select the same file.",
+      "actionLabel": "Select file for monitoring"
+    },
+    "refreshDisabledReason": {
+      "monitoringRequired": "File is not available for refresh. Select the file for monitoring."
+    },
+    "monitoringReplace": {
+      "withNames": "You selected a different file ({{selectedName}}) instead of {{expectedName}}. IndexedDB data will be overwritten. Continue?",
+      "withoutNames": "You selected a different file. IndexedDB data will be overwritten. Continue?"
+    },
+    "uploadDisabledSelectFormat": "Select log format",
+    "serverUpload": {
+      "selectFormatWarning": "Select log format before uploading to server.",
+      "successWithLines": "Upload to server completed: {{count}} lines.",
+      "success": "File upload to server completed.",
+      "failed": "Failed to upload file to server."
+    },
+    "formatChange": {
+      "formatNotFound": "Selected format was not found.",
+      "confirmDefault": "Are you sure you want to change the log format?",
+      "confirmRemote": "Changing the format will delete uploaded data on the server and re-upload the file. Are you sure you want to change the format?",
+      "confirmIndexedDb": "Changing the format will delete IndexedDB data and re-index the file. Are you sure you want to change the format?",
+      "reloadFailed": "Failed to reopen the file to change the format.",
+      "changedUploadAgain": "Format changed. Please upload the file to the server again.",
+      "failed": "Failed to change log format."
+    },
+    "unknownFormat": {
+      "message": "Log format for file {{fileName}} was not detected. Do you want to add a custom format?"
+    },
+    "customFormatDialog": {
+      "title": "Add Custom Log Format",
+      "submit": "Save and apply",
+      "registerError": "Failed to register format. Check the regular expression."
+    }
+  },
+  "toolbar": {
+    "sections": {
+      "order": "Order",
+      "server": "Server",
+      "refresh": "Refresh",
+      "anomalies": "Anomalies"
+    },
+    "order": {
+      "fromStart": "From start",
+      "fromEnd": "From end"
+    },
+    "server": {
+      "uploadTooltip": "Upload file to server",
+      "uploadTooltipProgress": "Server upload: {{progress}}%",
+      "uploadButton": "Upload to server",
+      "uploadingButton": "Uploading {{progress}}%"
+    },
+    "refresh": {
+      "refreshNow": "Refresh now",
+      "autoOn": "Auto-refresh on",
+      "autoOff": "Auto-refresh off",
+      "refreshButton": "Refresh",
+      "autoButton": "Auto"
+    },
+    "anomalies": {
+      "settings": "Settings",
+      "settingsTooltip": "Anomaly settings",
+      "prev": "Previous anomaly",
+      "next": "Next anomaly"
+    },
+    "search": {
+      "open": "Search (Ctrl+F)",
+      "prev": "Previous match",
+      "next": "Next match",
+      "label": "Search table",
+      "placeholder": "Type a word or phrase",
+      "clearAria": "Clear search",
+      "notFound": "No matches found"
+    },
+    "filters": {
+      "button": "Filters",
+      "tooltip": "Filters",
+      "disabledWhileIndexing": "Filters disabled while indexing"
+    }
+  },
+  "filters": {
+    "title": "Filters",
+    "clearAll": "Clear All",
+    "apply": "Apply",
+    "unavailableUnknownFormat": "Field-based filtering is unavailable for an unknown format.",
+    "datetime": {
+      "start": "Start",
+      "end": "End"
+    },
+    "textPlaceholder": "Search in {{field}}...",
+    "anomaly": {
+      "label": "Anomalies",
+      "anomaly": "Anomalies",
+      "normal": "Normal",
+      "undefined": "Undefined"
+    }
+  },
+  "logFormats": {
+    "custom": {
+      "title": "Custom Formats",
+      "addButton": "Add custom format",
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "regex": "Regular Expressions",
+        "actions": "Actions",
+        "empty": "No custom formats"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "editAria": "Edit custom format",
+        "deleteAria": "Delete custom format"
+      },
+      "dialog": {
+        "addTitle": "Add Custom Log Format",
+        "editTitle": "Edit Custom Log Format",
+        "submitAdd": "Add",
+        "submitSaveChanges": "Save changes",
+        "deleteConfirm": "Delete selected custom format{{namePart}}?"
+      }
+    },
+    "supported": {
+      "title": "Supported Log Formats",
+      "loadError": "Failed to load supported log formats. Please check your connection or file location.",
+      "retry": "Retry",
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "regex": "Regular Expressions"
+      }
+    },
+    "dialog": {
+      "title": "Add Custom Log Format",
+      "submit": "Save",
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "regex": "Regular Expression",
+        "regexPlaceholder": "e.g. ^(?<date>\\d{4}-\\d{2}-\\d{2}) (?<level>\\w+) (?<msg>.+)$"
+      },
+      "validation": {
+        "nameRequired": "Name is required.",
+        "regexRequired": "Regular expression is required.",
+        "invalidRegex": "Invalid regular expression.",
+        "missingNamedGroups": "Use named capture groups, for example (?<timestamp>...) (?<level>...) (?<message>...).",
+        "duplicateNamedGroups": "Duplicate named capture groups: {{groups}}. Use unique names for each group.",
+        "invalidRegexWithDetails": "Invalid regular expression. {{details}}"
+      },
+      "errors": {
+        "saveFailed": "Failed to save format."
+      },
+      "hints": {
+        "toggleShow": "Hint",
+        "toggleHide": "Hide hint",
+        "title": "Regex tips",
+        "namedGroups": "Use named capture groups: (?<name>...). This is required for highlighting and filters.",
+        "exampleLabel": "Example:",
+        "quick": "Quick tips: \\d{4} — year, \\w+ — word, .+ — the rest of the line."
+      },
+      "recommended": {
+        "detected": "Detected recommended fields: {{fields}}",
+        "missing": "No recommended fields detected yet. Add at least message and one time field for better analytics."
+      },
+      "preview": {
+        "title": "Preview parsing of first 5 lines",
+        "useNamedGroupsTitle": "Use named capture groups",
+        "useNamedGroupsBody": "Instead of regular groups () use named ones (?<name>...) ",
+        "duplicateGroupsTitle": "Duplicate group names",
+        "duplicateGroupsBody": "Each named group must have a unique name. Duplicates found:",
+        "duplicateGroupsExample": "Example: instead of (?<level>...) (?<level>...) use (?<level>...) (?<subLevel>...).",
+        "invalidRegexTitle": "Regular expression error",
+        "noMatches": "No matches"
+      }
+    }
+  },
+  "pretrainedModels": {
+    "title": "Pretrained Models",
+    "description": "Available backend models for anomaly detection.",
+    "loading": "Loading models...",
+    "status": {
+      "ready": "Ready",
+      "installing": "Preparing",
+      "unavailable": "Unavailable"
+    },
+    "labels": {
+      "dataset": "Dataset",
+      "architecture": "Architecture",
+      "stage": "Stage",
+      "status": "Status"
+    },
+    "actions": {
+      "prepare": "Prepare Model"
+    },
+    "errors": {
+      "loadList": "Failed to load model list",
+      "prepare": "Failed to prepare model"
+    }
+  },
+  "statusBar": {
+    "items": {
+      "currentFileTitle": "Current log file name",
+      "fileSizeTitle": "Total file size on disk",
+      "formatDetectedTitle": "Detected log format type",
+      "formatDetectedHint": "Click this field to change format",
+      "cancelUploadTitle": "Cancel server upload",
+      "cancelAnomalyTitle": "Stop anomaly analysis"
+    },
+    "formatDialog": {
+      "title": "Select log format",
+      "description": "Choose a format for correct parsing and displaying fields in the table.",
+      "searchLabel": "Format search",
+      "searchPlaceholder": "Type format name",
+      "current": "Current format",
+      "empty": "No formats found",
+      "close": "Close"
+    },
+    "server": {
+      "onlineTitle": "Server is available",
+      "offlineTitle": "Server is not available",
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "indexing": {
+      "indexingTitle": "Indexing {{progress}}%",
+      "indexingLabel": "Indexing {{progress}}%",
+      "uploadingTitle": "Uploading to server {{progress}}%",
+      "uploadingLabel": "Uploading to server {{progress}}%"
+    },
+    "notifications": {
+      "cancellingAnomaly": "Stopping anomaly analysis...",
+      "anomalyCancelled": "Anomaly analysis cancelled.",
+      "anomalyCancelFailed": "Failed to stop anomaly analysis",
+      "anomalyCancelError": "Anomaly cancel error: {{errorMessage}}",
+      "serverUploadCancelled": "Server upload cancelled.",
+      "serverUploadNotFound": "No active server upload found."
+    },
+    "anomaly": {
+      "errorCompact": "Anomaly: error",
+      "errorFull": "Anomaly error: {{error}}",
+      "stoppedCompact": "Anomaly: stopped",
+      "stoppedCompactWithTime": "Anomaly: stopped | {{time}}",
+      "stoppedFull": "Anomaly analysis was stopped by user.",
+      "ratioCompact": "Anomaly: {{ratio}}",
+      "ratioFull": "Anomaly rows: {{rows}} ({{ratio}} of {{total}})",
+      "model": "Model: {{model}}",
+      "parameters": "Parameters:",
+      "threshold": "Threshold: {{value}}",
+      "step": "Step: {{value}}",
+      "minRegion": "Min Region: {{value}}",
+      "stage": {
+        "preprocessing": "Preparing data",
+        "embedding": "Preparing embeddings",
+        "scoring": "Calculating anomalies",
+        "starting": "Waiting for analysis to start"
+      },
+      "detail": {
+        "starting": "Server is starting the analysis task.",
+        "scoring": "Processed {{windowsText}}.",
+        "default": "Processed {{rowsText}}."
+      },
+      "compactWithPercent": "{{stageLabel}}: {{progressText}}",
+      "compact": "{{stageLabel}}",
+      "fullWithPercent": "{{stageLabel}}: {{progressText}}. {{stageDetail}}",
+      "full": "{{stageLabel}}. {{stageDetail}}",
+      "rowsText": "{{processed}}/{{total}} rows",
+      "windowsText": "{{processed}}/{{total}} windows",
+      "rowsPreparing": "preparing rows",
+      "windowsPreparing": "preparing windows"
+    }
+  },
+  "theme": {
+    "drawerTitle": "Theme settings",
+    "mode": "Theme mode",
+    "light": "Light",
+    "dark": "Dark",
+    "primaryColor": "Primary color"
+  },
+  "notFound": {
+    "title": "404 - Page Not Found"
+  },
+  "settings": {
+    "title": "Settings"
+  },
+  "anomaly": {
+    "dialog": {
+      "title": "Anomaly Analysis",
+      "model": "Model",
+      "modelAria": "model",
+      "settingsTitle": "Model Analysis Settings",
+      "settingsTooltip": "These parameters are applied to anomaly calculation for the selected model.",
+      "threshold": "Threshold",
+      "thresholdTooltip": "Lower value finds more anomalies, higher value is stricter.",
+      "stepSize": "Step Size",
+      "stepSizeTooltip": "Window shift between checks. Smaller is more detailed but slower.",
+      "minRegion": "Min Region",
+      "minRegionTooltip": "Minimum continuous anomaly block length to reduce noise.",
+      "profileSensitive": "Sensitive",
+      "profileSensitiveTooltip": "High sensitivity: catches more anomalies, may include noise.",
+      "profileBalanced": "Balanced",
+      "profileBalancedTooltip": "Balanced mode: recommended default tradeoff.",
+      "profileStrict": "Strict",
+      "profileStrictTooltip": "Strict mode: fewer false positives, stronger anomaly signal only.",
+      "analyze": "Analyze",
+      "analyzeTooltip": "Analyze anomalies",
+      "close": "Close",
+      "parameterLoadConfirmSuffix": "Continue analysis with current parameters?",
+      "parameterLoadNeedsConfirm": "Confirmation is required before starting.",
+      "disabled": {
+        "indexing": "Wait until data is loaded into the database.",
+        "selectFile": "Select a file for monitoring.",
+        "noRows": "No log rows to analyze. Load or attach a log file first.",
+        "checkingModel": "Checking model readiness...",
+        "prepareModel": "Prepare selected model ({{model}}) in Pretrained Models first."
+      },
+      "parameterLoad": {
+        "critical": "These parameters will significantly increase runtime: step {{stepSize}} yields roughly x{{multiplier}} checks compared to step 20.",
+        "high": "Current parameters noticeably increase runtime (roughly x{{multiplier}} checks compared to step 20).",
+        "elevated": "Current parameters increase runtime (roughly x{{multiplier}} checks compared to step 20)."
+      },
+      "resultNotification": "Anomaly analysis completed. Anomalous rows found: {{count}}.",
+      "errors": {
+        "failed": "Anomaly analysis failed"
+      }
+    }
   },
   "sidebar": {
     "groups": {
@@ -21,7 +428,10 @@
     "title": "Logs Dashboard",
     "selectFileDescription": "No file is selected yet. Go to the upload page and choose a log file to open the dashboard.",
     "goToUploadButton": "Go to File Upload",
+    "requiresServerUploadNotice": "For large files, the dashboard is available only after uploading the file to the server. Go to View logs and click \"Upload to server\".",
+    "loading": "Loading dashboard",
     "noDataDescription": "No data available yet for analytics.",
+    "noDataToDisplay": "No data to display",
     "fileAndFormat": "File: {{fileName}} | Detected format: {{format}}",
     "largeFilePreviewNotice": "Large file mode: dashboard is based on file preview and can differ from the full-table view.",
     "largeFileFullScanNotice": "Large file mode: all dashboard charts are calculated from the full file (timeline uses sampled points).",

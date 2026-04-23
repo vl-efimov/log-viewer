@@ -1,7 +1,414 @@
 {
   "appTitle": "Prohlížeč logů",
+  "header": {
+    "closeFileTooltip": "Zavřít aktuální soubor a zastavit monitoring"
+  },
+  "appLayout": {
+    "dropFileToOpen": "Pusťte log soubor pro otevření"
+  },
   "common": {
-    "unknown": "neznámý"
+    "unknown": "neznámý",
+    "ok": "OK",
+    "cancel": "Zrušit",
+    "close": "Zavřít",
+    "save": "Uložit",
+    "add": "Přidat",
+    "edit": "Upravit",
+    "delete": "Smazat",
+    "retry": "Zkusit znovu",
+    "apply": "Použít",
+    "clearAll": "Vymazat vše",
+    "clear": "Vymazat",
+    "find": "Najít",
+    "search": "Hledat",
+    "menu": "Nabídka",
+    "selectLanguage": "Vybrat jazyk",
+    "themePalette": "Paleta motivu",
+    "loading": "Načítání...",
+    "closeAria": "zavřít"
+  },
+  "clipboard": {
+    "copy": "Kopírovat",
+    "copied": "Zkopírováno do schránky",
+    "copyFailed": "Nepodařilo se zkopírovat do schránky"
+  },
+  "fileSelection": {
+    "title": "Vítejte v LogVieweru!",
+    "description": "Vyberte log soubor pro sledování v reálném čase. Soubor můžete upravovat v libovolném textovém editoru a změny se zde projeví automaticky.",
+    "indexing": "Indexuji soubor...",
+     "indexingComplete": "Indexace dokončena: {{fileName}}",
+     "filePickerDescription": "Logovací soubory",
+    "selectButton": "Vybrat log soubor"
+  },
+  "monitoringActive": {
+    "title": "Sledování aktivní",
+    "fileLabel": "Soubor: <strong>{{fileName}}</strong>",
+    "description": "Soubor je sledován na změny. Upravte jej v textovém editoru a uvidíte živé aktualizace.",
+    "viewLogs": "Zobrazit logy",
+    "stop": "Zastavit sledování"
+  },
+  "noFileSelected": {
+    "title": "Není vybraný soubor",
+    "description": "Prosím vyberte log soubor na hlavní stránce pro zahájení monitoringu.",
+    "buttonText": "Přejít na nahrání souboru"
+  },
+  "viewLogs": {
+    "histogram": {
+      "title": "Časová osa logů",
+      "summary": "{{count}} intervalů, po {{bucketSize}}",
+      "groupedBy": "seskupeno podle {{field}}",
+      "expandTooltip": "Rozbalit histogram",
+      "collapseTooltip": "Sbalit histogram",
+      "loadingMessage": "Probíhá indexace — graf se brzy zobrazí.",
+      "quickRange": {
+        "day": "Den",
+        "week": "Týden",
+        "month": "Měsíc",
+        "quarter": "Čtvrtletí",
+        "all": "Celé období"
+      }
+    },
+    "table": {
+      "preparingLargeFile": "Připravuji tabulku pro velký soubor. Může to chvíli trvat.",
+      "loadingRows": "Načítám řádky tabulky...",
+      "emptyFiltered": "Pro vybrané filtry nebyly nalezeny žádné řádky."
+    },
+    "lines": {
+      "anomalyStatus": {
+        "anomaly": "ANOMÁLIE",
+        "normal": "NORMÁLNÍ",
+        "undefined": "NEURČENO"
+      }
+    },
+    "server": {
+      "reconnecting": "Žádné spojení se serverem. Znovu připojuji..."
+    },
+    "monitoringBanner": {
+      "message": "Pro sledování nových řádků prosím znovu vyberte stejný soubor.",
+      "actionLabel": "Vybrat soubor pro monitoring"
+    },
+    "refreshDisabledReason": {
+      "monitoringRequired": "Soubor není dostupný pro obnovení. Vyberte soubor pro monitoring."
+    },
+    "monitoringReplace": {
+      "withNames": "Vybrali jste jiný soubor ({{selectedName}}) místo {{expectedName}}. Data v IndexedDB budou přepsána. Pokračovat?",
+      "withoutNames": "Vybrali jste jiný soubor. Data v IndexedDB budou přepsána. Pokračovat?"
+    },
+    "uploadDisabledSelectFormat": "Vyberte formát logu",
+    "serverUpload": {
+      "selectFormatWarning": "Před nahráním na server vyberte formát logu.",
+      "successWithLines": "Nahrání na server dokončeno: {{count}} řádků.",
+      "success": "Nahrání souboru na server dokončeno.",
+      "failed": "Soubor se nepodařilo nahrát na server."
+    },
+    "formatChange": {
+      "formatNotFound": "Vybraný formát nebyl nalezen.",
+      "confirmDefault": "Opravdu chcete změnit formát logu?",
+      "confirmRemote": "Změna formátu smaže nahraná data na serveru a soubor bude nutné znovu nahrát. Opravdu chcete změnit formát?",
+      "confirmIndexedDb": "Změna formátu smaže data v IndexedDB a soubor se znovu zaindexuje. Opravdu chcete změnit formát?",
+      "reloadFailed": "Nepodařilo se znovu otevřít soubor pro změnu formátu.",
+      "changedUploadAgain": "Formát byl změněn. Nahrajte prosím soubor na server znovu.",
+      "failed": "Nepodařilo se změnit formát logu."
+    },
+    "unknownFormat": {
+      "message": "Formát logu pro soubor {{fileName}} nebyl rozpoznán. Chcete přidat vlastní formát?"
+    },
+    "customFormatDialog": {
+      "title": "Přidat vlastní formát",
+      "submit": "Uložit a použít",
+      "registerError": "Nepodařilo se zaregistrovat formát. Zkontrolujte regulární výraz."
+    }
+  },
+  "toolbar": {
+    "sections": {
+      "order": "Pořadí",
+      "server": "Server",
+      "refresh": "Obnovení",
+      "anomalies": "Anomálie"
+    },
+    "order": {
+      "fromStart": "Od začátku",
+      "fromEnd": "Od konce"
+    },
+    "server": {
+      "uploadTooltip": "Nahrát soubor na server",
+      "uploadTooltipProgress": "Nahrávání na server: {{progress}}%",
+      "uploadButton": "Nahrát na server",
+      "uploadingButton": "Nahrávám {{progress}}%"
+    },
+    "refresh": {
+      "refreshNow": "Obnovit nyní",
+      "autoOn": "Automatické obnovení zapnuto",
+      "autoOff": "Automatické obnovení vypnuto",
+      "refreshButton": "Obnovit",
+      "autoButton": "Auto"
+    },
+    "anomalies": {
+      "settings": "Nastavení",
+      "settingsTooltip": "Nastavení anomálií",
+      "prev": "Předchozí anomálie",
+      "next": "Další anomálie"
+    },
+    "search": {
+      "open": "Hledat (Ctrl+F)",
+      "prev": "Předchozí shoda",
+      "next": "Další shoda",
+      "label": "Hledat v tabulce",
+      "placeholder": "Zadejte slovo nebo frázi",
+      "clearAria": "Vymazat hledání",
+      "notFound": "Nenalezeny žádné shody"
+    },
+    "filters": {
+      "button": "Filtry",
+      "tooltip": "Filtry",
+      "disabledWhileIndexing": "Filtry jsou při indexaci zakázané"
+    }
+  },
+  "filters": {
+    "title": "Filtry",
+    "clearAll": "Vymazat vše",
+    "apply": "Použít",
+    "unavailableUnknownFormat": "Filtrování podle polí není dostupné pro neznámý formát.",
+    "datetime": {
+      "start": "Od",
+      "end": "Do"
+    },
+    "textPlaceholder": "Hledat v poli {{field}}...",
+    "anomaly": {
+      "label": "Anomálie",
+      "anomaly": "Anomálie",
+      "normal": "Normální",
+      "undefined": "Neurčeno"
+    }
+  },
+  "logFormats": {
+    "custom": {
+      "title": "Vlastní formáty",
+      "addButton": "Přidat vlastní formát",
+      "table": {
+        "name": "Název",
+        "description": "Popis",
+        "regex": "Regulární výrazy",
+        "actions": "Akce",
+        "empty": "Žádné vlastní formáty"
+      },
+      "actions": {
+        "edit": "Upravit",
+        "delete": "Smazat",
+        "editAria": "Upravit vlastní formát",
+        "deleteAria": "Smazat vlastní formát"
+      },
+      "dialog": {
+        "addTitle": "Přidat formát logu",
+        "editTitle": "Upravit formát logu",
+        "submitAdd": "Přidat",
+        "submitSaveChanges": "Uložit změny",
+        "deleteConfirm": "Smazat vybraný vlastní formát{{namePart}}?"
+      }
+    },
+    "supported": {
+      "title": "Podporované formáty logů",
+      "loadError": "Nepodařilo se načíst podporované formáty logů. Zkontrolujte připojení nebo umístění souboru.",
+      "retry": "Zkusit znovu",
+      "table": {
+        "name": "Název",
+        "description": "Popis",
+        "regex": "Regulární výrazy"
+      }
+    },
+    "dialog": {
+      "title": "Přidat vlastní formát",
+      "submit": "Uložit",
+      "fields": {
+        "name": "Název",
+        "description": "Popis",
+        "regex": "Regulární výraz",
+        "regexPlaceholder": "např. ^(?<date>\\d{4}-\\d{2}-\\d{2}) (?<level>\\w+) (?<msg>.+)$"
+      },
+      "validation": {
+        "nameRequired": "Název je povinný.",
+        "regexRequired": "Regulární výraz je povinný.",
+        "invalidRegex": "Neplatný regulární výraz.",
+        "missingNamedGroups": "Použijte pojmenované zachytávací skupiny, např. (?<timestamp>...) (?<level>...) (?<message>...).",
+        "duplicateNamedGroups": "Duplicitní pojmenované skupiny: {{groups}}. Použijte jedinečné názvy.",
+        "invalidRegexWithDetails": "Neplatný regulární výraz. {{details}}"
+      },
+      "errors": {
+        "saveFailed": "Nepodařilo se uložit formát."
+      },
+      "hints": {
+        "toggleShow": "Tip",
+        "toggleHide": "Skrýt tip",
+        "title": "Tipy pro regex",
+        "namedGroups": "Používejte pojmenované skupiny: (?<name>...). To je potřeba pro zvýraznění a filtry.",
+        "exampleLabel": "Příklad:",
+        "quick": "Rychlé tipy: \\d{4} — rok, \\w+ — slovo, .+ — zbytek řádku."
+      },
+      "recommended": {
+        "detected": "Detekovaná doporučená pole: {{fields}}",
+        "missing": "Zatím nebyla detekována doporučená pole. Přidejte alespoň message a jedno časové pole pro lepší analytiku."
+      },
+      "preview": {
+        "title": "Náhled parsování prvních 5 řádků",
+        "useNamedGroupsTitle": "Použijte pojmenované skupiny",
+        "useNamedGroupsBody": "Místo běžných skupin () použijte pojmenované (?<name>...)",
+        "duplicateGroupsTitle": "Duplicitní názvy skupin",
+        "duplicateGroupsBody": "Každá pojmenovaná skupina musí mít jedinečný název. Nalezeny duplicity:",
+        "duplicateGroupsExample": "Příklad: místo (?<level>...) (?<level>...) použijte (?<level>...) (?<subLevel>...).",
+        "invalidRegexTitle": "Chyba v regulárním výrazu",
+        "noMatches": "Žádné shody"
+      }
+    }
+  },
+  "pretrainedModels": {
+    "title": "Předtrénované modely",
+    "description": "Dostupné backendové modely pro detekci anomálií.",
+    "loading": "Načítám modely...",
+    "status": {
+      "ready": "Připraveno",
+      "installing": "Příprava",
+      "unavailable": "Nedostupné"
+    },
+    "labels": {
+      "dataset": "Datová sada",
+      "architecture": "Architektura",
+      "stage": "Fáze",
+      "status": "Stav"
+    },
+    "actions": {
+      "prepare": "Připravit model"
+    },
+    "errors": {
+      "loadList": "Nepodařilo se načíst seznam modelů",
+      "prepare": "Nepodařilo se připravit model"
+    }
+  },
+  "statusBar": {
+    "items": {
+      "currentFileTitle": "Název aktuálního log souboru",
+      "fileSizeTitle": "Celková velikost souboru na disku",
+      "formatDetectedTitle": "Detekovaný typ formátu logu",
+      "formatDetectedHint": "Klikněte sem pro změnu formátu",
+      "cancelUploadTitle": "Zrušit nahrávání na server",
+      "cancelAnomalyTitle": "Zastavit analýzu anomálií"
+    },
+    "formatDialog": {
+      "title": "Vybrat formát logu",
+      "description": "Vyberte formát pro správné parsování a zobrazení polí v tabulce.",
+      "searchLabel": "Hledání formátu",
+      "searchPlaceholder": "Zadejte název formátu",
+      "current": "Aktuální formát",
+      "empty": "Nenalezeny žádné formáty",
+      "close": "Zavřít"
+    },
+    "server": {
+      "onlineTitle": "Server je dostupný",
+      "offlineTitle": "Server není dostupný",
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "indexing": {
+      "indexingTitle": "Indexace {{progress}}%",
+      "indexingLabel": "Indexace {{progress}}%",
+      "uploadingTitle": "Nahrávám na server {{progress}}%",
+      "uploadingLabel": "Nahrávám na server {{progress}}%"
+    },
+    "notifications": {
+      "cancellingAnomaly": "Zastavuji analýzu anomálií...",
+      "anomalyCancelled": "Analýza anomálií zrušena.",
+      "anomalyCancelFailed": "Nepodařilo se zastavit analýzu anomálií",
+      "anomalyCancelError": "Chyba při rušení analýzy anomálií: {{errorMessage}}",
+      "serverUploadCancelled": "Nahrávání na server zrušeno.",
+      "serverUploadNotFound": "Nebyla nalezena aktivní úloha nahrávání na server."
+    },
+    "anomaly": {
+      "errorCompact": "Anomálie: chyba",
+      "errorFull": "Chyba anomálií: {{error}}",
+      "stoppedCompact": "Anomálie: zastaveno",
+      "stoppedCompactWithTime": "Anomálie: zastaveno | {{time}}",
+      "stoppedFull": "Analýza anomálií byla zastavena uživatelem.",
+      "ratioCompact": "Anomálie: {{ratio}}",
+      "ratioFull": "Anomální řádky: {{rows}} ({{ratio}} z {{total}})",
+      "model": "Model: {{model}}",
+      "parameters": "Parametry:",
+      "threshold": "Práh: {{value}}",
+      "step": "Krok: {{value}}",
+      "minRegion": "Min. oblast: {{value}}",
+      "stage": {
+        "preprocessing": "Připravuji data",
+        "embedding": "Připravuji embeddingy",
+        "scoring": "Počítám anomálie",
+        "starting": "Čekám na spuštění analýzy"
+      },
+      "detail": {
+        "starting": "Server spouští úlohu analýzy.",
+        "scoring": "Zpracováno {{windowsText}}.",
+        "default": "Zpracováno {{rowsText}}."
+      },
+      "compactWithPercent": "{{stageLabel}}: {{progressText}}",
+      "compact": "{{stageLabel}}",
+      "fullWithPercent": "{{stageLabel}}: {{progressText}}. {{stageDetail}}",
+      "full": "{{stageLabel}}. {{stageDetail}}",
+      "rowsText": "{{processed}}/{{total}} řádků",
+      "windowsText": "{{processed}}/{{total}} oken",
+      "rowsPreparing": "příprava řádků",
+      "windowsPreparing": "příprava oken"
+    }
+  },
+  "theme": {
+    "drawerTitle": "Nastavení motivu",
+    "mode": "Režim motivu",
+    "light": "Světlý",
+    "dark": "Tmavý",
+    "primaryColor": "Primární barva"
+  },
+  "notFound": {
+    "title": "404 - Stránka nenalezena"
+  },
+  "settings": {
+    "title": "Nastavení"
+  },
+  "anomaly": {
+    "dialog": {
+      "title": "Analýza anomálií",
+      "model": "Model",
+      "modelAria": "model",
+      "settingsTitle": "Nastavení analýzy",
+      "settingsTooltip": "Tyto parametry se používají při výpočtu anomálií pro vybraný model.",
+      "threshold": "Práh",
+      "thresholdTooltip": "Nižší hodnota najde více anomálií, vyšší je přísnější.",
+      "stepSize": "Velikost kroku",
+      "stepSizeTooltip": "Posun okna mezi kontrolami. Menší je detailnější, ale pomalejší.",
+      "minRegion": "Min. oblast",
+      "minRegionTooltip": "Minimální délka souvislé anomálie pro snížení šumu.",
+      "profileSensitive": "Citlivý",
+      "profileSensitiveTooltip": "Vysoká citlivost: zachytí více anomálií, může obsahovat šum.",
+      "profileBalanced": "Vyvážený",
+      "profileBalancedTooltip": "Vyvážený režim: doporučené výchozí nastavení.",
+      "profileStrict": "Přísný",
+      "profileStrictTooltip": "Přísný režim: méně falešných pozitiv.",
+      "analyze": "Analyzovat",
+      "analyzeTooltip": "Analyzovat anomálie",
+      "close": "Zavřít",
+      "parameterLoadConfirmSuffix": "Pokračovat v analýze s aktuálními parametry?",
+      "parameterLoadNeedsConfirm": "Před spuštěním je vyžadováno potvrzení.",
+      "disabled": {
+        "indexing": "Počkejte, až se data načtou do databáze.",
+        "selectFile": "Vyberte soubor pro monitoring.",
+        "noRows": "Žádné řádky k analýze. Nejprve načtěte nebo připojte soubor.",
+        "checkingModel": "Kontroluji připravenost modelu...",
+        "prepareModel": "Nejprve připravte vybraný model ({{model}}) na stránce Předtrénované modely."
+      },
+      "parameterLoad": {
+        "critical": "Tyto parametry výrazně zvýší dobu výpočtu: krok {{stepSize}} znamená přibližně x{{multiplier}} kontrol oproti kroku 20.",
+        "high": "Aktuální parametry znatelně zvyšují dobu výpočtu (zhruba x{{multiplier}} kontrol oproti kroku 20).",
+        "elevated": "Aktuální parametry zvyšují dobu výpočtu (zhruba x{{multiplier}} kontrol oproti kroku 20)."
+      },
+      "resultNotification": "Analýza anomálií dokončena. Nalezeno anomálních řádků: {{count}}.",
+      "errors": {
+        "failed": "Analýza anomálií se nezdařila"
+      }
+    }
   },
   "sidebar": {
     "groups": {
@@ -21,7 +428,10 @@
     "title": "Dashboard logů",
     "selectFileDescription": "Soubor ještě není vybraný. Přejděte na stránku nahrání a zvolte log soubor pro otevření dashboardu.",
     "goToUploadButton": "Přejít na nahrání souboru",
+    "requiresServerUploadNotice": "Pro velké soubory je dashboard dostupný až po nahrání souboru na server. Přejděte na stránku zobrazení logů a klikněte na „Nahrát na server“.",
+    "loading": "Načítám dashboard",
     "noDataDescription": "Zatím nejsou k dispozici data pro analytiku.",
+    "noDataToDisplay": "Žádná data k zobrazení",
     "fileAndFormat": "Soubor: {{fileName}} | Detekovaný formát: {{format}}",
     "largeFilePreviewNotice": "Režim velkého souboru: dashboard vychází z náhledu souboru a může se lišit od plného zobrazení tabulky.",
     "largeFileFullScanNotice": "Režim velkého souboru: všechny grafy dashboardu jsou počítány z celého souboru (timeline používá vzorkování bodů).",

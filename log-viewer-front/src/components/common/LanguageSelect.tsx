@@ -13,7 +13,7 @@ const LANGUAGES = [Languages.EN, Languages.RU, Languages.CZ];
 const flagStyle = { marginRight: 8, width: 20, height: 15 };
 
 const LanguageSelect = () => {
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
     const [locale, setLocale] = useState<Languages>(() => {
         return (i18n.language as Languages) || Languages.EN;
     });
@@ -38,7 +38,7 @@ const LanguageSelect = () => {
             <IconButton
                 onClick={handleButtonClick}
                 color="inherit"
-                aria-label="select language"
+                aria-label={t('common.selectLanguage')}
                 sx={{
                     width: 40,
                     height: 40,

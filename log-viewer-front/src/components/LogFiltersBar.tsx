@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
     LogFilters,
     DateRangeFilter,
@@ -55,6 +56,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     anomalyFilterEnabled,
     onCloseRequested,
 }) => {
+    const { t } = useTranslation();
     const [pendingFilters, setPendingFilters] = useState<LogFilters>(filters);
 
     // Get current year
@@ -225,7 +227,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                     style={{ display: 'contents' }}
                 >
                     <TextField
-                        label={`${getFieldLabel(field)} (Start)`}
+                        label={`${getFieldLabel(field)} (${t('filters.datetime.start')})`}
                         type="datetime-local"
                         value={formatDateTimeLocal(filterValue?.start)}
                         onChange={(e) => handleTimestampStartChange(fieldName, e.target.value)}
@@ -235,7 +237,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                         sx={{ minWidth: 220 }}
                     />
                     <TextField
-                        label={`${getFieldLabel(field)} (End)`}
+                        label={`${getFieldLabel(field)} (${t('filters.datetime.end')})`}
                         type="datetime-local"
                         value={formatDateTimeLocal(filterValue?.end)}
                         onChange={(e) => handleTimestampEndChange(fieldName, e.target.value)}
@@ -300,7 +302,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                 onChange={(e) => handleTextFilterChange(fieldName, e.target.value)}
                 size="small"
                 sx={{ minWidth: 200 }}
-                placeholder={`Search in ${fieldName}...`}
+                placeholder={t('filters.textPlaceholder', { field: fieldName })}
             />
         );
     };
@@ -315,31 +317,31 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                 sx={{ minWidth: 220 }}
                 disabled={!anomalyFilterEnabled}
             >
-                <InputLabel>Аномалии</InputLabel>
+                <InputLabel>{t('filters.anomaly.label')}</InputLabel>
                 <Select
                     multiple
                     value={filterValue || []}
                     onChange={(e) => handleAnomalyStatusChange(e.target.value as string[])}
-                    input={<OutlinedInput label="Аномалии" />}
+                    input={<OutlinedInput label={t('filters.anomaly.label')} />}
                     renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {selected.map((value) => (
                                 <Chip
                                     key={value}
                                     label={value === 'anomaly'
-                                        ? 'Аномалии'
+                                        ? t('filters.anomaly.anomaly')
                                         : value === 'normal'
-                                            ? 'Нормальные'
-                                            : 'Неопределенные'}
+                                            ? t('filters.anomaly.normal')
+                                            : t('filters.anomaly.undefined')}
                                     size="small"
                                 />
                             ))}
                         </Box>
                     )}
                 >
-                    <MenuItem value="anomaly">Аномалии</MenuItem>
-                    <MenuItem value="normal">Нормальные</MenuItem>
-                    <MenuItem value="undefined">Неопределенные</MenuItem>
+                    <MenuItem value="anomaly">{t('filters.anomaly.anomaly')}</MenuItem>
+                    <MenuItem value="normal">{t('filters.anomaly.normal')}</MenuItem>
+                    <MenuItem value="undefined">{t('filters.anomaly.undefined')}</MenuItem>
                 </Select>
             </FormControl>
         );
@@ -348,7 +350,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     const header = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
             <FilterListIcon />
-            <Typography>Filters</Typography>
+            <Typography>{t('filters.title')}</Typography>
             {hasActiveFilters() && (
                 <Chip
                     label={getActiveFiltersCount()}
@@ -365,7 +367,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                     disabled={!hasActiveFilters()}
                     sx={{ textTransform: 'none' }}
                 >
-                    Clear All
+                    {t('filters.clearAll')}
                 </Button>
             </Box>
         </Box>
@@ -380,7 +382,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                     variant="body2"
                     color="text.secondary"
                 >
-                    Фильтрация по полям для неопознанного формата недоступна.
+                    {t('filters.unavailableUnknownFormat')}
                 </Typography>
             ) : (
                 <>
@@ -396,7 +398,7 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
                     onClick={handleApplyFilters}
                     sx={{ textTransform: 'none' }}
                 >
-                    Apply
+                    {t('filters.apply')}
                 </Button>
             </Box>
         </Box>

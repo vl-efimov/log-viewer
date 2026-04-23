@@ -1,5 +1,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import AddLogFormatDialog from '../components/log-patterns/AddLogFormatDialog';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
@@ -44,6 +45,7 @@ interface LogFormat {
 }
 
 const LogFormatsPage: React.FC = () => {
+    const { t } = useTranslation();
     const [systemFormats, setSystemFormats] = useState<LogFormat[]>([]);
     const [userFormats, setUserFormats] = useState<CustomLogFormatRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -77,11 +79,11 @@ const LogFormatsPage: React.FC = () => {
             console.error('Failed to load log formats:', error);
             setSystemFormats([]);
             setUserFormats([]);
-            setError('Failed to load supported log formats. Please check your connection or file location.');
+            setError(t('logFormats.supported.loadError'));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         void loadFormats();
@@ -160,7 +162,7 @@ const LogFormatsPage: React.FC = () => {
                     gutterBottom
                     sx={{ flexGrow: 1 }}
                 >
-                    Custom Formats
+                    {t('logFormats.custom.title')}
                 </Typography>
                 <Button
                     variant="outlined"
@@ -172,7 +174,7 @@ const LogFormatsPage: React.FC = () => {
                         setAddOpen(true);
                     }}
                 >
-                    Add custom format
+                    {t('logFormats.custom.addButton')}
                 </Button>
             </Box>
             <TableContainer
@@ -182,10 +184,10 @@ const LogFormatsPage: React.FC = () => {
                 <Table size="small">
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={nameColumnSx}>Name</TableCell>
-                            <TableCell sx={descriptionColumnSx}>Description</TableCell>
-                            <TableCell>Regular Expressions</TableCell>
-                            <TableCell sx={{ width: 64, minWidth: 64 }}>Actions</TableCell>
+                            <TableCell sx={nameColumnSx}>{t('logFormats.custom.table.name')}</TableCell>
+                            <TableCell sx={descriptionColumnSx}>{t('logFormats.custom.table.description')}</TableCell>
+                            <TableCell>{t('logFormats.custom.table.regex')}</TableCell>
+                            <TableCell sx={{ width: 64, minWidth: 64 }}>{t('logFormats.custom.table.actions')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -196,7 +198,7 @@ const LogFormatsPage: React.FC = () => {
                                     align="center"
                                     sx={{ color: 'text.secondary' }}
                                 >
-                                    No custom formats
+                                    {t('logFormats.custom.table.empty')}
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -209,11 +211,11 @@ const LogFormatsPage: React.FC = () => {
                                     </TableCell>
                                     <TableCell sx={{ width: 64, minWidth: 64, verticalAlign: 'top' }}>
                                         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                                            <Tooltip title="Edit" arrow>
+                                            <Tooltip title={t('logFormats.custom.actions.edit')} arrow>
                                                 <IconButton
                                                     size="small"
                                                     color="primary"
-                                                    aria-label="Edit custom format"
+                                                    aria-label={t('logFormats.custom.actions.editAria')}
                                                     onClick={() => {
                                                         setEditingFormat(format);
                                                         setAddOpen(true);
@@ -222,11 +224,11 @@ const LogFormatsPage: React.FC = () => {
                                                     <EditIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Delete" arrow>
+                                            <Tooltip title={t('logFormats.custom.actions.delete')} arrow>
                                                 <IconButton
                                                     size="small"
                                                     color="error"
-                                                    aria-label="Delete custom format"
+                                                    aria-label={t('logFormats.custom.actions.deleteAria')}
                                                     onClick={() => handleDeleteRequest(format)}
                                                 >
                                                     <DeleteIcon fontSize="small" />
@@ -249,15 +251,17 @@ const LogFormatsPage: React.FC = () => {
                 }}
                 onSubmit={handleSaveFormat}
                 initialValue={editingFormat ?? undefined}
-                title={editingFormat ? 'Edit Custom Log Format' : 'Add Custom Log Format'}
-                submitLabel={editingFormat ? 'Save changes' : 'Add'}
+                title={editingFormat ? t('logFormats.custom.dialog.editTitle') : t('logFormats.custom.dialog.addTitle')}
+                submitLabel={editingFormat ? t('logFormats.custom.dialog.submitSaveChanges') : t('logFormats.custom.dialog.submitAdd')}
             />
 
             <ConfirmActionDialog
                 open={deleteDialogState.open}
-                message={`Delete selected custom format${deleteDialogState.formatName ? ` "${deleteDialogState.formatName}"` : ''}?`}
-                confirmLabel="OK"
-                cancelLabel="Отмена"
+                message={t('logFormats.custom.dialog.deleteConfirm', {
+                    namePart: deleteDialogState.formatName ? ` "${deleteDialogState.formatName}"` : '',
+                })}
+                confirmLabel={t('common.ok')}
+                cancelLabel={t('common.cancel')}
                 onConfirm={() => void handleDeleteConfirm()}
                 onCancel={handleDeleteCancel}
             />
@@ -266,7 +270,7 @@ const LogFormatsPage: React.FC = () => {
                 variant="h5" 
                 gutterBottom
             >
-                Supported Log Formats
+                {t('logFormats.supported.title')}
             </Typography>
             {error ? (
                 <Stack 
@@ -284,7 +288,7 @@ const LogFormatsPage: React.FC = () => {
                                 startIcon={<ReplayIcon />}
                                 onClick={loadFormats}
                             >
-                                Retry
+                                {t('logFormats.supported.retry')}
                             </Button>
                         }
                     >
@@ -296,9 +300,9 @@ const LogFormatsPage: React.FC = () => {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={nameColumnSx}>Name</TableCell>
-                                <TableCell sx={descriptionColumnSx}>Description</TableCell>
-                                <TableCell>Regular Expressions</TableCell>
+                                <TableCell sx={nameColumnSx}>{t('logFormats.supported.table.name')}</TableCell>
+                                <TableCell sx={descriptionColumnSx}>{t('logFormats.supported.table.description')}</TableCell>
+                                <TableCell>{t('logFormats.supported.table.regex')}</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>

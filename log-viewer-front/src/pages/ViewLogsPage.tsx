@@ -11,8 +11,10 @@ import FormatChangeConfirmDialog from './viewLogs/components/FormatChangeConfirm
 import UnknownFormatConfirmDialog from './viewLogs/components/UnknownFormatConfirmDialog';
 import ConfirmActionDialog from '../components/common/ConfirmActionDialog';
 import { useViewLogsController } from './viewLogs/useViewLogsController';
+import { useTranslation } from 'react-i18next';
 
 const ViewLogsPage: React.FC = () => {
+    const { t } = useTranslation();
     const {
         fileSelection,
         monitoringBanner,
@@ -68,7 +70,7 @@ const ViewLogsPage: React.FC = () => {
                 isLargeFile={histogram.isLargeFile}
                 isIndexing={histogram.isIndexing}
                 isHistogramLoading={histogram.isHistogramLoading}
-                loadingMessage="Индексация завершится — появится график."
+                loadingMessage={t('viewLogs.histogram.loadingMessage')}
                 parsedLines={histogram.parsedLines}
                 anomalyRegions={histogram.anomalyRegions}
                 onAnomalyRangeSelect={histogram.onAnomalyRangeSelect}
@@ -129,7 +131,7 @@ const ViewLogsPage: React.FC = () => {
                             color="text.secondary"
                             align="center"
                         >
-                            Подготавливаем таблицу для большого файла. Это может занять некоторое время.
+                            {t('viewLogs.table.preparingLargeFile')}
                         </Typography>
                     </Box>
                 ) : showTableRowsLoading ? (
@@ -151,7 +153,7 @@ const ViewLogsPage: React.FC = () => {
                             color="text.secondary"
                             align="center"
                         >
-                            Загружаем строки таблицы...
+                            {t('viewLogs.table.loadingRows')}
                         </Typography>
                     </Box>
                 ) : showEmptyFilteredState ? (
@@ -170,7 +172,7 @@ const ViewLogsPage: React.FC = () => {
                             color="text.secondary"
                             align="center"
                         >
-                            По выбранным фильтрам ничего не найдено.
+                            {t('viewLogs.table.emptyFiltered')}
                         </Typography>
                     </Box>
                 ) : (
@@ -206,8 +208,8 @@ const ViewLogsPage: React.FC = () => {
                 onClose={customFormatDialog.onClose}
                 onSubmit={customFormatDialog.onSubmit}
                 previewLines={customFormatDialog.previewLines}
-                title="Add Custom Log Format"
-                submitLabel="Save and apply"
+                title={t('viewLogs.customFormatDialog.title')}
+                submitLabel={t('viewLogs.customFormatDialog.submit')}
             />
         </Box>
     );
