@@ -689,12 +689,22 @@ const toChartOption = (
     locale: string,
     isDarkMode: boolean,
     scaleBaseColor: string,
+    highContrastLabels: boolean = false,
 ) => {
     const chartTextColor = isDarkMode ? '#cbd5e1' : '#334155';
-    const chartSecondaryTextColor = isDarkMode ? '#94a3b8' : '#64748b';
+    const chartSecondaryTextColor = isDarkMode
+        ? (highContrastLabels ? '#d5deea' : '#94a3b8')
+        : '#64748b';
+    const tooltipTextColor = isDarkMode ? '#0f172a' : '#1f2937';
+    const tooltipBackgroundColor = isDarkMode ? 'rgba(248, 250, 252, 0.98)' : 'rgba(255, 255, 255, 0.98)';
+    const tooltipBorderColor = isDarkMode ? 'rgba(71, 85, 105, 0.35)' : 'rgba(148, 163, 184, 0.35)';
     const chartValueLabelColor = isDarkMode ? '#e2e8f0' : '#1f2937';
-    const chartAxisColor = isDarkMode ? 'rgba(148, 163, 184, 0.55)' : 'rgba(100, 116, 139, 0.45)';
-    const chartSplitLineColor = isDarkMode ? 'rgba(148, 163, 184, 0.32)' : 'rgba(100, 116, 139, 0.2)';
+    const chartAxisColor = isDarkMode
+        ? (highContrastLabels ? 'rgba(203, 213, 225, 0.72)' : 'rgba(148, 163, 184, 0.55)')
+        : 'rgba(100, 116, 139, 0.45)';
+    const chartSplitLineColor = isDarkMode
+        ? (highContrastLabels ? 'rgba(148, 163, 184, 0.42)' : 'rgba(148, 163, 184, 0.32)')
+        : 'rgba(100, 116, 139, 0.2)';
     const barColor = isDarkMode ? alpha(scaleBaseColor, 0.92) : alpha(scaleBaseColor, 0.82);
 
     return {
@@ -711,8 +721,12 @@ const toChartOption = (
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
+            backgroundColor: tooltipBackgroundColor,
+            borderColor: tooltipBorderColor,
+            borderWidth: 1,
             textStyle: {
-                color: chartTextColor,
+                color: tooltipTextColor,
+                fontWeight: 400,
             },
             valueFormatter: (value: number | string) => {
                 if (typeof value === 'number') {
@@ -1837,7 +1851,14 @@ const DashboardPage: React.FC = () => {
                                                     size={{ xs: 12, md: 4 }}
                                                 >
                                                     <ReactECharts
-                                                        option={toChartOption(getFieldTitle(facet.field, t), facet.values, locale, isDarkMode, chartScaleBaseColor)}
+                                                        option={toChartOption(
+                                                            getFieldTitle(facet.field, t),
+                                                            facet.values,
+                                                            locale,
+                                                            isDarkMode,
+                                                            chartScaleBaseColor,
+                                                            true,
+                                                        )}
                                                         style={{ height: 260 }}
                                                     />
                                                 </Grid>

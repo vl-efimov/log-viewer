@@ -247,7 +247,7 @@ const LogLinesList: FC<LogLinesListProps> = ({
     return (
         <Virtuoso
             ref={virtuosoRef}
-            style={{ height: '100%', width: '100%' }}
+            style={{ height: '100%', width: '100%', overflowX: 'auto' }}
             totalCount={resolvedTotalCount}
             overscan={200}
             fixedItemHeight={20}
@@ -275,6 +275,8 @@ const LogLinesList: FC<LogLinesListProps> = ({
                     <Box
                         sx={{
                             display: 'flex',
+                            width: 'max-content',
+                            minWidth: '100%',
                             height: '20px',
                             alignItems: 'center',
                             px: 2,
@@ -334,10 +336,9 @@ const LogLinesList: FC<LogLinesListProps> = ({
                                 fontFamily: 'monospace',
                                 fontSize: '0.8rem',
                                 lineHeight: '20px',
-                                flex: 1,
+                                flexShrink: 0,
+                                minWidth: 'max-content',
                                 whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
                                 color: parsing.parseState === 'unparsed' ? 'text.disabled' : 'text.primary',
                             }}
                         >

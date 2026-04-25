@@ -348,6 +348,59 @@ function formatAxisTimeLabel(timestamp: number, rangeMs: number, bucketSize: num
     return hhmmss;
 }
 
+function formatTooltipTimestamp(timestamp: number, bucketSize: number, locale: string): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    if (bucketSize >= 86400000) {
+        return date.toLocaleDateString(locale, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+    }
+
+    return date.toLocaleString(locale, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: bucketSize < 60000 ? '2-digit' : undefined,
+    });
+}
+
+function formatZoomHandleLabel(value: unknown, locale: string): string {
+    const parsed = parseZoomBoundary(value);
+    if (parsed === null) {
+        return '';
+    }
+
+    const date = new Date(parsed);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    const isMidnight = date.getHours() === 0 && date.getMinutes() === 0;
+    if (isMidnight) {
+        return date.toLocaleDateString(locale, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+    }
+
+    return date.toLocaleString(locale, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 function parseZoomBoundary(value: unknown): number | null {
     if (typeof value === 'number' && Number.isFinite(value)) {
         return value;
@@ -739,6 +792,33 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             tooltip: {
                 trigger: 'axis',
                 confine: true,
+                formatter: (params: unknown) => {
+                    const rows = (Array.isArray(params) ? params : [params]) as Array<Record<string, unknown>>;
+                    if (rows.length === 0) {
+                        return '';
+                    }
+
+                    const first = rows[0] ?? {};
+                    const firstValue = first.value;
+                    const axisCandidate = first.axisValue
+                        ?? (Array.isArray(firstValue) ? firstValue[0] : firstValue);
+
+                    const axisTimestamp = parseZoomBoundary(axisCandidate);
+                    const header = axisTimestamp === null
+                        ? String(axisCandidate ?? '')
+                        : formatTooltipTimestamp(axisTimestamp, mainHistogram.bucketSize, locale);
+
+                    const lines = rows.map((item) => {
+                        const value = item.value;
+                        const numericValue = Array.isArray(value) ? Number(value[1]) : Number(value);
+                        const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+                        const marker = typeof item.marker === 'string' ? item.marker : '';
+                        const seriesName = typeof item.seriesName === 'string' ? item.seriesName : '';
+                        return `${marker}${seriesName}: <b>${safeValue.toLocaleString(locale)}</b>`;
+                    });
+
+                    return [header, ...lines].join('<br/>');
+                },
                 position: (
                     point: [number, number],
                     _params: unknown,
@@ -1374,6 +1454,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     moveHandleSize: 20,
                     showDataShadow: false,
                     handleSize: '100%',
+                    labelFormatter: (value: number | string) => formatZoomHandleLabel(value, locale),
                     brushSelect: false,
                     zoomLock: false,
                     handleIcon: 'path://M50,0 L50,100 M44,40 L56,40 L56,60 L44,60 Z M47,44 L47,56 M53,44 L53,56',
@@ -1385,7 +1466,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 },
             ],
         };
-    }, [isDarkMode, timeRange, zoomSliderGrid]);
+    }, [isDarkMode, locale, timeRange, zoomSliderGrid]);
 
     const handleZoom = useCallback((params: {
         start?: number;

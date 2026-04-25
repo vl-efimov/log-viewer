@@ -28,6 +28,7 @@ const LogViewMonitoringBanner: FC<LogViewMonitoringBannerProps> = ({
                     ? (
                         <Button
                             variant="outlined"
+                            color="info"
                             size="small"
                             onClick={onAction}
                         >

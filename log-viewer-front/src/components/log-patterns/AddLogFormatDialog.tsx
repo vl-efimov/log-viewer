@@ -93,6 +93,40 @@ const extractDuplicateGroupNames = (groupNames: string[]): string[] => {
         .map(([name]) => name);
 };
 
+const autoRenameDuplicateGroupNames = (regexSource: string): string => {
+    const originalNames = extractNamedGroupOccurrences(regexSource);
+    if (originalNames.length === 0) {
+        return regexSource;
+    }
+
+    const seenNames = new Map<string, number>();
+    const usedNames = new Set(originalNames);
+    const nextSuffixByName = new Map<string, number>();
+    const namedGroupPattern = /\(\?<([A-Za-z_][A-Za-z0-9_]*)>/g;
+
+    return regexSource.replace(namedGroupPattern, (_fullMatch, groupName: string) => {
+        const seenCount = seenNames.get(groupName) ?? 0;
+        seenNames.set(groupName, seenCount + 1);
+
+        if (seenCount === 0) {
+            return `(?<${groupName}>`;
+        }
+
+        let suffix = nextSuffixByName.get(groupName) ?? 1;
+        let candidate = `${groupName}${suffix}`;
+
+        while (usedNames.has(candidate)) {
+            suffix += 1;
+            candidate = `${groupName}${suffix}`;
+        }
+
+        usedNames.add(candidate);
+        nextSuffixByName.set(groupName, suffix + 1);
+
+        return `(?<${candidate}>`;
+    });
+};
+
 const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
     open,
     onClose,
@@ -341,6 +375,21 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
         setSubmitError(null);
         setSubmitting(false);
         onClose();
+    };
+
+    const handleAutoFixDuplicateGroups = () => {
+        const normalizedRegex = autoRenameDuplicateGroupNames(regex);
+        if (normalizedRegex === regex) {
+            return;
+        }
+
+        setRegex(normalizedRegex);
+        if (regexError) {
+            setRegexError(null);
+        }
+        if (submitError) {
+            setSubmitError(null);
+        }
     };
 
     const handleSubmit = async () => {
@@ -601,6 +650,17 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                     {t('logFormats.dialog.preview.duplicateGroupsExample')}
                                 </Typography>
+                                <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={handleAutoFixDuplicateGroups}
+                                        disabled={submitting}
+                                    >
+                                        {t('logFormats.dialog.preview.autoFixDuplicateGroups')}
+                                    </Button>
+                                </Box>
                             </Box>
                         ) : regexValidation.errorCode === 'invalid-regex' && regex.trim() ? (
                             <Box

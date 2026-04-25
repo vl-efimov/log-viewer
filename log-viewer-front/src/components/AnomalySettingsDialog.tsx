@@ -485,10 +485,11 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
             <Dialog
                 open={open}
                 onClose={onClose}
-                maxWidth="xs"
+                maxWidth="sm"
+                fullWidth
                 PaperProps={{
                     sx: {
-                        width: { xs: '92vw', sm: 360 },
+                        width: { xs: '92vw', sm: 520 },
                     },
                 }}
             >
@@ -512,7 +513,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     >
                         <Stack
                             spacing={0.5}
-                            sx={{ width: 220 }}
+                            sx={{ width: { xs: '100%', sm: 300 } }}
                         >
                             <Typography variant="caption">{t('anomaly.dialog.model')}</Typography>
                             <FormControl size="small">
@@ -545,7 +546,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                     </Stack>
 
                     <Stack spacing={1.5}>
-                        <Box sx={{ width: 220 }}>
+                        <Box sx={{ width: { xs: '100%', sm: 300 } }}>
                             <Stack
                                 direction="row"
                                 spacing={0.5}
@@ -582,10 +583,10 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                     const next = Array.isArray(value) ? value[0] : value;
                                     setThresholdValue(next);
                                 }}
-                                sx={{ mt: 0.75, width: 220 }}
+                                sx={{ mt: 0.75, width: '100%' }}
                             />
                         </Box>
-                        <Box>
+                        <Box sx={{ width: { xs: '100%', sm: 300 } }}>
                             <Stack
                                 direction="row"
                                 spacing={0.5}
@@ -622,7 +623,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                     const next = Array.isArray(value) ? value[0] : value;
                                     setStepSizeValue(next);
                                 }}
-                                sx={{ mt: 0.75, width: 220 }}
+                                sx={{ mt: 0.75, width: '100%' }}
                             />
                             {parameterLoadWarning && (
                                 <Alert
@@ -639,7 +640,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                 </Alert>
                             )}
                         </Box>
-                        <Box sx={{ width: 220 }}>
+                        <Box sx={{ width: { xs: '100%', sm: 300 } }}>
                             <Stack
                                 direction="row"
                                 spacing={0.5}
@@ -676,7 +677,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                     const next = Array.isArray(value) ? value[0] : value;
                                     setMinRegionLinesValue(next);
                                 }}
-                                sx={{ mt: 0.75, width: 220 }}
+                                sx={{ mt: 0.75, width: '100%' }}
                             />
                         </Box>
                     </Stack>

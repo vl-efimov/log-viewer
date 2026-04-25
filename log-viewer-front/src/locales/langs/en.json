@@ -94,9 +94,7 @@
       "withNames": "You selected a different file ({{selectedName}}) instead of {{expectedName}}. IndexedDB data will be overwritten. Continue?",
       "withoutNames": "You selected a different file. IndexedDB data will be overwritten. Continue?"
     },
-    "uploadDisabledSelectFormat": "Select log format",
     "serverUpload": {
-      "selectFormatWarning": "Select log format before uploading to server.",
       "successWithLines": "Upload to server completed: {{count}} lines.",
       "success": "File upload to server completed.",
       "failed": "Failed to upload file to server."
@@ -255,6 +253,7 @@
         "duplicateGroupsTitle": "Duplicate group names",
         "duplicateGroupsBody": "Each named group must have a unique name. Duplicates found:",
         "duplicateGroupsExample": "Example: instead of (?<level>...) (?<level>...) use (?<level>...) (?<subLevel>...).",
+        "autoFixDuplicateGroups": "Auto-fix duplicate names",
         "invalidRegexTitle": "Regular expression error",
         "noMatches": "No matches"
       }

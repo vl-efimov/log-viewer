@@ -94,9 +94,7 @@
       "withNames": "Vybrali jste jiný soubor ({{selectedName}}) místo {{expectedName}}. Data v IndexedDB budou přepsána. Pokračovat?",
       "withoutNames": "Vybrali jste jiný soubor. Data v IndexedDB budou přepsána. Pokračovat?"
     },
-    "uploadDisabledSelectFormat": "Vyberte formát logu",
     "serverUpload": {
-      "selectFormatWarning": "Před nahráním na server vyberte formát logu.",
       "successWithLines": "Nahrání na server dokončeno: {{count}} řádků.",
       "success": "Nahrání souboru na server dokončeno.",
       "failed": "Soubor se nepodařilo nahrát na server."
@@ -255,6 +253,7 @@
         "duplicateGroupsTitle": "Duplicitní názvy skupin",
         "duplicateGroupsBody": "Každá pojmenovaná skupina musí mít jedinečný název. Nalezeny duplicity:",
         "duplicateGroupsExample": "Příklad: místo (?<level>...) (?<level>...) použijte (?<level>...) (?<subLevel>...).",
+        "autoFixDuplicateGroups": "Automaticky opravit duplicity",
         "invalidRegexTitle": "Chyba v regulárním výrazu",
         "noMatches": "Žádné shody"
       }

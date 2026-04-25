@@ -661,10 +661,7 @@ export const useViewLogsController = () => {
     const requiresServerUpload = isLargeFile && !isRemoteLargeSession;
     const isServerUploadActive = requiresServerUpload && isIndexing;
     const normalizedFormatId = (format || '').trim() || 'unknown';
-    const isFormatUnknown = normalizedFormatId === 'unknown';
-    const uploadDisabledReason = requiresServerUpload && isFormatUnknown
-        ? t('viewLogs.uploadDisabledSelectFormat')
-        : '';
+    const uploadDisabledReason = '';
     const isDbView = !isStreamView && Boolean(analyticsSessionId);
     const smallFileTotalRows = useMemo(() => countPhysicalLines(content ?? ''), [content]);
     const totalRowsHintForAnomaly = useMemo(() => {
@@ -1000,14 +997,6 @@ export const useViewLogsController = () => {
             return;
         }
 
-        if (isFormatUnknown) {
-            dispatch(enqueueNotification({
-                message: t('viewLogs.serverUpload.selectFormatWarning'),
-                severity: 'warning',
-            }));
-            return;
-        }
-
         const file = await getActiveFile();
         if (!file) {
             return;
@@ -1026,7 +1015,7 @@ export const useViewLogsController = () => {
             const selectedFormat = getLogFormatById(format);
             const parserPattern = selectedFormat?.patterns?.[0]?.source;
             const started = await startRemoteIngest(file.name, file.size, {
-                formatId: format || undefined,
+                formatId: format && format !== 'unknown' ? format : undefined,
                 parserPattern,
             });
             startedIngestId = started.ingest_id;
@@ -1142,7 +1131,6 @@ export const useViewLogsController = () => {
         format,
         getActiveFile,
         hasFileHandle,
-        isFormatUnknown,
         isLargeFile,
         lastModified,
         requiresServerUpload,

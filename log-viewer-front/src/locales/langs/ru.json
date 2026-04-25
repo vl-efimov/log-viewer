@@ -94,9 +94,7 @@
       "withNames": "Вы выбрали другой файл ({{selectedName}}) вместо {{expectedName}}. Данные в IndexedDB будут перезаписаны. Продолжить?",
       "withoutNames": "Вы выбрали другой файл. Данные в IndexedDB будут перезаписаны. Продолжить?"
     },
-    "uploadDisabledSelectFormat": "Выберите формат логов",
     "serverUpload": {
-      "selectFormatWarning": "Выберите формат логов перед загрузкой на сервер.",
       "successWithLines": "Загрузка на сервер завершена: {{count}} строк.",
       "success": "Загрузка файла на сервер завершена.",
       "failed": "Не удалось загрузить файл на сервер."
@@ -255,6 +253,7 @@
         "duplicateGroupsTitle": "Повторяющиеся имена групп",
         "duplicateGroupsBody": "Каждая именованная группа должна иметь уникальное имя. Найдены дубликаты:",
         "duplicateGroupsExample": "Пример: вместо (?<level>...) (?<level>...) используйте (?<level>...) (?<subLevel>...).",
+        "autoFixDuplicateGroups": "Автоисправить повторы",
         "invalidRegexTitle": "Ошибка в регулярном выражении",
         "noMatches": "Нет совпадений"
       }

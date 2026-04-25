@@ -23,7 +23,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RootState } from '../../../redux/store';
 import { baseUrl } from '../../../constants/BaseUrl';
-import { RouteViewLogs } from '../../../routes/routePaths';
+import { RouteDashboard, RouteViewLogs } from '../../../routes/routePaths';
 import { requestFormatChange, setIndexingState } from '../../../redux/slices/logFileSlice';
 import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
 import { enqueueNotification } from '../../../redux/slices/notificationsSlice';
@@ -106,7 +106,9 @@ const AppStatusBar: React.FC = () => {
 
     const currentPath = location.pathname.replace(/\/+$/, '');
     const fullViewLogsPath = `${baseUrl}${RouteViewLogs}`.replace(/\/+/g, '/').replace(/\/+$/, '');
+    const fullDashboardPath = `${baseUrl}${RouteDashboard}`.replace(/\/+/g, '/').replace(/\/+$/, '');
     const isViewLogsRoute = currentPath === fullViewLogsPath;
+    const isDashboardRoute = currentPath === fullDashboardPath;
     const isServerUploadInProgress = isIndexing && isLargeFile && !analyticsSessionId.startsWith('remote:');
 
     const normalizedFormatId = (format || '').trim() || 'unknown';
@@ -286,7 +288,7 @@ const AppStatusBar: React.FC = () => {
     }, []);
 
     const anomalyStatus: AnomalyStatusText | null = (() => {
-        const allowStatusOnCurrentRoute = anomalyIsRunning || (loaded && isViewLogsRoute);
+        const allowStatusOnCurrentRoute = anomalyIsRunning || (loaded && (isViewLogsRoute || isDashboardRoute));
         if (!allowStatusOnCurrentRoute) {
             return null;
         }
