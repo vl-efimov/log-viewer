@@ -368,6 +368,22 @@
   "settings": {
     "title": "Nastavení"
   },
+  "aboutPage": {
+    "description": "LuVo je odlehčené prostředí pro prohlížení logů, analytiku grafů a detekci anomálií se zaměřením na rychlost a přehlednost.",
+    "thesisAttribution": "Tento projekt byl vypracován jako diplomová práce v magisterském studiu autorem Vladimirem Efivovem.",
+    "highlights": {
+      "viewer": "Otevírejte a procházejte logy pomocí filtrů, vyhledávání a časové osy.",
+      "monitoring": "Sledujte změny souboru v reálném čase a udržujte zobrazení synchronizované.",
+      "charts": "Používejte dashboardy a grafy pro analýzu trendů a rozložení ve velkých datech logů.",
+      "anomaly": "Spouštějte analýzu anomálií s předtrénovanými modely a odhalujte podezřelé vzory."
+    },
+    "logoAlt": "Plné logo LuVo Log Viewer",
+    "thesis": {
+      "supportLine1": "Tento software vznikl za podpory Fakulty informačních technologií ČVUT v Praze.",
+      "supportLine2Prefix": "Více informací naleznete na",
+      "cvutLogoAlt": "logo FIT ČVUT"
+    }
+  },
   "anomaly": {
     "dialog": {
       "title": "Analýza anomálií",

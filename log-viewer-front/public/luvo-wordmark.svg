@@ -1,0 +1,13 @@
+<svg width="520" height="120" viewBox="0 0 520 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="luvoWordmarkTitle luvoWordmarkDesc">
+  <title id="luvoWordmarkTitle">LuVo wordmark</title>
+  <desc id="luvoWordmarkDesc">Text-only LuVo Log Viewer wordmark</desc>
+  <defs>
+    <linearGradient id="wordGrad" x1="8" y1="20" x2="310" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4FCFF"/>
+      <stop offset="1" stop-color="#86EEFF"/>
+    </linearGradient>
+  </defs>
+
+  <text x="8" y="78" font-family="Space Grotesk, Segoe UI, sans-serif" font-size="74" font-weight="700" fill="url(#wordGrad)" letter-spacing="2">LUVO</text>
+  <text x="12" y="110" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="22" font-weight="600" fill="#B8EFFF" letter-spacing="5.2">LOG VIEWER</text>
+</svg>

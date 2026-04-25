@@ -368,6 +368,22 @@
   "settings": {
     "title": "Settings"
   },
+  "aboutPage": {
+    "description": "LuVo is a lightweight workspace for log viewing, chart-based analytics, and anomaly analysis with a focus on speed and clarity.",
+    "thesisAttribution": "This project was completed as a master's thesis by Vladimir Efivov.",
+    "highlights": {
+      "viewer": "Open and inspect logs with filtering, search, and timeline tools.",
+      "monitoring": "Track file updates in real time and keep the view synchronized.",
+      "charts": "Explore dashboards and charts to understand trends and distributions in large log datasets.",
+      "anomaly": "Run anomaly analysis with pretrained models to detect suspicious patterns."
+    },
+    "logoAlt": "LuVo Log Viewer full logo",
+    "thesis": {
+      "supportLine1": "This software was developed with the support of the Faculty of Information Technology, Czech Technical University in Prague.",
+      "supportLine2Prefix": "For more information, visit",
+      "cvutLogoAlt": "FIT CTU logo"
+    }
+  },
   "anomaly": {
     "dialog": {
       "title": "Anomaly Analysis",

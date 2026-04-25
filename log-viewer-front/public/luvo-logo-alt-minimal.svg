@@ -1,0 +1,24 @@
+<svg width="720" height="200" viewBox="0 0 720 200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="luvoAltTitle luvoAltDesc">
+  <title id="luvoAltTitle">LuVo minimal logo</title>
+  <desc id="luvoAltDesc">Minimal monoline logo for LuVo Log Viewer</desc>
+  <defs>
+    <linearGradient id="monoStroke" x1="30" y1="28" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4FCFF"/>
+      <stop offset="1" stop-color="#86EEFF"/>
+    </linearGradient>
+    <linearGradient id="monoAccent" x1="54" y1="124" x2="136" y2="124" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C6FF4D"/>
+      <stop offset="1" stop-color="#F0FF82"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="24" width="156" height="156" rx="34" stroke="url(#monoStroke)" stroke-width="10"/>
+  <rect x="52" y="56" width="100" height="10" rx="5" fill="#CFF9FF"/>
+  <rect x="52" y="82" width="78" height="10" rx="5" fill="#A7F5FF"/>
+  <rect x="52" y="108" width="56" height="10" rx="5" fill="#86EEFF"/>
+  <circle cx="60" cy="138" r="8" fill="url(#monoAccent)"/>
+  <rect x="74" y="133" width="62" height="10" rx="5" fill="url(#monoAccent)"/>
+
+  <text x="220" y="106" font-family="Outfit, Segoe UI, sans-serif" font-size="72" font-weight="700" fill="url(#monoStroke)" letter-spacing="1.5">LUVO</text>
+  <text x="224" y="138" font-family="Outfit, Segoe UI, sans-serif" font-size="22" font-weight="500" fill="#B8EFFF" letter-spacing="4">LOG VIEWER</text>
+</svg>

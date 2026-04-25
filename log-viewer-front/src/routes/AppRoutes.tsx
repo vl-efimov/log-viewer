@@ -5,6 +5,7 @@ import DashboardPage from '../pages/DashboardPage';
 import LogFormatsPage from '../pages/LogFormatsPage';
 import PretrainedModelsPage from '../pages/PretrainedModelsPage';
 import SettingsPage from '../pages/SettingsPage';
+import AboutPage from '../pages/AboutPage';
 import ViewLogsPage from '../pages/ViewLogsPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import {
@@ -13,6 +14,7 @@ import {
     RouteViewLogs,
     RouteLogFormats,
     RoutePretrainedModels,
+    RouteAbout,
     RouteSettings,
     RouteNotFound
 } from './routePaths';
@@ -41,6 +43,10 @@ const AppRoutes: RouteObject[] = [
             {
                 path: RoutePretrainedModels,
                 element: <PretrainedModelsPage />,
+            },
+            {
+                path: RouteAbout,
+                element: <AboutPage />,
             },
             {
                 path: RouteSettings,
