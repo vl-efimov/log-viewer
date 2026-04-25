@@ -362,7 +362,9 @@
     "primaryColor": "Primární barva"
   },
   "notFound": {
-    "title": "404 - Stránka nenalezena"
+    "title": "Stránka nenalezena",
+    "description": "Adresa může být chybná nebo byla stránka přesunuta.",
+    "goHome": "Přejít na hlavní stránku"
   },
   "settings": {
     "title": "Nastavení"

@@ -362,7 +362,9 @@
     "primaryColor": "Primary color"
   },
   "notFound": {
-    "title": "404 - Page Not Found"
+    "title": "Page Not Found",
+    "description": "The address may be incorrect, or the page was moved.",
+    "goHome": "Go to Home"
   },
   "settings": {
     "title": "Settings"
