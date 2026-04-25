@@ -156,6 +156,7 @@ type BuildLineIndexOptions = {
 type UnknownFormatDialogState = {
     open: boolean;
     previewLines: string[];
+    fileName: string;
 };
 
 type UnknownFormatConfirmDialogState = {
@@ -381,6 +382,7 @@ export const useViewLogsController = () => {
     const [customFormatDialogState, setCustomFormatDialogState] = useState<UnknownFormatDialogState>({
         open: false,
         previewLines: [],
+        fileName: '',
     });
     const [confirmDialogState, setConfirmDialogState] = useState<UnknownFormatConfirmDialogState>({
         open: false,
@@ -498,6 +500,37 @@ export const useViewLogsController = () => {
 
     const largeFileCacheKey = analyticsSessionId || `${fileName}|${fileSize}`;
 
+    const activeFileIdentity = useMemo(() => {
+        if (!loaded || !fileName) {
+            return '';
+        }
+
+        if (analyticsSessionId) {
+            return `session:${analyticsSessionId}`;
+        }
+
+        return `file:${fileName}|${fileSize}|${lastModified}`;
+    }, [analyticsSessionId, fileName, fileSize, lastModified, loaded]);
+    const previousActiveFileIdentityRef = useRef<string>('');
+
+    useEffect(() => {
+        if (!activeFileIdentity) {
+            previousActiveFileIdentityRef.current = '';
+            return;
+        }
+
+        const previousIdentity = previousActiveFileIdentityRef.current;
+        previousActiveFileIdentityRef.current = activeFileIdentity;
+
+        if (!previousIdentity || previousIdentity === activeFileIdentity) {
+            return;
+        }
+
+        setFilters({});
+        setSearchTerm('');
+        setSelectedLine(null);
+    }, [activeFileIdentity]);
+
     useEffect(() => {
         return () => {
             lineOffsetsRef.current = createLineIndex();
@@ -545,7 +578,7 @@ export const useViewLogsController = () => {
     }, [clearParsedRowCache]);
 
     const closeUnknownFormatDialog = useCallback(() => {
-        setCustomFormatDialogState({ open: false, previewLines: [] });
+        setCustomFormatDialogState({ open: false, previewLines: [], fileName: '' });
 
         if (pendingUnknownFormatResolverRef.current) {
             pendingUnknownFormatResolverRef.current({ mode: 'continue-unknown' });
@@ -588,8 +621,9 @@ export const useViewLogsController = () => {
         setCustomFormatDialogState({
             open: true,
             previewLines: confirmDialogState.previewLines,
+            fileName: confirmDialogState.fileName,
         });
-    }, [confirmDialogState.previewLines]);
+    }, [confirmDialogState.fileName, confirmDialogState.previewLines]);
 
     const handleConfirmDialogCancel = useCallback(() => {
         setConfirmDialogState({
@@ -627,7 +661,7 @@ export const useViewLogsController = () => {
 
         const resolver = pendingUnknownFormatResolverRef.current;
         pendingUnknownFormatResolverRef.current = null;
-        setCustomFormatDialogState({ open: false, previewLines: [] });
+        setCustomFormatDialogState({ open: false, previewLines: [], fileName: '' });
 
         resolver?.({ mode: 'use-format', formatId: saved.id });
     }, [t]);
@@ -3717,6 +3751,7 @@ export const useViewLogsController = () => {
         customFormatDialog: {
             open: customFormatDialogState.open,
             previewLines: customFormatDialogState.previewLines,
+            fileName: customFormatDialogState.fileName,
             onClose: closeUnknownFormatDialog,
             onSubmit: handleCreateCustomFormatForUnknown,
         },

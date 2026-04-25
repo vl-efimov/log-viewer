@@ -1,6 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import {
+    clearAnomalyResults,
+} from '../redux/slices/anomalySlice';
 import {
     clearLogFile,
     getFileHandle,
@@ -60,6 +63,8 @@ type UseFileLoaderOptions = {
     onFileLoadStart?: () => void;
 };
 
+let sharedUnknownFormatResolver: UseFileLoaderOptions['resolveUnknownFormat'] | null = null;
+
 export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
     const dispatch = useDispatch();
     const { t } = useTranslation();
@@ -68,11 +73,26 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
     const activeSessionIdRef = useRef<string | null>(null);
     const loadTokenRef = useRef(0);
 
+    useEffect(() => {
+        if (!options.resolveUnknownFormat) {
+            return;
+        }
+
+        sharedUnknownFormatResolver = options.resolveUnknownFormat;
+
+        return () => {
+            if (sharedUnknownFormatResolver === options.resolveUnknownFormat) {
+                sharedUnknownFormatResolver = null;
+            }
+        };
+    }, [options.resolveUnknownFormat]);
+
     const loadFile = async (file: File, handle?: FileSystemFileHandle, loadOptions: LoadFileOptions = {}) => {
         const loadToken = ++loadTokenRef.current;
         const isLargeFile = file.size >= LARGE_FILE_BYTES;
 
         options.onFileLoadStart?.();
+        dispatch(clearAnomalyResults());
 
         setIndexing(true);
         dispatch(setIndexingState({ isIndexing: true, progress: 0 }));
@@ -107,13 +127,15 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                 return;
             }
 
+            const unknownFormatResolver = options.resolveUnknownFormat ?? sharedUnknownFormatResolver;
+
             if (
                 !loadOptions.forcedFormatId
                 && !loadOptions.skipUnknownPrompt
                 && formatId === 'unknown'
-                && options.resolveUnknownFormat
+                && unknownFormatResolver
             ) {
-                const resolution = await options.resolveUnknownFormat({
+                const resolution = await unknownFormatResolver({
                     fileName: file.name,
                     fileSize: file.size,
                     previewText,

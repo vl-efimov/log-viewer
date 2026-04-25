@@ -208,6 +208,7 @@ const ViewLogsPage: React.FC = () => {
                 onClose={customFormatDialog.onClose}
                 onSubmit={customFormatDialog.onSubmit}
                 previewLines={customFormatDialog.previewLines}
+                initialValue={customFormatDialog.fileName ? { name: customFormatDialog.fileName } : undefined}
                 title={t('viewLogs.customFormatDialog.title')}
                 submitLabel={t('viewLogs.customFormatDialog.submit')}
             />
