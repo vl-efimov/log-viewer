@@ -371,7 +371,7 @@
   },
   "aboutPage": {
     "description": "LuVo is a lightweight workspace for log viewing, chart-based analytics, and anomaly analysis with a focus on speed and clarity.",
-    "thesisAttribution": "This project was completed as a master's thesis by Vladimir Efivov.",
+    "thesisAttribution": "This project was completed as a master's thesis by Vladimir Efimov.",
     "highlights": {
       "viewer": "Open and inspect logs with filtering, search, and timeline tools.",
       "monitoring": "Track file updates in real time and keep the view synchronized.",

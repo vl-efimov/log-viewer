@@ -371,7 +371,7 @@
   },
   "aboutPage": {
     "description": "LuVo je odlehčené prostředí pro prohlížení logů, analytiku grafů a detekci anomálií se zaměřením na rychlost a přehlednost.",
-    "thesisAttribution": "Tento projekt byl vypracován jako diplomová práce v magisterském studiu autorem Vladimirem Efivovem.",
+    "thesisAttribution": "Tento projekt byl vypracován jako diplomová práce v magisterském studiu autorem Vladimirem Efimovem.",
     "highlights": {
       "viewer": "Otevírejte a procházejte logy pomocí filtrů, vyhledávání a časové osy.",
       "monitoring": "Sledujte změny souboru v reálném čase a udržujte zobrazení synchronizované.",
