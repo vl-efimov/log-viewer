@@ -93,14 +93,6 @@ const logFileSlice = createSlice({
             }
             state.lastModified = action.payload.lastModified || Date.now();
         },
-        appendLogContent: (state, action: PayloadAction<{ newContent: string; newSize: number; lastModified?: number }>) => {
-            console.log('appendLogContent');
-            if (!state.isLargeFile) {
-                state.content = state.content + action.payload.newContent;
-            }
-            state.size = action.payload.newSize;
-            state.lastModified = action.payload.lastModified || Date.now();
-        },
         setMonitoringState: (state, action: PayloadAction<boolean>) => {
             state.isMonitoring = action.payload;
         },
@@ -142,7 +134,6 @@ const logFileSlice = createSlice({
 export const {
     setLogFile,
     updateLogContent,
-    appendLogContent,
     setMonitoringState,
     setIndexingState,
     requestFormatChange,

@@ -46,7 +46,7 @@ export type LogLineRecord = {
 };
 
 
-export type LogStatsRecord = {
+type LogStatsRecord = {
     sessionId: string;
     kind: 'dashboard';
     stats: LargeFileAggregateStats;
@@ -54,7 +54,7 @@ export type LogStatsRecord = {
     updatedAt: number;
 };
 
-export type AnomalySnapshotRecord = {
+type AnomalySnapshotRecord = {
     sessionId: string;
     kind: 'anomaly';
     regions: Array<{
@@ -90,12 +90,12 @@ export type CustomLogFormatRecord = {
     updatedAt: number;
 };
 
-export type FilteredLinesResult = {
+type FilteredLinesResult = {
     totalMatches: number;
     lines: Array<{ lineNumber: number; raw: string }>;
 };
 
-export type ExactDashboardSnapshot = {
+type ExactDashboardSnapshot = {
     stats: {
         totalLines: number;
         nonEmptyLines: number;
@@ -275,7 +275,7 @@ const openLogDb = (): Promise<IDBDatabase> => {
     });
 };
 
-export const getLogDb = async (): Promise<IDBDatabase> => {
+const getLogDb = async (): Promise<IDBDatabase> => {
     if (!dbPromise) {
         dbPromise = openLogDb();
     }

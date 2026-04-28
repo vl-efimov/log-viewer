@@ -41,16 +41,12 @@ const notificationsSlice = createSlice({
         removeNotification: (state, action: PayloadAction<string>) => {
             state.queue = state.queue.filter((notification) => notification.id !== action.payload);
         },
-        clearNotifications: (state) => {
-            state.queue = [];
-        },
     },
 });
 
 export const {
     enqueueNotification,
     removeNotification,
-    clearNotifications,
 } = notificationsSlice.actions;
 
 export default notificationsSlice.reducer;

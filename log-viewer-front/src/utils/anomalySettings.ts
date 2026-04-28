@@ -1,6 +1,6 @@
-export type AnalysisScope = 'all' | 'filtered';
-export type TimestampColumnOption = 'auto' | 'timestamp' | 'datetime' | 'time' | 'date' | 'event_time' | 'created_at';
-export type AnomalyModelId = 'bgl' | 'hdfs';
+type AnalysisScope = 'all' | 'filtered';
+type TimestampColumnOption = 'auto' | 'timestamp' | 'datetime' | 'time' | 'date' | 'event_time' | 'created_at';
+type AnomalyModelId = 'bgl' | 'hdfs';
 
 export interface AnomalySettings {
     modelId: AnomalyModelId;
