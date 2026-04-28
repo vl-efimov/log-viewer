@@ -211,7 +211,10 @@ const LogFormatsPage: React.FC = () => {
                                     </TableCell>
                                     <TableCell sx={{ width: 64, minWidth: 64, verticalAlign: 'top' }}>
                                         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                                            <Tooltip title={t('logFormats.custom.actions.edit')} arrow>
+                                            <Tooltip
+                                                title={t('logFormats.custom.actions.edit')}
+                                                arrow
+                                            >
                                                 <IconButton
                                                     size="small"
                                                     color="primary"
@@ -224,7 +227,10 @@ const LogFormatsPage: React.FC = () => {
                                                     <EditIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title={t('logFormats.custom.actions.delete')} arrow>
+                                            <Tooltip
+                                                title={t('logFormats.custom.actions.delete')}
+                                                arrow
+                                            >
                                                 <IconButton
                                                     size="small"
                                                     color="error"

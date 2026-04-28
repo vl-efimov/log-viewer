@@ -46,17 +46,27 @@ const FormatChangeConfirmDialog: React.FC<FormatChangeConfirmDialogProps> = ({
                     <CloseIcon fontSize="small" />
                 </IconButton>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                    <WarningIcon color="warning" sx={{ mt: 0.5 }} />
+                    <WarningIcon
+                        color="warning"
+                        sx={{ mt: 0.5 }}
+                    />
                     <Typography variant="body1">
                         {message}
                     </Typography>
                 </Box>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button onClick={onCancel} variant="outlined">
+                <Button
+                    onClick={onCancel}
+                    variant="outlined"
+                >
                     {t('common.cancel')}
                 </Button>
-                <Button onClick={onConfirm} variant="contained" autoFocus>
+                <Button
+                    onClick={onConfirm}
+                    variant="contained"
+                    autoFocus
+                >
                     {t('common.ok')}
                 </Button>
             </DialogActions>

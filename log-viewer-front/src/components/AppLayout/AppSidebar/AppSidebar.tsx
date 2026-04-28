@@ -149,7 +149,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                 </div>
 
                 <List>
-                    <Tooltip title={t('sidebar.items.about')} placement="right" disableHoverListener={isSidebarOpen} arrow>
+                    <Tooltip
+                        title={t('sidebar.items.about')}
+                        placement="right"
+                        disableHoverListener={isSidebarOpen}
+                        arrow
+                    >
                         <ListItemButton
                             component={Link}
                             to={RouteAbout}
@@ -166,7 +171,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                         </ListItemButton>
                     </Tooltip>
                     <Divider sx={{ marginY: 1 }} />
-                    <Tooltip title={t('sidebar.items.settings')} placement="right" disableHoverListener={isSidebarOpen} arrow>
+                    <Tooltip
+                        title={t('sidebar.items.settings')}
+                        placement="right"
+                        disableHoverListener={isSidebarOpen}
+                        arrow
+                    >
                         <ListItemButton
                             component={Link}
                             to={RouteSettings}

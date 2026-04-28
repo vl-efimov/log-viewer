@@ -89,10 +89,16 @@ const SettingsPage: React.FC = () => {
                 }}
             >
                 <Box sx={{ maxWidth: 980 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
+                    <Typography
+                        variant="subtitle1"
+                        sx={{ fontWeight: 700, mb: 1.5 }}
+                    >
                         {t('theme.mode')}
                     </Typography>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1.5}
+                    >
                         <Button
                             onClick={() => setMode(ColorModeEnum.Light)}
                             variant={mode === ColorModeEnum.Light ? 'contained' : 'outlined'}
@@ -121,7 +127,10 @@ const SettingsPage: React.FC = () => {
                 }}
             >
                 <Box sx={{ maxWidth: 980 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
+                    <Typography
+                        variant="subtitle1"
+                        sx={{ fontWeight: 700, mb: 1.5 }}
+                    >
                         {t('theme.primaryColor')}
                     </Typography>
                     <Box
@@ -170,10 +179,16 @@ const SettingsPage: React.FC = () => {
                 }}
             >
                 <Box sx={{ maxWidth: 980 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
+                    <Typography
+                        variant="subtitle1"
+                        sx={{ fontWeight: 700, mb: 1.5 }}
+                    >
                         {t('common.selectLanguage')}
                     </Typography>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1.5}
+                    >
                         {LANGUAGE_OPTIONS.map((lang) => {
                             const isSelected = lang === selectedLanguage;
                             const flagCode = lang === Languages.EN ? 'gb' : lang;
@@ -185,7 +200,12 @@ const SettingsPage: React.FC = () => {
                                         void i18n.changeLanguage(lang);
                                     }}
                                     variant={isSelected ? 'contained' : 'outlined'}
-                                    startIcon={<Flag language={flagCode} style={{ width: 20, height: 15 }} />}
+                                    startIcon={
+                                        <Flag
+                                            language={flagCode}
+                                            style={{ width: 20, height: 15 }}
+                                        />
+                                    }
                                     sx={{ minWidth: 110 }}
                                 >
                                     {lang.toUpperCase()}

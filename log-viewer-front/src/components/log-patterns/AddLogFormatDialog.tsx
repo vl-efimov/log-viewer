@@ -534,10 +534,17 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                             backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(148, 163, 184, 0.08)' : 'rgba(148, 163, 184, 0.12)',
                         }}
                     >
-                        <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 600 }}>
+                        <Typography
+                            variant="body2"
+                            sx={{ mb: 0.5, fontWeight: 600 }}
+                        >
                             {t('logFormats.dialog.hints.title')}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block', mb: 0.75 }}
+                        >
                             {t('logFormats.dialog.hints.namedGroups')}
                         </Typography>
                         <Typography
@@ -552,13 +559,17 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 mb: 0.75,
                             }}
                         >
-    {`${t('logFormats.dialog.hints.exampleLabel')}
+                            {`${t('logFormats.dialog.hints.exampleLabel')}
 ^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})
 \\s+(?<level>\\w+)
 \\s+(?<message>.+)$`}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                {t('logFormats.dialog.hints.quick')}
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block' }}
+                        >
+                            {t('logFormats.dialog.hints.quick')}
                         </Typography>
                     </Box>
                 )}
@@ -592,10 +603,18 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.08)' : 'rgba(255, 152, 0, 0.04)',
                                 }}
                             >
-                                <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600, mb: 1 }}>
+                                <Typography
+                                    variant="body2"
+                                    color="warning.main"
+                                    sx={{ fontWeight: 600, mb: 1 }}
+                                >
                                     {t('logFormats.dialog.preview.useNamedGroupsTitle')}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block', mb: 1 }}
+                                >
                                     {t('logFormats.dialog.preview.useNamedGroupsBody')}
                                 </Typography>
                                 <Typography
@@ -610,7 +629,7 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                         overflow: 'auto',
                                     }}
                                 >
-{`${t('logFormats.dialog.hints.exampleLabel')}
+                                    {`${t('logFormats.dialog.hints.exampleLabel')}
 ^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})
 \\s+(?<level>\\w+)
 \\s+(?<message>.+)$`}
@@ -626,10 +645,18 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.10)' : 'rgba(244, 67, 54, 0.06)',
                                 }}
                             >
-                                <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, mb: 1 }}>
+                                <Typography
+                                    variant="body2"
+                                    color="error.main"
+                                    sx={{ fontWeight: 600, mb: 1 }}
+                                >
                                     {t('logFormats.dialog.preview.duplicateGroupsTitle')}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block', mb: 1 }}
+                                >
                                     {t('logFormats.dialog.preview.duplicateGroupsBody')}
                                 </Typography>
                                 <Typography
@@ -647,7 +674,11 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                 >
                                     {regexValidation.duplicateNamedGroups.join(', ')}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block' }}
+                                >
                                     {t('logFormats.dialog.preview.duplicateGroupsExample')}
                                 </Typography>
                                 <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
@@ -672,10 +703,18 @@ const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
                                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.10)' : 'rgba(244, 67, 54, 0.06)',
                                 }}
                             >
-                                <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, mb: 0.75 }}>
+                                <Typography
+                                    variant="body2"
+                                    color="error.main"
+                                    sx={{ fontWeight: 600, mb: 0.75 }}
+                                >
                                     {t('logFormats.dialog.preview.invalidRegexTitle')}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block' }}
+                                >
                                     {regexValidation.error ?? t('logFormats.dialog.validation.invalidRegex')}
                                 </Typography>
                             </Box>

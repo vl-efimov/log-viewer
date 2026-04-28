@@ -50,18 +50,27 @@ const AboutPage: React.FC = () => {
                         }}
                     />
 
-                    <Typography variant="body1" sx={{ mb: 2 }}>
+                    <Typography
+                        variant="body1"
+                        sx={{ mb: 2 }}
+                    >
                         {t('aboutPage.description')}
                     </Typography>
 
-                    <Box component="ul" sx={{ m: 0, pl: 3, display: 'grid', gap: 0.75 }}>
+                    <Box
+                        component="ul"
+                        sx={{ m: 0, pl: 3, display: 'grid', gap: 0.75 }}
+                    >
                         <Box component="li">{t('aboutPage.highlights.viewer')}</Box>
                         <Box component="li">{t('aboutPage.highlights.monitoring')}</Box>
                         <Box component="li">{t('aboutPage.highlights.charts')}</Box>
                         <Box component="li">{t('aboutPage.highlights.anomaly')}</Box>
                     </Box>
 
-                    <Typography variant="body2" sx={{ mt: 2 }}>
+                    <Typography
+                        variant="body2"
+                        sx={{ mt: 2 }}
+                    >
                         {t('aboutPage.thesisAttribution')}
                     </Typography>
                 </Box>
@@ -98,7 +107,10 @@ const AboutPage: React.FC = () => {
                     />
 
                     <Box sx={{ maxWidth: 560 }}>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
+                        <Typography
+                            variant="body2"
+                            sx={{ mb: 1 }}
+                        >
                             {t('aboutPage.thesis.supportLine1')}
                         </Typography>
 

@@ -372,19 +372,39 @@ const AppStatusBar: React.FC = () => {
                 detailsCompact: `${modeLabel} (${threshold}, ${stepSize}, ${minRegionLines})`,
                 detailsFull: (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, lineHeight: 1.2 }}>
-                        <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
+                        <Typography
+                            component="span"
+                            variant="body2"
+                            sx={{ color: 'inherit' }}
+                        >
                             {t('statusBar.anomaly.model', { model: modeLabel })}
                         </Typography>
-                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                        <Typography
+                            component="span"
+                            variant="caption"
+                            sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                        >
                             {t('statusBar.anomaly.parameters')}
                         </Typography>
-                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                        <Typography
+                            component="span"
+                            variant="caption"
+                            sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                        >
                             {t('statusBar.anomaly.threshold', { value: threshold })}
                         </Typography>
-                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                        <Typography
+                            component="span"
+                            variant="caption"
+                            sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                        >
                             {t('statusBar.anomaly.step', { value: stepSize })}
                         </Typography>
-                        <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                        <Typography
+                            component="span"
+                            variant="caption"
+                            sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                        >
                             {t('statusBar.anomaly.minRegion', { value: minRegionLines })}
                         </Typography>
                     </Box>
@@ -439,10 +459,18 @@ const AppStatusBar: React.FC = () => {
 
     const formatTooltipTitle = (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, lineHeight: 1.2 }}>
-            <Typography component="span" variant="body2" sx={{ color: 'inherit' }}>
+            <Typography
+                component="span"
+                variant="body2"
+                sx={{ color: 'inherit' }}
+            >
                 {t('statusBar.items.formatDetectedTitle')}
             </Typography>
-            <Typography component="span" variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+            <Typography
+                component="span"
+                variant="caption"
+                sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+            >
                 {t('statusBar.items.formatDetectedHint')}
             </Typography>
         </Box>
@@ -526,7 +554,11 @@ const AppStatusBar: React.FC = () => {
                                         </IconButton>
                                     </DialogTitle>
                                     <DialogContent sx={{ pt: 1 }}>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{ mb: 1.5 }}
+                                        >
                                             {t('statusBar.formatDialog.description')}
                                         </Typography>
                                         <TextField
@@ -562,7 +594,10 @@ const AppStatusBar: React.FC = () => {
                                         </List>
                                     </DialogContent>
                                     <DialogActions sx={{ px: 3, pb: 2 }}>
-                                        <Button onClick={handleFormatDialogClose} variant="outlined">
+                                        <Button
+                                            onClick={handleFormatDialogClose}
+                                            variant="outlined"
+                                        >
                                             {t('statusBar.formatDialog.close')}
                                         </Button>
                                     </DialogActions>

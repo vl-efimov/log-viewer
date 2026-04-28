@@ -506,222 +506,222 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                 </DialogTitle>
                 <DialogContent sx={{ pt: 1 }}>
                     <Stack spacing={1.5}>
-                    <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={1}
-                        alignItems={{ sm: 'center' }}
-                    >
                         <Stack
-                            spacing={0.5}
-                            sx={{ width: { xs: '100%', sm: 300 } }}
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={1}
+                            alignItems={{ sm: 'center' }}
                         >
-                            <Typography variant="caption">{t('anomaly.dialog.model')}</Typography>
-                            <FormControl size="small">
-                                <Select
-                                    value={selectedModelId}
-                                    onChange={handleModelChange}
-                                    aria-label={t('anomaly.dialog.modelAria')}
-                                >
-                                    <MenuItem value="bgl">BGL</MenuItem>
-                                    <MenuItem value="hdfs">HDFS</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Stack>
-                    </Stack>
-
-                    <Stack spacing={0.5}>
-                        <Stack
-                            direction="row"
-                            spacing={0.5}
-                            alignItems="center"
-                        >
-                            <Typography variant="subtitle2">{t('anomaly.dialog.settingsTitle')}</Typography>
-                            <Tooltip
-                                title={t('anomaly.dialog.settingsTooltip')}
-                                arrow
+                            <Stack
+                                spacing={0.5}
+                                sx={{ width: { xs: '100%', sm: 300 } }}
                             >
-                                <InfoOutlinedIcon fontSize="inherit" />
-                            </Tooltip>
+                                <Typography variant="caption">{t('anomaly.dialog.model')}</Typography>
+                                <FormControl size="small">
+                                    <Select
+                                        value={selectedModelId}
+                                        onChange={handleModelChange}
+                                        aria-label={t('anomaly.dialog.modelAria')}
+                                    >
+                                        <MenuItem value="bgl">BGL</MenuItem>
+                                        <MenuItem value="hdfs">HDFS</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Stack>
                         </Stack>
-                    </Stack>
 
-                    <Stack spacing={1.5}>
-                        <Box sx={{ width: { xs: '100%', sm: 300 } }}>
+                        <Stack spacing={0.5}>
                             <Stack
                                 direction="row"
                                 spacing={0.5}
                                 alignItems="center"
-                                sx={{ mb: 0.5 }}
                             >
+                                <Typography variant="subtitle2">{t('anomaly.dialog.settingsTitle')}</Typography>
+                                <Tooltip
+                                    title={t('anomaly.dialog.settingsTooltip')}
+                                    arrow
+                                >
+                                    <InfoOutlinedIcon fontSize="inherit" />
+                                </Tooltip>
+                            </Stack>
+                        </Stack>
+
+                        <Stack spacing={1.5}>
+                            <Box sx={{ width: { xs: '100%', sm: 300 } }}>
+                                <Stack
+                                    direction="row"
+                                    spacing={0.5}
+                                    alignItems="center"
+                                    sx={{ mb: 0.5 }}
+                                >
                                     <Typography variant="caption">{t('anomaly.dialog.threshold')}</Typography>
-                                <Tooltip
+                                    <Tooltip
                                         title={t('anomaly.dialog.thresholdTooltip')}
-                                    arrow
+                                        arrow
+                                    >
+                                        <InfoOutlinedIcon fontSize="inherit" />
+                                    </Tooltip>
+                                </Stack>
+                                <TextField
+                                    size="small"
+                                    type="number"
+                                    value={anomalySettings.threshold}
+                                    onChange={(event) => {
+                                        const next = Number(event.target.value);
+                                        if (!Number.isFinite(next)) return;
+                                        setThresholdValue(next);
+                                    }}
+                                    sx={{ width: 110 }}
+                                    inputProps={{ min: ANOMALY_THRESHOLD_RANGE.min, max: ANOMALY_THRESHOLD_RANGE.max, step: ANOMALY_THRESHOLD_RANGE.step }}
+                                />
+                                <Slider
+                                    size="small"
+                                    value={anomalySettings.threshold}
+                                    min={ANOMALY_THRESHOLD_RANGE.min}
+                                    max={ANOMALY_THRESHOLD_RANGE.max}
+                                    step={ANOMALY_THRESHOLD_RANGE.step}
+                                    onChange={(_event, value) => {
+                                        const next = Array.isArray(value) ? value[0] : value;
+                                        setThresholdValue(next);
+                                    }}
+                                    sx={{ mt: 0.75, width: '100%' }}
+                                />
+                            </Box>
+                            <Box sx={{ width: { xs: '100%', sm: 300 } }}>
+                                <Stack
+                                    direction="row"
+                                    spacing={0.5}
+                                    alignItems="center"
+                                    sx={{ mb: 0.5 }}
                                 >
-                                    <InfoOutlinedIcon fontSize="inherit" />
-                                </Tooltip>
-                            </Stack>
-                            <TextField
-                                size="small"
-                                type="number"
-                                value={anomalySettings.threshold}
-                                onChange={(event) => {
-                                    const next = Number(event.target.value);
-                                    if (!Number.isFinite(next)) return;
-                                    setThresholdValue(next);
-                                }}
-                                sx={{ width: 110 }}
-                                inputProps={{ min: ANOMALY_THRESHOLD_RANGE.min, max: ANOMALY_THRESHOLD_RANGE.max, step: ANOMALY_THRESHOLD_RANGE.step }}
-                            />
-                            <Slider
-                                size="small"
-                                value={anomalySettings.threshold}
-                                min={ANOMALY_THRESHOLD_RANGE.min}
-                                max={ANOMALY_THRESHOLD_RANGE.max}
-                                step={ANOMALY_THRESHOLD_RANGE.step}
-                                onChange={(_event, value) => {
-                                    const next = Array.isArray(value) ? value[0] : value;
-                                    setThresholdValue(next);
-                                }}
-                                sx={{ mt: 0.75, width: '100%' }}
-                            />
-                        </Box>
-                        <Box sx={{ width: { xs: '100%', sm: 300 } }}>
-                            <Stack
-                                direction="row"
-                                spacing={0.5}
-                                alignItems="center"
-                                sx={{ mb: 0.5 }}
-                            >
-                                <Typography variant="caption">{t('anomaly.dialog.stepSize')}</Typography>
-                                <Tooltip
-                                    title={t('anomaly.dialog.stepSizeTooltip')}
-                                    arrow
+                                    <Typography variant="caption">{t('anomaly.dialog.stepSize')}</Typography>
+                                    <Tooltip
+                                        title={t('anomaly.dialog.stepSizeTooltip')}
+                                        arrow
+                                    >
+                                        <InfoOutlinedIcon fontSize="inherit" />
+                                    </Tooltip>
+                                </Stack>
+                                <TextField
+                                    size="small"
+                                    type="number"
+                                    value={anomalySettings.stepSize}
+                                    onChange={(event) => {
+                                        const next = Number(event.target.value);
+                                        if (!Number.isFinite(next)) return;
+                                        setStepSizeValue(next);
+                                    }}
+                                    sx={{ width: 110 }}
+                                    inputProps={{ min: ANOMALY_STEP_SIZE_RANGE.min, max: ANOMALY_STEP_SIZE_RANGE.max, step: ANOMALY_STEP_SIZE_RANGE.step }}
+                                />
+                                <Slider
+                                    size="small"
+                                    value={anomalySettings.stepSize}
+                                    min={ANOMALY_STEP_SIZE_RANGE.min}
+                                    max={ANOMALY_STEP_SIZE_RANGE.max}
+                                    step={ANOMALY_STEP_SIZE_RANGE.step}
+                                    onChange={(_event, value) => {
+                                        const next = Array.isArray(value) ? value[0] : value;
+                                        setStepSizeValue(next);
+                                    }}
+                                    sx={{ mt: 0.75, width: '100%' }}
+                                />
+                                {parameterLoadWarning && (
+                                    <Alert
+                                        severity={parameterLoadWarning.severity === 'critical' ? 'warning' : 'info'}
+                                        variant="outlined"
+                                        sx={{ mt: 1, py: 0.25, px: 1 }}
+                                    >
+                                        <Typography variant="caption">
+                                            {parameterLoadWarning.message}
+                                            {parameterLoadWarning.shouldConfirmBeforeAnalyze
+                                                ? ` ${t('anomaly.dialog.parameterLoadNeedsConfirm')}`
+                                                : ''}
+                                        </Typography>
+                                    </Alert>
+                                )}
+                            </Box>
+                            <Box sx={{ width: { xs: '100%', sm: 300 } }}>
+                                <Stack
+                                    direction="row"
+                                    spacing={0.5}
+                                    alignItems="center"
+                                    sx={{ mb: 0.5 }}
                                 >
-                                    <InfoOutlinedIcon fontSize="inherit" />
-                                </Tooltip>
-                            </Stack>
-                            <TextField
-                                size="small"
-                                type="number"
-                                value={anomalySettings.stepSize}
-                                onChange={(event) => {
-                                    const next = Number(event.target.value);
-                                    if (!Number.isFinite(next)) return;
-                                    setStepSizeValue(next);
-                                }}
-                                sx={{ width: 110 }}
-                                inputProps={{ min: ANOMALY_STEP_SIZE_RANGE.min, max: ANOMALY_STEP_SIZE_RANGE.max, step: ANOMALY_STEP_SIZE_RANGE.step }}
-                            />
-                            <Slider
-                                size="small"
-                                value={anomalySettings.stepSize}
-                                min={ANOMALY_STEP_SIZE_RANGE.min}
-                                max={ANOMALY_STEP_SIZE_RANGE.max}
-                                step={ANOMALY_STEP_SIZE_RANGE.step}
-                                onChange={(_event, value) => {
-                                    const next = Array.isArray(value) ? value[0] : value;
-                                    setStepSizeValue(next);
-                                }}
-                                sx={{ mt: 0.75, width: '100%' }}
-                            />
-                            {parameterLoadWarning && (
-                                <Alert
-                                    severity={parameterLoadWarning.severity === 'critical' ? 'warning' : 'info'}
-                                    variant="outlined"
-                                    sx={{ mt: 1, py: 0.25, px: 1 }}
-                                >
-                                    <Typography variant="caption">
-                                        {parameterLoadWarning.message}
-                                        {parameterLoadWarning.shouldConfirmBeforeAnalyze
-                                            ? ` ${t('anomaly.dialog.parameterLoadNeedsConfirm')}`
-                                            : ''}
-                                    </Typography>
-                                </Alert>
-                            )}
-                        </Box>
-                        <Box sx={{ width: { xs: '100%', sm: 300 } }}>
-                            <Stack
-                                direction="row"
-                                spacing={0.5}
-                                alignItems="center"
-                                sx={{ mb: 0.5 }}
-                            >
-                                <Typography variant="caption">{t('anomaly.dialog.minRegion')}</Typography>
-                                <Tooltip
-                                    title={t('anomaly.dialog.minRegionTooltip')}
-                                    arrow
-                                >
-                                    <InfoOutlinedIcon fontSize="inherit" />
-                                </Tooltip>
-                            </Stack>
-                            <TextField
-                                size="small"
-                                type="number"
-                                value={anomalySettings.minRegionLines}
-                                onChange={(event) => {
-                                    const next = Number(event.target.value);
-                                    if (!Number.isFinite(next)) return;
-                                    setMinRegionLinesValue(next);
-                                }}
-                                sx={{ width: 110 }}
-                                inputProps={{ min: ANOMALY_MIN_REGION_LINES_RANGE.min, max: ANOMALY_MIN_REGION_LINES_RANGE.max, step: ANOMALY_MIN_REGION_LINES_RANGE.step }}
-                            />
-                            <Slider
-                                size="small"
-                                value={anomalySettings.minRegionLines}
-                                min={ANOMALY_MIN_REGION_LINES_RANGE.min}
-                                max={ANOMALY_MIN_REGION_LINES_RANGE.max}
-                                step={ANOMALY_MIN_REGION_LINES_RANGE.step}
-                                onChange={(_event, value) => {
-                                    const next = Array.isArray(value) ? value[0] : value;
-                                    setMinRegionLinesValue(next);
-                                }}
-                                sx={{ mt: 0.75, width: '100%' }}
-                            />
-                        </Box>
-                    </Stack>
+                                    <Typography variant="caption">{t('anomaly.dialog.minRegion')}</Typography>
+                                    <Tooltip
+                                        title={t('anomaly.dialog.minRegionTooltip')}
+                                        arrow
+                                    >
+                                        <InfoOutlinedIcon fontSize="inherit" />
+                                    </Tooltip>
+                                </Stack>
+                                <TextField
+                                    size="small"
+                                    type="number"
+                                    value={anomalySettings.minRegionLines}
+                                    onChange={(event) => {
+                                        const next = Number(event.target.value);
+                                        if (!Number.isFinite(next)) return;
+                                        setMinRegionLinesValue(next);
+                                    }}
+                                    sx={{ width: 110 }}
+                                    inputProps={{ min: ANOMALY_MIN_REGION_LINES_RANGE.min, max: ANOMALY_MIN_REGION_LINES_RANGE.max, step: ANOMALY_MIN_REGION_LINES_RANGE.step }}
+                                />
+                                <Slider
+                                    size="small"
+                                    value={anomalySettings.minRegionLines}
+                                    min={ANOMALY_MIN_REGION_LINES_RANGE.min}
+                                    max={ANOMALY_MIN_REGION_LINES_RANGE.max}
+                                    step={ANOMALY_MIN_REGION_LINES_RANGE.step}
+                                    onChange={(_event, value) => {
+                                        const next = Array.isArray(value) ? value[0] : value;
+                                        setMinRegionLinesValue(next);
+                                    }}
+                                    sx={{ mt: 0.75, width: '100%' }}
+                                />
+                            </Box>
+                        </Stack>
 
                         <Stack
                             direction={{ xs: 'column', md: 'row' }}
                             spacing={1}
                         >
-                        <Tooltip
-                            title={t('anomaly.dialog.profileSensitiveTooltip')}
-                            arrow
-                        >
-                            <Button
-                                size="small"
-                                variant={selectedSensitivityProfile === 'sensitive' ? 'contained' : 'outlined'}
-                                onClick={() => applySensitivityProfile('sensitive')}
+                            <Tooltip
+                                title={t('anomaly.dialog.profileSensitiveTooltip')}
+                                arrow
                             >
-                                {t('anomaly.dialog.profileSensitive')}
-                            </Button>
-                        </Tooltip>
-                        <Tooltip
-                            title={t('anomaly.dialog.profileBalancedTooltip')}
-                            arrow
-                        >
-                            <Button
-                                size="small"
-                                variant={selectedSensitivityProfile === 'balanced' ? 'contained' : 'outlined'}
-                                onClick={() => applySensitivityProfile('balanced')}
+                                <Button
+                                    size="small"
+                                    variant={selectedSensitivityProfile === 'sensitive' ? 'contained' : 'outlined'}
+                                    onClick={() => applySensitivityProfile('sensitive')}
+                                >
+                                    {t('anomaly.dialog.profileSensitive')}
+                                </Button>
+                            </Tooltip>
+                            <Tooltip
+                                title={t('anomaly.dialog.profileBalancedTooltip')}
+                                arrow
                             >
-                                {t('anomaly.dialog.profileBalanced')}
-                            </Button>
-                        </Tooltip>
-                        <Tooltip
-                            title={t('anomaly.dialog.profileStrictTooltip')}
-                            arrow
-                        >
-                            <Button
-                                size="small"
-                                variant={selectedSensitivityProfile === 'strict' ? 'contained' : 'outlined'}
-                                onClick={() => applySensitivityProfile('strict')}
+                                <Button
+                                    size="small"
+                                    variant={selectedSensitivityProfile === 'balanced' ? 'contained' : 'outlined'}
+                                    onClick={() => applySensitivityProfile('balanced')}
+                                >
+                                    {t('anomaly.dialog.profileBalanced')}
+                                </Button>
+                            </Tooltip>
+                            <Tooltip
+                                title={t('anomaly.dialog.profileStrictTooltip')}
+                                arrow
                             >
-                                {t('anomaly.dialog.profileStrict')}
-                            </Button>
-                        </Tooltip>
+                                <Button
+                                    size="small"
+                                    variant={selectedSensitivityProfile === 'strict' ? 'contained' : 'outlined'}
+                                    onClick={() => applySensitivityProfile('strict')}
+                                >
+                                    {t('anomaly.dialog.profileStrict')}
+                                </Button>
+                            </Tooltip>
                         </Stack>
                     </Stack>
                 </DialogContent>

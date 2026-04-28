@@ -62,7 +62,10 @@ const NotFoundPage: React.FC = () => {
                 >
                     404
                 </Typography>
-                <Typography variant="h4" sx={{ mb: 1.5, fontWeight: 700 }}>
+                <Typography
+                    variant="h4"
+                    sx={{ mb: 1.5, fontWeight: 700 }}
+                >
                     {t('notFound.title')}
                 </Typography>
                 <Typography
