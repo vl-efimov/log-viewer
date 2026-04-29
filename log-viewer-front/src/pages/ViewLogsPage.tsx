@@ -1,16 +1,16 @@
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
-import { FileSelectionView } from '../components/FileSelectionView';
-import LogLinesList from '../components/LogLinesList';
-import LogToolbar from '../components/LogToolbar';
-import AddLogFormatDialog from '../components/log-patterns/AddLogFormatDialog';
-import LogViewHistogramPanel from './viewLogs/components/LogViewHistogramPanel';
-import LogViewMonitoringBanner from './viewLogs/components/LogViewMonitoringBanner';
-import FormatChangeConfirmDialog from './viewLogs/components/FormatChangeConfirmDialog';
-import UnknownFormatConfirmDialog from './viewLogs/components/UnknownFormatConfirmDialog';
-import ConfirmActionDialog from '../components/common/ConfirmActionDialog';
-import { useViewLogsController } from './viewLogs/useViewLogsController';
+import { FileSelectionView } from '@/components/FileSelectionView';
+import LogLinesList from '@/components/LogLinesList';
+import LogToolbar from '@/components/LogToolbar';
+import AddLogFormatDialog from '@/components/log-patterns/AddLogFormatDialog';
+import LogViewHistogramPanel from '@/pages/viewLogs/components/LogViewHistogramPanel';
+import LogViewMonitoringBanner from '@/pages/viewLogs/components/LogViewMonitoringBanner';
+import FormatChangeConfirmDialog from '@/pages/viewLogs/components/FormatChangeConfirmDialog';
+import UnknownFormatConfirmDialog from '@/pages/viewLogs/components/UnknownFormatConfirmDialog';
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog';
+import { useViewLogsController } from '@/pages/viewLogs/useViewLogsController';
 import { useTranslation } from 'react-i18next';
 
 const ViewLogsPage: React.FC = () => {

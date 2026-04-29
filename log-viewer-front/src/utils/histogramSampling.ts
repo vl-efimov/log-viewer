@@ -1,4 +1,4 @@
-import { parseLogLineAuto, type ParsedLogLine } from './logFormatDetector';
+import { parseLogLineAuto, type ParsedLogLine } from '@/utils/logFormatDetector';
 
 export interface HistogramLine {
     lineNumber: number;

@@ -21,21 +21,21 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
-import { RootState } from '../../../redux/store';
-import { baseUrl } from '../../../constants/BaseUrl';
-import { RouteDashboard, RouteViewLogs } from '../../../routes/routePaths';
-import { requestFormatChange, setIndexingState } from '../../../redux/slices/logFileSlice';
-import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '../../../redux/slices/anomalySlice';
-import { enqueueNotification } from '../../../redux/slices/notificationsSlice';
+import { RootState } from '@/redux/store';
+import { baseUrl } from '@/constants/BaseUrl';
+import { RouteDashboard, RouteViewLogs } from '@/routes/routePaths';
+import { requestFormatChange, setIndexingState } from '@/redux/slices/logFileSlice';
+import { requestAnomalyCancel, setAnomalyError, setAnomalyRunning, setAnomalyStopped } from '@/redux/slices/anomalySlice';
+import { enqueueNotification } from '@/redux/slices/notificationsSlice';
 import {
     checkBackendAvailability,
     cancelActiveAnomalyPredictionSession,
     cancelActiveRemoteUploadSession,
     cancelBglAnomalyPrediction,
     getBglAnomalyProgress,
-} from '../../../services/bglAnomalyApi';
-import { getAvailableLogFormats, getLogFormatById } from '../../../utils/logFormatDetector';
-import AppStatusBarItem from '../AppStatusBarItem';
+} from '@/services/bglAnomalyApi';
+import { getAvailableLogFormats, getLogFormatById } from '@/utils/logFormatDetector';
+import AppStatusBarItem from '@/components/AppLayout/AppStatusBarItem';
 import {
     anomalyTextSx,
     closeButtonSx,
@@ -46,7 +46,7 @@ import {
     statusBarRightGroupSx,
     statusBarSx,
     textSx,
-} from './styles';
+} from '@/components/AppLayout/AppStatusBar/styles';
 
 type AnomalyWindowProgress = {
     percent: number | null;

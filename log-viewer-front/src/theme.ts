@@ -1,6 +1,6 @@
 
 import { alpha, createTheme, Theme } from '@mui/material/styles';
-import { ColorModeEnum } from './constants/ColorModeEnum';
+import { ColorModeEnum } from '@/constants/ColorModeEnum';
 
 export const getCustomTheme = (
     mode: ColorModeEnum,

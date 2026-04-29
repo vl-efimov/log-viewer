@@ -7,10 +7,10 @@ import Typography from '@mui/material/Typography';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import { useTranslation } from 'react-i18next';
-import Flag from '../components/common/Flag';
-import { ThemeContext } from '../contexts/ThemeContext';
-import { ColorModeEnum } from '../constants/ColorModeEnum';
-import { Languages } from '../constants/LanguagesEnum';
+import Flag from '@/components/common/Flag';
+import { ThemeContext } from '@/contexts/ThemeContext';
+import { ColorModeEnum } from '@/constants/ColorModeEnum';
+import { Languages } from '@/constants/LanguagesEnum';
 
 const PRIMARY_COLORS = [
     '#334155',

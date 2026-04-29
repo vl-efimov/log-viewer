@@ -1,12 +1,12 @@
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
-import Header from './AppHeader/AppHeader';
-import Sidebar from './AppSidebar/AppSidebar';
-import AppStatusBar from './AppStatusBar/AppStatusBar';
+import Header from '@/components/AppLayout/AppHeader/AppHeader';
+import Sidebar from '@/components/AppLayout/AppSidebar/AppSidebar';
+import AppStatusBar from '@/components/AppLayout/AppStatusBar/AppStatusBar';
 import { useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { useFileLoader } from '../../hooks/useFileLoader';
-import GlobalNotifications from '../common/GlobalNotifications';
+import { useFileLoader } from '@/hooks/useFileLoader';
+import GlobalNotifications from '@/components/common/GlobalNotifications';
 import { useTranslation } from 'react-i18next';
 
 

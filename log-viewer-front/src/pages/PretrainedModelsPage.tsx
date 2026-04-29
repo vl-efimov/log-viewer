@@ -8,7 +8,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import { getPretrainedModels, warmupBglModel, type PretrainedModelInfo } from '../services/bglAnomalyApi';
+import { getPretrainedModels, warmupBglModel, type PretrainedModelInfo } from '@/services/bglAnomalyApi';
 import { useTranslation } from 'react-i18next';
 
 let cachedPretrainedModels: PretrainedModelInfo[] | null = null;

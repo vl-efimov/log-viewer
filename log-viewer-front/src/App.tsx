@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import AppRoutes from './routes/AppRoutes';
-import { baseUrl } from './constants/BaseUrl';
-import { setLogFile } from './redux/slices/logFileSlice';
-import type { RootState } from './redux/store';
-import { getLastSession, touchSession } from './utils/logIndexedDb';
+import AppRoutes from '@/routes/AppRoutes';
+import { baseUrl } from '@/constants/BaseUrl';
+import { setLogFile } from '@/redux/slices/logFileSlice';
+import type { RootState } from '@/redux/store';
+import { getLastSession, touchSession } from '@/utils/logIndexedDb';
 
 console.log(baseUrl, 'baseUrl');
 

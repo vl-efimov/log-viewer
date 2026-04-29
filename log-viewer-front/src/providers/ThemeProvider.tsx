@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeContext } from '../contexts/ThemeContext';
-import { ColorModeEnum } from '../constants/ColorModeEnum';
-import { getCustomTheme } from '../theme';
+import { ThemeContext } from '@/contexts/ThemeContext';
+import { ColorModeEnum } from '@/constants/ColorModeEnum';
+import { getCustomTheme } from '@/theme';
 
 const DEFAULT_PRIMARY = '#3b82f6';
 

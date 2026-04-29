@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
-import type { ParsedLogLine } from '../utils/logFormatDetector';
-import { parseLogLineAuto } from '../utils/logFormatDetector';
-import { LRUCache } from '../utils/lruCache';
+import type { ParsedLogLine } from '@/utils/logFormatDetector';
+import { parseLogLineAuto } from '@/utils/logFormatDetector';
+import { LRUCache } from '@/utils/lruCache';
 
 type ViewRow = {
     lineNumber: number;

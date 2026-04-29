@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 import { type FC, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import { parseLogLineAuto } from '../utils/logFormatDetector';
+import { parseLogLineAuto } from '@/utils/logFormatDetector';
 
 type ParsedLinePreview = {
     formatId: string;

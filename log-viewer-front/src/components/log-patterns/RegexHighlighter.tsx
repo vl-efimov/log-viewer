@@ -3,7 +3,7 @@ import { Box, IconButton, Tooltip } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { enqueueNotification } from '../../redux/slices/notificationsSlice';
+import { enqueueNotification } from '@/redux/slices/notificationsSlice';
 
 interface RegexHighlighterProps {
     pattern: string;

@@ -2,9 +2,9 @@ import Alert from '@mui/material/Alert';
 import Snackbar, { type SnackbarCloseReason } from '@mui/material/Snackbar';
 import { useDispatch, useSelector } from 'react-redux';
 import { useCallback, type SyntheticEvent } from 'react';
-import type { RootState } from '../../redux/store';
-import { removeNotification } from '../../redux/slices/notificationsSlice';
-import { APP_LAYOUT_TOKENS } from '../../design-tokens';
+import type { RootState } from '@/redux/store';
+import { removeNotification } from '@/redux/slices/notificationsSlice';
+import { APP_LAYOUT_TOKENS } from '@/design-tokens';
 
 const statusBarOffsetPx = APP_LAYOUT_TOKENS.statusBar.height + 8;
 

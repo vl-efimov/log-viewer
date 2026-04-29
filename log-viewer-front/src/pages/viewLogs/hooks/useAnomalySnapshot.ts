@@ -3,12 +3,12 @@ import { useDispatch } from 'react-redux';
 import {
     clearAnomalyResults,
     setAnomalyResults,
-} from '../../../redux/slices/anomalySlice';
+} from '@/redux/slices/anomalySlice';
 import {
     getAnomalySnapshot,
     pruneAnomalySnapshots,
     saveAnomalySnapshot,
-} from '../../../utils/logIndexedDb';
+} from '@/utils/logIndexedDb';
 
 interface UseAnomalySnapshotOptions {
     storageKey: string;

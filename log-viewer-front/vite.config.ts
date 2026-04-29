@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { fileURLToPath, URL } from 'node:url';
 
 const getBaseUrl = (mode: string) => {
     // Optional override (e.g. CI or custom hosting)
@@ -25,6 +26,11 @@ export default defineConfig(({ mode }) => {
 
     return {
         base: BASE_URL,
+        resolve: {
+            alias: {
+                '@': fileURLToPath(new URL('./src', import.meta.url)),
+            },
+        },
         plugins: [
             react(),
             VitePWA({

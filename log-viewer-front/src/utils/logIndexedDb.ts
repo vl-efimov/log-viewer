@@ -1,13 +1,13 @@
-import type { LogFilters, DateRangeFilter, TextFilter } from '../types/filters';
-import { GLOBAL_SEARCH_FILTER_KEY } from '../types/filters';
-import type { HistogramLine, LargeFileAggregateStats } from './histogramSampling';
+import type { LogFilters, DateRangeFilter, TextFilter } from '@/types/filters';
+import { GLOBAL_SEARCH_FILTER_KEY } from '@/types/filters';
+import type { HistogramLine, LargeFileAggregateStats } from '@/utils/histogramSampling';
 import {
     getRemoteDashboardSnapshot,
     getRemoteLineCount,
     getRemoteLinesRange,
     queryRemoteFilteredLines,
-} from '../services/bglAnomalyApi';
-import { parseTimestamp } from './logTimestamp';
+} from '@/services/bglAnomalyApi';
+import { parseTimestamp } from '@/utils/logTimestamp';
 
 const DB_NAME = 'log_viewer';
 const DB_VERSION = 3;

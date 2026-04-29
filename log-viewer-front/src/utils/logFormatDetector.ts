@@ -3,8 +3,8 @@
  * Each format has a name, description, patterns for detection, and priority
  */
 
-import { baseUrl } from "../constants/BaseUrl";
-import { getCustomLogFormats, type CustomLogFormatRecord } from './logIndexedDb';
+import { baseUrl } from "@/constants/BaseUrl";
+import { getCustomLogFormats, type CustomLogFormatRecord } from '@/utils/logIndexedDb';
 
 export const USER_FORMATS_STORAGE_KEY = 'userLogFormats';
 

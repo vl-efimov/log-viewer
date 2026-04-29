@@ -1,6 +1,6 @@
-import type { LogFilters } from '../types/filters';
-import { GLOBAL_SEARCH_FILTER_KEY } from '../types/filters';
-import type { ParsedLogLine } from './logFormatDetector';
+import type { LogFilters } from '@/types/filters';
+import { GLOBAL_SEARCH_FILTER_KEY } from '@/types/filters';
+import type { ParsedLogLine } from '@/utils/logFormatDetector';
 
 interface LogLineWithRaw {
     lineNumber: number;

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { VirtuosoHandle } from 'react-virtuoso';
-import { RootState } from '../../redux/store';
-import { ViewModeEnum } from '../../constants/ViewModeEnum';
+import { RootState } from '@/redux/store';
+import { ViewModeEnum } from '@/constants/ViewModeEnum';
 import {
     clearLogContent,
     clearFormatChangeRequest,
@@ -11,9 +11,9 @@ import {
     setIndexingState,
     setLogFile,
     updateLogContent,
-} from '../../redux/slices/logFileSlice';
-import { setAnomalyResults } from '../../redux/slices/anomalySlice';
-import { enqueueNotification } from '../../redux/slices/notificationsSlice';
+} from '@/redux/slices/logFileSlice';
+import { setAnomalyResults } from '@/redux/slices/anomalySlice';
+import { enqueueNotification } from '@/redux/slices/notificationsSlice';
 import {
     buildCustomFormatPattern,
     detectLogFormat,
@@ -23,11 +23,11 @@ import {
     registerCustomLogFormat,
     type LogFormatField,
     type ParsedLogLine,
-} from '../../utils/logFormatDetector';
-import type { LogFilters } from '../../types/filters';
-import { applyLogFilters } from '../../utils/logFilters';
-import { useFileLoader } from '../../hooks/useFileLoader';
-import { useParsedRowsCache } from '../../hooks/useParsedRowsCache';
+} from '@/utils/logFormatDetector';
+import type { LogFilters } from '@/types/filters';
+import { applyLogFilters } from '@/utils/logFilters';
+import { useFileLoader } from '@/hooks/useFileLoader';
+import { useParsedRowsCache } from '@/hooks/useParsedRowsCache';
 import {
     findAdjacentLineMatch,
     getDashboardSnapshot,
@@ -37,8 +37,8 @@ import {
     queryFilteredLines,
     upsertCustomLogFormat,
     upsertSession,
-} from '../../utils/logIndexedDb';
-import { appendLogFileToIndex } from '../../utils/logIndexer';
+} from '@/utils/logIndexedDb';
+import { appendLogFileToIndex } from '@/utils/logIndexer';
 import {
     beginRemoteUploadSession,
     deleteRemoteIngest,
@@ -48,8 +48,8 @@ import {
     setActiveRemoteUploadIngestId,
     startRemoteIngest,
     uploadRemoteIngestChunk,
-} from '../../services/bglAnomalyApi';
-import { useAnomalySnapshot } from './hooks/useAnomalySnapshot';
+} from '@/services/bglAnomalyApi';
+import { useAnomalySnapshot } from '@/pages/viewLogs/hooks/useAnomalySnapshot';
 import { useTranslation } from 'react-i18next';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024;

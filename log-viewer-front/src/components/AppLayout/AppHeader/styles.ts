@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material/styles';
-import { APP_LAYOUT_TOKENS } from '../../../design-tokens';
+import { APP_LAYOUT_TOKENS } from '@/design-tokens';
 
 export const appBarSx: SxProps<Theme> = {
     pl: 0,

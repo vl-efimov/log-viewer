@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
     clearAnomalyResults,
-} from '../redux/slices/anomalySlice';
+} from '@/redux/slices/anomalySlice';
 import {
     clearLogFile,
     getFileHandle,
@@ -13,12 +13,12 @@ import {
     setFileHandle,
     setFileObject,
     setIndexingState,
-} from '../redux/slices/logFileSlice';
-import { enqueueNotification } from '../redux/slices/notificationsSlice';
-import type { RootState } from '../redux/store';
-import { detectLogFormat, initializeLogFormats } from '../utils/logFormatDetector';
-import { deleteSessionData } from '../utils/logIndexedDb';
-import { cancelIndexing, clearIndexingController, createSessionRecord, indexLogFile, registerIndexingController } from '../utils/logIndexer';
+} from '@/redux/slices/logFileSlice';
+import { enqueueNotification } from '@/redux/slices/notificationsSlice';
+import type { RootState } from '@/redux/store';
+import { detectLogFormat, initializeLogFormats } from '@/utils/logFormatDetector';
+import { deleteSessionData } from '@/utils/logIndexedDb';
+import { cancelIndexing, clearIndexingController, createSessionRecord, indexLogFile, registerIndexingController } from '@/utils/logIndexer';
 
 const LARGE_FILE_BYTES = 300 * 1024 * 1024; // 300 MB
 const FORMAT_PREVIEW_BYTES = 2 * 1024 * 1024; // 2 MB

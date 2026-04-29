@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
-import logFileReducer from './slices/logFileSlice';
-import anomalyReducer from './slices/anomalySlice';
-import notificationsReducer from './slices/notificationsSlice';
+import logFileReducer from '@/redux/slices/logFileSlice';
+import anomalyReducer from '@/redux/slices/anomalySlice';
+import notificationsReducer from '@/redux/slices/notificationsSlice';
 
 const store = configureStore({
     reducer: {

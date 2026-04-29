@@ -17,9 +17,9 @@ import type {
     DateRangeFilter,
     TextFilter,
     AnomalyStatusFilterValue,
-} from '../types/filters';
-import { GLOBAL_SEARCH_FILTER_KEY } from '../types/filters';
-import type { LogFormatField } from '../utils/logFormatDetector';
+} from '@/types/filters';
+import { GLOBAL_SEARCH_FILTER_KEY } from '@/types/filters';
+import type { LogFormatField } from '@/utils/logFormatDetector';
 
 const LOG_LEVEL_OPTIONS = [
     'TRACE',

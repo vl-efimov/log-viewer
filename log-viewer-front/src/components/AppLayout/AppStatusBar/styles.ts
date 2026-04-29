@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material/styles';
-import { APP_LAYOUT_TOKENS } from '../../../design-tokens';
+import { APP_LAYOUT_TOKENS } from '@/design-tokens';
 
 const {
     height: STATUS_BAR_HEIGHT,

@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import AddLogFormatDialog from '../components/log-patterns/AddLogFormatDialog';
+import AddLogFormatDialog from '@/components/log-patterns/AddLogFormatDialog';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import EditIcon from '@mui/icons-material/Edit';
@@ -21,20 +21,20 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CircularProgress from '@mui/material/CircularProgress';
-import RegexHighlighter from '../components/log-patterns/RegexHighlighter';
-import ConfirmActionDialog from '../components/common/ConfirmActionDialog';
-import { baseUrl } from '../constants/BaseUrl';
+import RegexHighlighter from '@/components/log-patterns/RegexHighlighter';
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog';
+import { baseUrl } from '@/constants/BaseUrl';
 import {
     buildCustomFormatPattern,
     registerCustomLogFormat,
     unregisterLogFormat,
-} from '../utils/logFormatDetector';
+} from '@/utils/logFormatDetector';
 import {
     deleteCustomLogFormat,
     getCustomLogFormats,
     upsertCustomLogFormat,
     type CustomLogFormatRecord,
-} from '../utils/logIndexedDb';
+} from '@/utils/logIndexedDb';
 
 interface LogFormat {
     id: string;

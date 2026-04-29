@@ -1,5 +1,5 @@
-import { parseLogLineAuto, type ParsedLogLine } from './logFormatDetector';
-import type { HistogramLine, LargeFileAggregateStats } from './histogramSampling';
+import { parseLogLineAuto, type ParsedLogLine } from '@/utils/logFormatDetector';
+import type { HistogramLine, LargeFileAggregateStats } from '@/utils/histogramSampling';
 import {
     type LogLineRecord,
     type LogSessionRecord,
@@ -10,7 +10,7 @@ import {
     putLineBatch,
     saveDashboardSnapshot,
     upsertSession,
-} from './logIndexedDb';
+} from '@/utils/logIndexedDb';
 
 const INDEX_CHUNK_BYTES = 2 * 1024 * 1024; // 2 MB
 const BATCH_LINES = 1000;

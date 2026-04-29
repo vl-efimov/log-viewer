@@ -1,4 +1,4 @@
-import type { ParsedLogLine } from './logFormatDetector';
+import type { ParsedLogLine } from '@/utils/logFormatDetector';
 
 export function parseTimestamp(timestamp: string): Date | null {
     if (!timestamp) return null;

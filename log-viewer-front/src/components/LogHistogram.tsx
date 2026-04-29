@@ -10,8 +10,8 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReactECharts from 'echarts-for-react';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import type { ParsedLogLine } from '../utils/logFormatDetector';
-import { extractTimestampFromParsedLine, parseTimestamp } from '../utils/logTimestamp';
+import type { ParsedLogLine } from '@/utils/logFormatDetector';
+import { extractTimestampFromParsedLine, parseTimestamp } from '@/utils/logTimestamp';
 
 // Log level colors - consistent across different log formats
 const LOG_LEVEL_COLORS: Record<string, string> = {

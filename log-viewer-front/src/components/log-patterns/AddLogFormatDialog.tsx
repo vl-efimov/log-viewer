@@ -10,7 +10,7 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useMemo, useState } from 'react';
-import { extractNamedGroups } from '../../utils/logFormatDetector';
+import { extractNamedGroups } from '@/utils/logFormatDetector';
 import { useTranslation } from 'react-i18next';
 
 type LogFormatFormPayload = {

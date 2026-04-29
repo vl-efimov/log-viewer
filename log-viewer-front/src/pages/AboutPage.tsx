@@ -4,7 +4,7 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import { ColorModeEnum } from '../constants/ColorModeEnum';
+import { ColorModeEnum } from '@/constants/ColorModeEnum';
 
 const AboutPage: React.FC = () => {
     const { t, i18n } = useTranslation();

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ColorModeEnum } from '../constants/ColorModeEnum';
+import { ColorModeEnum } from '@/constants/ColorModeEnum';
 
 export interface ThemeContextProps {
     mode: ColorModeEnum;

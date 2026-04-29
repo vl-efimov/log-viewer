@@ -7,28 +7,28 @@ import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import PaletteIcon from '@mui/icons-material/Palette';
 import CloseIcon from '@mui/icons-material/Close';
-import LanguageSelect from '../../common/LanguageSelect';
+import LanguageSelect from '@/components/common/LanguageSelect';
 import { useTranslation } from 'react-i18next';
 import { useState, useContext } from 'react';
-import { ThemeContext } from '../../../contexts/ThemeContext';
-import ThemePaletteDrawer from '../ThemePaletteDrawer';
-import ThemeToggleButton from '../../common/ThemeToggleButton';
+import { ThemeContext } from '@/contexts/ThemeContext';
+import ThemePaletteDrawer from '@/components/AppLayout/ThemePaletteDrawer';
+import ThemeToggleButton from '@/components/common/ThemeToggleButton';
 import Box from '@mui/material/Box';
-import { ColorModeEnum } from '../../../constants/ColorModeEnum';
-import { RootState } from '../../../redux/store';
+import { ColorModeEnum } from '@/constants/ColorModeEnum';
+import { RootState } from '@/redux/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Tooltip from '@mui/material/Tooltip';
-import { clearLogFile, setFileHandle, setFileObject } from '../../../redux/slices/logFileSlice';
-import { clearAnomalyResults, requestAnomalyCancel } from '../../../redux/slices/anomalySlice';
-import { deleteAllLogData } from '../../../utils/logIndexedDb';
-import { cancelAllIndexing, cancelIndexing, waitForIndexingIdle } from '../../../utils/logIndexer';
+import { clearLogFile, setFileHandle, setFileObject } from '@/redux/slices/logFileSlice';
+import { clearAnomalyResults, requestAnomalyCancel } from '@/redux/slices/anomalySlice';
+import { deleteAllLogData } from '@/utils/logIndexedDb';
+import { cancelAllIndexing, cancelIndexing, waitForIndexingIdle } from '@/utils/logIndexer';
 import {
     cancelActiveAnomalyPredictionSession,
     cancelActiveRemoteUploadSession,
     cancelBglAnomalyPrediction,
     deleteRemoteIngest,
-} from '../../../services/bglAnomalyApi';
+} from '@/services/bglAnomalyApi';
 
 import {
     appBarSx,
@@ -44,8 +44,8 @@ import {
     fileBadgeSx,
     fileClearButtonSx,
     fileBadgeSpacerSx,
-} from './styles';
-import { RouteViewLogs } from '../../../routes/routePaths';
+} from '@/components/AppLayout/AppHeader/styles';
+import { RouteViewLogs } from '@/routes/routePaths';
 
 interface HeaderProps {
     isSidebarOpen: boolean;

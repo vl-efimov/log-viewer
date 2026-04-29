@@ -20,23 +20,23 @@ import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import type { RootState } from '../redux/store';
+import type { RootState } from '@/redux/store';
 import {
     clearAnomalyResults,
     setAnomalyError,
     setAnomalyResults,
     setAnomalyRunning,
     setAnomalyStopped,
-} from '../redux/slices/anomalySlice';
-import { enqueueNotification } from '../redux/slices/notificationsSlice';
-import { deleteAnomalySnapshot } from '../utils/logIndexedDb';
+} from '@/redux/slices/anomalySlice';
+import { enqueueNotification } from '@/redux/slices/notificationsSlice';
+import { deleteAnomalySnapshot } from '@/utils/logIndexedDb';
 import {
     beginAnomalyPredictionSession,
     endAnomalyPredictionSession,
     getPretrainedModels,
     predictBglAnomaliesFromFile,
     predictBglAnomaliesFromIngest,
-} from '../services/bglAnomalyApi';
+} from '@/services/bglAnomalyApi';
 import {
     ANOMALY_MIN_REGION_LINES_RANGE,
     ANOMALY_STEP_SIZE_RANGE,
@@ -46,8 +46,8 @@ import {
     loadSelectedAnomalyModelId,
     saveAnomalySettings,
     saveSelectedAnomalyModelId,
-} from '../utils/anomalySettings';
-import ConfirmActionDialog from './common/ConfirmActionDialog';
+} from '@/utils/anomalySettings';
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog';
 
 type AnomalySourceRow = {
     lineNumber: number;

@@ -12,20 +12,20 @@ import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
-import { RootState } from '../redux/store';
-import NoFileSelected from '../components/common/NoFileSelected';
-import { parseLogLineAuto, type ParsedLogLine } from '../utils/logFormatDetector';
-import LogHistogram from '../components/LogHistogram';
-import { extractTimestampFromParsedLine } from '../utils/logTimestamp';
-import { getFileHandle, getFileObject } from '../redux/slices/logFileSlice';
-import { getRemoteExactDashboardSnapshot } from '../services/bglAnomalyApi';
-import { getDashboardSnapshot, getLocalExactDashboardSnapshot } from '../utils/logIndexedDb';
+import { RootState } from '@/redux/store';
+import NoFileSelected from '@/components/common/NoFileSelected';
+import { parseLogLineAuto, type ParsedLogLine } from '@/utils/logFormatDetector';
+import LogHistogram from '@/components/LogHistogram';
+import { extractTimestampFromParsedLine } from '@/utils/logTimestamp';
+import { getFileHandle, getFileObject } from '@/redux/slices/logFileSlice';
+import { getRemoteExactDashboardSnapshot } from '@/services/bglAnomalyApi';
+import { getDashboardSnapshot, getLocalExactDashboardSnapshot } from '@/utils/logIndexedDb';
 import {
     countFileLines,
     sampleAndAnalyzeLargeFile,
     type HistogramLine,
     type LargeFileAggregateStats,
-} from '../utils/histogramSampling';
+} from '@/utils/histogramSampling';
 
 const MAX_CATEGORY_VALUES = 8;
 const MAX_LARGE_FILE_CACHE_ENTRIES = 3;

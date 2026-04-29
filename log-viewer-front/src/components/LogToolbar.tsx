@@ -22,11 +22,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ViewModeEnum } from '../constants/ViewModeEnum';
-import AnomalySettingsDialog from './AnomalySettingsDialog';
-import { LogFiltersBar } from './LogFiltersBar';
-import type { LogFilters } from '../types/filters';
-import type { LogFormatField } from '../utils/logFormatDetector';
+import { ViewModeEnum } from '@/constants/ViewModeEnum';
+import AnomalySettingsDialog from '@/components/AnomalySettingsDialog';
+import { LogFiltersBar } from '@/components/LogFiltersBar';
+import type { LogFilters } from '@/types/filters';
+import type { LogFormatField } from '@/utils/logFormatDetector';
 import { useTranslation } from 'react-i18next';
 
 const LOG_TABLE_SEARCH_INPUT_ID = 'log-table-search-input';

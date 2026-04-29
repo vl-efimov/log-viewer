@@ -5,7 +5,7 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
-import { ColorModeEnum } from '../../constants/ColorModeEnum';
+import { ColorModeEnum } from '@/constants/ColorModeEnum';
 import { useTranslation } from 'react-i18next';
 
 interface ThemePaletteDrawerProps {

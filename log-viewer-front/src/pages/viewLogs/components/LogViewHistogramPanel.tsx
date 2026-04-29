@@ -2,8 +2,8 @@ import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import type { FC } from 'react';
-import { LogHistogram } from '../../../components/LogHistogram';
-import type { ParsedLogLine } from '../../../utils/logFormatDetector';
+import { LogHistogram } from '@/components/LogHistogram';
+import type { ParsedLogLine } from '@/utils/logFormatDetector';
 
 interface LogViewHistogramPanelProps {
     isLargeFile: boolean;
