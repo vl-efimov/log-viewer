@@ -19,8 +19,8 @@ import type { RootState } from '@/redux/store';
 import { detectLogFormat, initializeLogFormats } from '@/utils/logFormatDetector';
 import { deleteSessionData } from '@/utils/logIndexedDb';
 import { cancelIndexing, clearIndexingController, createSessionRecord, indexLogFile, registerIndexingController } from '@/utils/logIndexer';
+import { isLargeFileByThreshold } from '@/utils/fileSizeSettings';
 
-const LARGE_FILE_BYTES = 300 * 1024 * 1024; // 300 MB
 const FORMAT_PREVIEW_BYTES = 2 * 1024 * 1024; // 2 MB
 
 type AttachOptions = {
@@ -89,7 +89,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
 
     const loadFile = async (file: File, handle?: FileSystemFileHandle, loadOptions: LoadFileOptions = {}) => {
         const loadToken = ++loadTokenRef.current;
-        const isLargeFile = file.size >= LARGE_FILE_BYTES;
+        const isLargeFile = isLargeFileByThreshold(file.size);
 
         options.onFileLoadStart?.();
         dispatch(clearAnomalyResults());
@@ -180,6 +180,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                     fileSize: file.size,
                     lastModified: file.lastModified,
                     formatId,
+                    isLargeFile: false,
                     previewText,
                 });
                 activeSessionIdRef.current = session.sessionId;
@@ -398,7 +399,7 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                 format: attachOptions.formatHint || detectedFormat || 'Unknown',
                 lastModified: file.lastModified,
                 hasFileHandle: true,
-                isLargeFile: attachOptions.isLargeFile ?? file.size >= LARGE_FILE_BYTES,
+                isLargeFile: attachOptions.isLargeFile ?? isLargeFileByThreshold(file.size),
                 analyticsSessionId: sessionId,
             }));
 

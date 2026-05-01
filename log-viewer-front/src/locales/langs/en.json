@@ -144,7 +144,7 @@
     },
     "anomalies": {
       "settings": "Search",
-      "settingsTooltip": "Anomaly settings",
+      "settingsTooltip": "Anomaly search",
       "prev": "Previous anomaly",
       "next": "Next anomaly"
     },
@@ -368,7 +368,14 @@
     "goHome": "Go to Home"
   },
   "settings": {
-    "title": "Settings"
+    "title": "Settings",
+    "largeFileThreshold": {
+      "title": "Large file threshold",
+      "description": "Files at or above this size will open in large file mode.",
+      "hint": "Files from {{value}} MB are currently treated as large.",
+      "tooltip": "Defines from which size a file is treated as large and opened in the simplified processing mode. On low-power computers, it is not recommended to set this value too high to avoid excessive memory and CPU load.",
+      "recommendedAction": "Default"
+    }
   },
   "aboutPage": {
     "description": "LuVo is a lightweight workspace for log viewing, chart-based analytics, and anomaly analysis with a focus on speed and clarity.",

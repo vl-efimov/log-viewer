@@ -144,7 +144,7 @@
     },
     "anomalies": {
       "settings": "Hledání",
-      "settingsTooltip": "Nastavení anomálií",
+      "settingsTooltip": "Hledání anomálií",
       "prev": "Předchozí anomálie",
       "next": "Další anomálie"
     },
@@ -368,7 +368,14 @@
     "goHome": "Přejít na hlavní stránku"
   },
   "settings": {
-    "title": "Nastavení"
+    "title": "Nastavení",
+    "largeFileThreshold": {
+      "title": "Práh velkého souboru",
+      "description": "Soubory od této velikosti se otevřou v režimu velkého souboru.",
+      "hint": "Jako velké se nyní berou soubory od {{value}} MB.",
+      "tooltip": "Určuje, od jaké velikosti se soubor považuje za velký a otevře se v zjednodušeném režimu zpracování. Na slabších počítačích se nedoporučuje nastavovat příliš vysoké hodnoty, aby nedocházelo k nadměrnému zatížení paměti a procesoru.",
+      "recommendedAction": "Výchozí"
+    }
   },
   "aboutPage": {
     "description": "LuVo je odlehčené prostředí pro prohlížení logů, analytiku grafů a detekci anomálií se zaměřením na rychlost a přehlednost.",

@@ -1,16 +1,27 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
+import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTranslation } from 'react-i18next';
 import Flag from '@/components/common/Flag';
 import { ThemeContext } from '@/contexts/ThemeContext';
 import { ColorModeEnum } from '@/constants/ColorModeEnum';
 import { Languages } from '@/constants/LanguagesEnum';
+import {
+    LARGE_FILE_THRESHOLD_DEFAULT_MB,
+    LARGE_FILE_THRESHOLD_RANGE,
+    loadLargeFileThresholdMb,
+    saveLargeFileThresholdMb,
+    sanitizeLargeFileThresholdMb,
+} from '@/utils/fileSizeSettings';
 
 const PRIMARY_COLORS = [
     '#334155',
@@ -58,6 +69,7 @@ const SettingsPage: React.FC = () => {
     }
 
     const { mode, toggleTheme, primaryColor, setPrimaryColor } = themeCtx;
+    const [largeFileThresholdMb, setLargeFileThresholdMb] = useState<number>(() => loadLargeFileThresholdMb());
     const selectedLanguage = useMemo(
         () => resolveLanguage(i18n.resolvedLanguage ?? i18n.language ?? Languages.EN),
         [i18n.language, i18n.resolvedLanguage]
@@ -67,6 +79,11 @@ const SettingsPage: React.FC = () => {
         if (mode !== targetMode) {
             toggleTheme();
         }
+    };
+
+    const updateLargeFileThreshold = (value: number) => {
+        const safeValue = saveLargeFileThresholdMb(value);
+        setLargeFileThresholdMb(safeValue);
     };
 
     return (
@@ -114,6 +131,110 @@ const SettingsPage: React.FC = () => {
                             {t('theme.dark')}
                         </Button>
                     </Stack>
+                </Box>
+            </Paper>
+
+            <Paper
+                elevation={0}
+                sx={{
+                    p: { xs: 2, sm: 3 },
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                }}
+            >
+                <Box sx={{ maxWidth: 980 }}>
+                    <Stack
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                        sx={{ mb: 0.5 }}
+                    >
+                        <Typography
+                            variant="subtitle1"
+                            sx={{ fontWeight: 700 }}
+                        >
+                            {t('settings.largeFileThreshold.title')}
+                        </Typography>
+                        <Tooltip
+                            title={t('settings.largeFileThreshold.tooltip')}
+                            arrow
+                        >
+                            <InfoOutlinedIcon fontSize="small" color="action" />
+                        </Tooltip>
+                    </Stack>
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mb: 2 }}
+                    >
+                        {t('settings.largeFileThreshold.description')}
+                    </Typography>
+                    <Box sx={{ width: { xs: '100%', sm: 360 } }}>
+                        <TextField
+                            size="small"
+                            type="number"
+                            value={largeFileThresholdMb}
+                            onChange={(event) => {
+                                const next = Number(event.target.value);
+                                if (!Number.isFinite(next)) {
+                                    return;
+                                }
+
+                                updateLargeFileThreshold(next);
+                            }}
+                            sx={{ width: 120 }}
+                            inputProps={{
+                                min: LARGE_FILE_THRESHOLD_RANGE.min,
+                                max: LARGE_FILE_THRESHOLD_RANGE.max,
+                                step: LARGE_FILE_THRESHOLD_RANGE.step,
+                            }}
+                        />
+                        <Slider
+                            size="small"
+                            value={largeFileThresholdMb}
+                            min={LARGE_FILE_THRESHOLD_RANGE.min}
+                            max={LARGE_FILE_THRESHOLD_RANGE.max}
+                            step={LARGE_FILE_THRESHOLD_RANGE.step}
+                            marks={[
+                                { value: LARGE_FILE_THRESHOLD_RANGE.min, label: `${LARGE_FILE_THRESHOLD_RANGE.min} MB` },
+                                { value: LARGE_FILE_THRESHOLD_DEFAULT_MB, label: `${LARGE_FILE_THRESHOLD_DEFAULT_MB} MB` },
+                                { value: LARGE_FILE_THRESHOLD_RANGE.max, label: `${LARGE_FILE_THRESHOLD_RANGE.max} MB` },
+                            ]}
+                            onChange={(_event, value) => {
+                                const next = Array.isArray(value) ? value[0] : value;
+                                updateLargeFileThreshold(next);
+                            }}
+                            valueLabelDisplay="auto"
+                            valueLabelFormat={(value) => `${sanitizeLargeFileThresholdMb(value)} MB`}
+                            sx={{ mt: 1.25, width: '100%' }}
+                        />
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 1,
+                                mt: 1.5,
+                            }}
+                        >
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ flex: 1, minWidth: 0 }}
+                            >
+                                {t('settings.largeFileThreshold.hint', { value: largeFileThresholdMb })}
+                            </Typography>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => updateLargeFileThreshold(LARGE_FILE_THRESHOLD_DEFAULT_MB)}
+                                disabled={largeFileThresholdMb === LARGE_FILE_THRESHOLD_DEFAULT_MB}
+                            >
+                                {t('settings.largeFileThreshold.recommendedAction')}
+                            </Button>
+                        </Box>
+                    </Box>
                 </Box>
             </Paper>
 

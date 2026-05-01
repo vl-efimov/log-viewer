@@ -31,6 +31,7 @@ export type LogSessionRecord = {
     createdAt: number;
     lastOpenedAt: number;
     isIndexed: boolean;
+    isLargeFile?: boolean;
     lineCount: number;
     previewText: string;
 };
@@ -1357,7 +1358,7 @@ const queryDateOnlyFilteredLines = async (
         desiredWindowEnd,
     );
 
-    let selectedParsedRecords: LogLineRecord[] = [];
+    const selectedParsedRecords: LogLineRecord[] = [];
     if (options.order === 'desc') {
         for (let index = pageEndIndex - 1; index >= pageStartIndex; index -= 1) {
             const lineNumber = orderedMatchedLineNumbers[index];

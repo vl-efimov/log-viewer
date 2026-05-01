@@ -513,7 +513,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                         >
                             <Stack
                                 spacing={0.5}
-                                sx={{ width: { xs: '100%', sm: 300 } }}
+                                sx={{ width: { xs: '100%', sm: 180 } }}
                             >
                                 <Typography variant="caption">{t('anomaly.dialog.model')}</Typography>
                                 <FormControl size="small">
@@ -545,8 +545,8 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             </Stack>
                         </Stack>
 
-                        <Stack spacing={1.5}>
-                            <Box sx={{ width: { xs: '100%', sm: 300 } }}>
+                        <Stack spacing={1.5} sx={{ width: '100%' }}>
+                            <Box sx={{ width: '100%' }}>
                                 <Stack
                                     direction="row"
                                     spacing={0.5}
@@ -586,7 +586,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                     sx={{ mt: 0.75, width: '100%' }}
                                 />
                             </Box>
-                            <Box sx={{ width: { xs: '100%', sm: 300 } }}>
+                            <Box sx={{ width: '100%' }}>
                                 <Stack
                                     direction="row"
                                     spacing={0.5}
@@ -629,7 +629,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                     <Alert
                                         severity={parameterLoadWarning.severity === 'critical' ? 'warning' : 'info'}
                                         variant="outlined"
-                                        sx={{ mt: 1, py: 0.25, px: 1 }}
+                                        sx={{ mt: 1, py: 0.25, px: 1, width: '100%' }}
                                     >
                                         <Typography variant="caption">
                                             {parameterLoadWarning.message}
@@ -640,7 +640,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                                     </Alert>
                                 )}
                             </Box>
-                            <Box sx={{ width: { xs: '100%', sm: 300 } }}>
+                            <Box sx={{ width: '100%' }}>
                                 <Stack
                                     direction="row"
                                     spacing={0.5}

@@ -5,6 +5,7 @@ import AppRoutes from '@/routes/AppRoutes';
 import { baseUrl } from '@/constants/BaseUrl';
 import { setLogFile } from '@/redux/slices/logFileSlice';
 import type { RootState } from '@/redux/store';
+import { isLargeFileByThreshold } from '@/utils/fileSizeSettings';
 import { getLastSession, touchSession } from '@/utils/logIndexedDb';
 
 console.log(baseUrl, 'baseUrl');
@@ -45,7 +46,9 @@ export default function App () {
                 format: session.formatId || 'Unknown',
                 lastModified: session.lastModified,
                 hasFileHandle: false,
-                isLargeFile: session.fileSize >= 300 * 1024 * 1024,
+                isLargeFile: typeof session.isLargeFile === 'boolean'
+                    ? session.isLargeFile
+                    : isLargeFileByThreshold(session.fileSize),
                 analyticsSessionId: session.sessionId,
             }));
 
