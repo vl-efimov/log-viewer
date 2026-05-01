@@ -1768,46 +1768,62 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         sx={{
                             mt: 1,
                             display: 'flex',
-                            alignItems: 'center',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
                             flexWrap: 'wrap',
                             gap: 1,
                         }}
                     >
-                        <Button
-                            size="small"
-                            variant={activeQuickRange === 'day' ? 'contained' : 'outlined'}
-                            onClick={() => handleQuickRangeSelect('day')}
+                        <Typography
+                            variant="caption"
+                            sx={{ color: 'text.secondary', fontWeight: 600 }}
                         >
-                            {t('viewLogs.histogram.quickRange.day')}
-                        </Button>
-                        <Button
-                            size="small"
-                            variant={activeQuickRange === 'week' ? 'contained' : 'outlined'}
-                            onClick={() => handleQuickRangeSelect('week')}
+                            {t('viewLogs.histogram.quickRange.label')}
+                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: 1,
+                            }}
                         >
-                            {t('viewLogs.histogram.quickRange.week')}
-                        </Button>
-                        <Button
-                            size="small"
-                            variant={activeQuickRange === 'month' ? 'contained' : 'outlined'}
-                            onClick={() => handleQuickRangeSelect('month')}
-                        >
-                            {t('viewLogs.histogram.quickRange.month')}
-                        </Button>
-                        <Button
-                            size="small"
-                            variant={activeQuickRange === 'quarter' ? 'contained' : 'outlined'}
-                            onClick={() => handleQuickRangeSelect('quarter')}
-                        >
-                            {t('viewLogs.histogram.quickRange.quarter')}
-                        </Button>
-                        <Button
-                            size="small"
-                            variant={activeQuickRange === 'all' ? 'contained' : 'outlined'}
-                            onClick={() => handleQuickRangeSelect('all')}
-                        >
-                            {t('viewLogs.histogram.quickRange.all')}
-                        </Button>
+                            <Button
+                                size="small"
+                                variant={activeQuickRange === 'day' ? 'contained' : 'outlined'}
+                                onClick={() => handleQuickRangeSelect('day')}
+                            >
+                                {t('viewLogs.histogram.quickRange.day')}
+                            </Button>
+                            <Button
+                                size="small"
+                                variant={activeQuickRange === 'week' ? 'contained' : 'outlined'}
+                                onClick={() => handleQuickRangeSelect('week')}
+                            >
+                                {t('viewLogs.histogram.quickRange.week')}
+                            </Button>
+                            <Button
+                                size="small"
+                                variant={activeQuickRange === 'month' ? 'contained' : 'outlined'}
+                                onClick={() => handleQuickRangeSelect('month')}
+                            >
+                                {t('viewLogs.histogram.quickRange.month')}
+                            </Button>
+                            <Button
+                                size="small"
+                                variant={activeQuickRange === 'quarter' ? 'contained' : 'outlined'}
+                                onClick={() => handleQuickRangeSelect('quarter')}
+                            >
+                                {t('viewLogs.histogram.quickRange.quarter')}
+                            </Button>
+                            <Button
+                                size="small"
+                                variant={activeQuickRange === 'all' ? 'contained' : 'outlined'}
+                                onClick={() => handleQuickRangeSelect('all')}
+                            >
+                                {t('viewLogs.histogram.quickRange.all')}
+                            </Button>
+                        </Box>
 
                     </Box>
                 )}

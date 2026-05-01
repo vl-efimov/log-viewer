@@ -33,7 +33,7 @@
     "copyFailed": "Nepodařilo se zkopírovat do schránky"
   },
   "fileSelection": {
-    "title": "Vítejte v LogVieweru!",
+    "title": "Vítejte v LuVo!",
     "description": "Vyberte log soubor pro sledování v reálném čase. Soubor můžete upravovat v libovolném textovém editoru a změny se zde projeví automaticky.",
     "indexing": "Indexuji soubor...",
      "indexingComplete": "Indexace dokončena: {{fileName}}",
@@ -61,6 +61,7 @@
       "collapseTooltip": "Sbalit histogram",
       "loadingMessage": "Probíhá indexace — graf se brzy zobrazí.",
       "quickRange": {
+        "label": "Data za poslední:",
         "day": "Den",
         "week": "Týden",
         "month": "Měsíc",
@@ -142,7 +143,7 @@
       "autoButton": "Auto"
     },
     "anomalies": {
-      "settings": "Nastavení",
+      "settings": "Hledání",
       "settingsTooltip": "Nastavení anomálií",
       "prev": "Předchozí anomálie",
       "next": "Další anomálie"
@@ -387,7 +388,7 @@
   },
   "anomaly": {
     "dialog": {
-      "title": "Analýza anomálií",
+      "title": "Nastavení hledání anomálií",
       "model": "Model",
       "modelAria": "model",
       "settingsTitle": "Nastavení analýzy",
@@ -404,8 +405,8 @@
       "profileBalancedTooltip": "Vyvážený režim: doporučené výchozí nastavení.",
       "profileStrict": "Přísný",
       "profileStrictTooltip": "Přísný režim: méně falešných pozitiv.",
-      "analyze": "Analyzovat",
-      "analyzeTooltip": "Analyzovat anomálie",
+      "analyze": "Hledat",
+      "analyzeTooltip": "Hledat anomálie",
       "close": "Zavřít",
       "parameterLoadConfirmSuffix": "Pokračovat v analýze s aktuálními parametry?",
       "parameterLoadNeedsConfirm": "Před spuštěním je vyžadováno potvrzení.",

@@ -33,7 +33,7 @@
     "copyFailed": "Failed to copy to clipboard"
   },
   "fileSelection": {
-    "title": "Welcome to LogViewer!",
+    "title": "Welcome to LuVo!",
     "description": "Select a log file to monitor in real-time. You can edit the file in any text editor, and changes will be reflected here automatically.",
     "indexing": "Indexing file...",
     "indexingComplete": "Indexing completed: {{fileName}}",
@@ -61,6 +61,7 @@
       "collapseTooltip": "Collapse histogram",
       "loadingMessage": "Indexing is in progress — the chart will appear soon.",
       "quickRange": {
+        "label": "Data for the last:",
         "day": "Day",
         "week": "Week",
         "month": "Month",
@@ -142,7 +143,7 @@
       "autoButton": "Auto"
     },
     "anomalies": {
-      "settings": "Settings",
+      "settings": "Search",
       "settingsTooltip": "Anomaly settings",
       "prev": "Previous anomaly",
       "next": "Next anomaly"
@@ -387,7 +388,7 @@
   },
   "anomaly": {
     "dialog": {
-      "title": "Anomaly Analysis",
+      "title": "Anomaly Search Settings",
       "model": "Model",
       "modelAria": "model",
       "settingsTitle": "Model Analysis Settings",
@@ -404,8 +405,8 @@
       "profileBalancedTooltip": "Balanced mode: recommended default tradeoff.",
       "profileStrict": "Strict",
       "profileStrictTooltip": "Strict mode: fewer false positives, stronger anomaly signal only.",
-      "analyze": "Analyze",
-      "analyzeTooltip": "Analyze anomalies",
+      "analyze": "Search",
+      "analyzeTooltip": "Search anomalies",
       "close": "Close",
       "parameterLoadConfirmSuffix": "Continue analysis with current parameters?",
       "parameterLoadNeedsConfirm": "Confirmation is required before starting.",

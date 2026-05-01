@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { alpha } from '@mui/material/styles';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -81,7 +82,15 @@ const NotFoundPage: React.FC = () => {
                     size="large"
                     startIcon={<HomeRoundedIcon />}
                     onClick={() => navigate('/')}
-                    sx={{ px: 3.5 }}
+                    sx={{
+                        px: 3.5,
+                        py: 1.2,
+                        borderRadius: 2.5,
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                        letterSpacing: '0.03em',
+                        boxShadow: (theme) => `0 12px 28px ${alpha(theme.palette.primary.main, 0.28)}`,
+                    }}
                 >
                     {t('notFound.goHome')}
                 </Button>

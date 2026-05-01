@@ -1,8 +1,8 @@
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
+import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import PaletteIcon from '@mui/icons-material/Palette';
@@ -42,7 +42,8 @@ import {
     titleRowSx,
     fileBadgeWrapSx,
     fileBadgeSx,
-    fileClearButtonSx,
+    fileActionButtonSx,
+    fileCloseSegmentSx,
     fileBadgeSpacerSx,
 } from '@/components/AppLayout/AppHeader/styles';
 import { RouteViewLogs } from '@/routes/routePaths';
@@ -65,6 +66,10 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
     const { name: fileName, analyticsSessionId } = useSelector((state: RootState) => state.logFile);
     const { isRunning: anomalyIsRunning, runningModelId: anomalyRunningModelId, lastModelId: anomalyLastModelId } = useSelector((state: RootState) => state.anomaly);
+
+    const handleOpenViewLogs = () => {
+        navigate(`/${RouteViewLogs}`);
+    };
 
     const handleClearFile = async () => {
         const pendingUploadIngestId = cancelActiveRemoteUploadSession();
@@ -145,10 +150,15 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
                 {fileName ? (
                     <Box sx={fileBadgeWrapSx}>
-                        <Paper sx={fileBadgeSx}>
-                            <Typography sx={{...titleSx(textColor)}}>
-                                {fileName}
-                            </Typography>
+                        <Box sx={fileBadgeSx}>
+                            <ButtonBase
+                                onClick={handleOpenViewLogs}
+                                sx={fileActionButtonSx(textColor)}
+                            >
+                                <Typography sx={{ ...titleSx(textColor) }}>
+                                    {fileName}
+                                </Typography>
+                            </ButtonBase>
                             <Tooltip
                                 title={t('header.closeFileTooltip')}
                                 arrow
@@ -157,12 +167,12 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                                 <IconButton
                                     onClick={handleClearFile}
                                     size="small"
-                                    sx={fileClearButtonSx(textColor)}
+                                    sx={fileCloseSegmentSx(textColor)}
                                 >
                                     <CloseIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
-                        </Paper>
+                        </Box>
                     </Box>
                 ) : (<Box sx={fileBadgeSpacerSx}></Box>)}
 

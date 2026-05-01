@@ -48,11 +48,37 @@ export const fileBadgeSx: SxProps<Theme> = {
     alignItems: 'center',
     border: '1px solid',
     borderColor: APP_LAYOUT_TOKENS.header.fileBadge.borderColor,
+    bgcolor: 'transparent',
+    borderRadius: 1,
+    overflow: 'hidden',
+    minWidth: 0,
+};
+
+export const fileActionButtonSx = (color: string | undefined): SxProps<Theme> => ({
+    minWidth: 0,
+    flex: 1,
+    justifyContent: 'flex-start',
+    textTransform: 'none',
+    color: color ?? 'text.primary',
     px: APP_LAYOUT_TOKENS.header.fileBadge.paddingX,
     py: APP_LAYOUT_TOKENS.header.fileBadge.paddingY,
-    gap: APP_LAYOUT_TOKENS.header.fileBadge.gap,
-    bgcolor: 'transparent',
-};
+    borderRadius: 0,
+    '& .MuiTypography-root': {
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+    },
+});
+
+export const fileCloseSegmentSx = (color: string | undefined): SxProps<Theme> => ({
+    ...iconButtonSx(color),
+    alignSelf: 'stretch',
+    borderRadius: 0,
+    borderLeft: '1px solid',
+    borderColor: APP_LAYOUT_TOKENS.header.fileBadge.borderColor,
+    px: 1,
+});
 
 export const fileClearButtonSx = (color: string | undefined): SxProps<Theme> => ({
     ...iconButtonSx(color),
