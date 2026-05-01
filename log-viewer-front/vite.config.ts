@@ -51,25 +51,25 @@ export default defineConfig(({ mode }) => {
                     "theme_color": "#ffffff",
                     "icons": [
                         {
-                            "src": `${BASE_URL}pwa-192x192.png`,
+                            "src": `${BASE_URL}assets/pwa/pwa-192x192.png`,
                             "sizes": "192x192",
                             "type": "image/png"
                         },
                         {
-                            "src": `${BASE_URL}pwa-512x512.png`,
+                            "src": `${BASE_URL}assets/pwa/pwa-512x512.png`,
                             "sizes": "512x512",
                             "type": "image/png"
                         }
                     ],
                     "screenshots": [
                         {
-                            "src": `${BASE_URL}screenshot-wide-desktop.png`,
+                            "src": `${BASE_URL}assets/screenshots/screenshot-wide-desktop.png`,
                             "sizes": "2560x1440",
                             "type": "image/png",
                             "form_factor": "wide"
                         },
                         {
-                            "src": `${BASE_URL}screenshot-wide-mobile.png`,
+                            "src": `${BASE_URL}assets/screenshots/screenshot-wide-mobile.png`,
                             "sizes": "850x1440",
                             "type": "image/png",
                             "form_factor": "narrow"

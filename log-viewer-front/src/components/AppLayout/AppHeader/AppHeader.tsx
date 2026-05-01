@@ -131,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                     <Box sx={titleRowSx}>
                         <Box
                             component="img"
-                            src={`${import.meta.env.BASE_URL}luvo-wordmark.svg`}
+                            src={`${import.meta.env.BASE_URL}assets/logos/luvo-wordmark.svg`}
                             alt={t('appTitle')}
                             sx={{
                                 display: 'block',

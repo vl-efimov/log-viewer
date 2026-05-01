@@ -2,7 +2,7 @@
 
 ## Overview
 
-The log format detection system loads all format definitions from a JSON configuration file (`public/log-formats.json`). This makes it easy to add, modify, or remove log formats without changing the code.
+The log format detection system loads all format definitions from a JSON configuration file (`public/config/log-formats.json`). This makes it easy to add, modify, or remove log formats without changing the code.
 
 ## Structure
 
@@ -12,7 +12,7 @@ The log format detection system loads all format definitions from a JSON configu
 - Loads formats from JSON at application startup
 - Provides API for format detection and parsing
 
-### 2. **Configuration File**: `public/log-formats.json`
+### 2. **Configuration File**: `public/config/log-formats.json`
 - JSON-based format definitions (the single source of truth)
 - Can be edited without code changes
 - Contains all regex patterns and field definitions
@@ -20,7 +20,7 @@ The log format detection system loads all format definitions from a JSON configu
 ## How It Works
 
 1. **Application Startup**: When the app starts, `initializeLogFormats()` is called in `main.tsx`
-2. **JSON Loading**: The function fetches `/log-formats.json` and converts string patterns to RegExp objects
+2. **JSON Loading**: The function fetches `/config/log-formats.json` and converts string patterns to RegExp objects
 3. **Format Detection**: All detection and parsing functions use the loaded formats from JSON
 
 ## Usage
@@ -80,7 +80,7 @@ formats.forEach(format => {
 
 ## Adding New Formats
 
-Edit `public/log-formats.json` and add a new format object:
+Edit `public/config/log-formats.json` and add a new format object:
 
 ```json
 {
@@ -154,7 +154,7 @@ This section defines the shared dashboard analytics contract for all existing an
 ### Scope
 
 - Applies to dashboard charts built from parsed fields.
-- Applies to built-in formats and custom formats added to `public/log-formats.json`.
+- Applies to built-in formats and custom formats added to `public/config/log-formats.json`.
 
 ### Top Charts (Fixed Core)
 
@@ -215,7 +215,7 @@ Recommended aliases:
 
 ### Format Author Checklist
 
-When adding a new format in `public/log-formats.json`:
+When adding a new format in `public/config/log-formats.json`:
 
 1. Capture `timestamp` whenever possible.
 2. Capture at least one core field from `level` / `status` / `method`.

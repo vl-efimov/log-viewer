@@ -11,12 +11,12 @@ const AboutPage: React.FC = () => {
     const theme = useTheme();
 
     const isDarkTheme = theme.palette.mode === ColorModeEnum.Dark;
-    const logoSrc = `${import.meta.env.BASE_URL}${isDarkTheme ? 'luvo-logo-alt-minimal.svg' : 'luvo-logo-alt-minimal-dark.svg'}`;
+    const logoSrc = `${import.meta.env.BASE_URL}assets/logos/${isDarkTheme ? 'luvo-logo-alt-minimal.svg' : 'luvo-logo-alt-minimal-dark.svg'}`;
     const language = (i18n.resolvedLanguage ?? i18n.language ?? 'en').toLowerCase();
     const isCzechLanguage = language.startsWith('cs') || language.startsWith('cz');
     const cvutLogoSrc = isCzechLanguage
-        ? `${import.meta.env.BASE_URL}fit-cvut-logo-cs.svg`
-        : `${import.meta.env.BASE_URL}fit-cvut-logo-en.svg`;
+        ? `${import.meta.env.BASE_URL}assets/logos/fit-cvut-logo-cs.svg`
+        : `${import.meta.env.BASE_URL}assets/logos/fit-cvut-logo-en.svg`;
 
     return (
         <Box

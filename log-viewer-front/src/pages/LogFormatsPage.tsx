@@ -61,7 +61,7 @@ const LogFormatsPage: React.FC = () => {
         setError(null);
         try {
             const [response, customFormats] = await Promise.all([
-                fetch(`${baseUrl}log-formats.json`),
+                fetch(`${baseUrl}config/log-formats.json`),
                 getCustomLogFormats(),
             ]);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
