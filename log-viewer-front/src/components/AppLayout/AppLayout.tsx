@@ -8,10 +8,14 @@ import { Outlet } from 'react-router-dom';
 import { useFileLoader } from '@/hooks/useFileLoader';
 import GlobalNotifications from '@/components/common/GlobalNotifications';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 
 export default function MainLayout () {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isTabletLayout = useMediaQuery(theme.breakpoints.down('lg'));
     const [isSidebarOpen, setSidebarOpen] = useState(() => {
         const saved = localStorage.getItem('sidebarOpen');
         return saved !== null ? saved === 'true' : false;
@@ -19,8 +23,13 @@ export default function MainLayout () {
     const [isDragActive, setIsDragActive] = useState(false);
     const dragCounterRef = useRef(0);
     const { handleFileDrop, handleFileSystemAccess } = useFileLoader();
+    const effectiveSidebarOpen = !isTabletLayout && isSidebarOpen;
     
     const toggleSidebar = () => {
+        if (isTabletLayout) {
+            return;
+        }
+
         setSidebarOpen(prev => {
             const newState = !prev;
             localStorage.setItem('sidebarOpen', String(newState));
@@ -74,7 +83,11 @@ export default function MainLayout () {
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                height: '100vh',
+                width: '100%',
+                height: '100dvh',
+                minHeight: 0,
+                minWidth: 0,
+                overflow: 'hidden',
             }}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
@@ -84,24 +97,29 @@ export default function MainLayout () {
             <CssBaseline />
 
             <Header
-                isSidebarOpen={isSidebarOpen}
+                isSidebarOpen={effectiveSidebarOpen}
                 toggleSidebar={toggleSidebar}
+                isSidebarToggleDisabled={isTabletLayout}
             />
             <Box 
                 sx={{ 
                     display: 'flex', 
                     flexGrow: 1,
+                    minHeight: 0,
+                    minWidth: 0,
                     overflow: 'hidden',
                     pt: { xs: '56px', sm: '64px' },
                 }}
             >
                 <Sidebar
-                    isSidebarOpen={isSidebarOpen}
+                    isSidebarOpen={effectiveSidebarOpen}
                 />
                 <Box
                     component="main"
                     sx={{
                         flexGrow: 1,
+                        minWidth: 0,
+                        minHeight: 0,
                         overflow: 'hidden',
                         display: 'flex',
                         position: 'relative',
@@ -128,8 +146,10 @@ export default function MainLayout () {
                 >
                     <Box
                         sx={{
-                            p: 2,
+                            p: { xs: 1, md: 1.5, xl: 2 },
                             width: '100%',
+                            minWidth: 0,
+                            minHeight: 0,
                             overflow: 'auto',
                         }}
                     >

@@ -47,6 +47,8 @@ import {
     statusBarSx,
     textSx,
 } from '@/components/AppLayout/AppStatusBar/styles';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 type AnomalyWindowProgress = {
     percent: number | null;
@@ -70,6 +72,8 @@ const SERVER_STATUS_POLL_MS = 5000;
 const AppStatusBar: React.FC = () => {
     const dispatch = useDispatch();
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isTabletLayout = useMediaQuery(theme.breakpoints.down('lg'));
     const location = useLocation();
     const {
         name,
@@ -493,18 +497,22 @@ const AppStatusBar: React.FC = () => {
             <Box sx={statusBarLeftGroupSx}>
                 {loaded && (
                     <>
-                        <AppStatusBarItem title={t('statusBar.items.currentFileTitle')}>
-                            <DescriptionIcon sx={iconRaisedSx} />
-                            <Typography sx={textSx}>
-                                {name}
-                            </Typography>
-                        </AppStatusBarItem>
+                        {!isTabletLayout && (
+                            <>
+                                <AppStatusBarItem title={t('statusBar.items.currentFileTitle')}>
+                                    <DescriptionIcon sx={iconRaisedSx} />
+                                    <Typography sx={textSx}>
+                                        {name}
+                                    </Typography>
+                                </AppStatusBarItem>
 
-                        <Divider
-                            orientation="vertical"
-                            flexItem
-                            sx={statusBarDividerSx}
-                        />
+                                <Divider
+                                    orientation="vertical"
+                                    flexItem
+                                    sx={statusBarDividerSx}
+                                />
+                            </>
+                        )}
 
                         <AppStatusBarItem title={t('statusBar.items.fileSizeTitle')}>
                             <StorageIcon sx={iconRaisedSx} />

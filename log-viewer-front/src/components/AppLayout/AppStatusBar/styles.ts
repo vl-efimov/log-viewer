@@ -22,17 +22,28 @@ export const statusBarSx: SxProps<Theme> = {
     justifyContent: 'space-between',
     px: STATUS_BAR_PADDING_X,
     flexShrink: 0,
+    minWidth: 0,
+    overflow: 'hidden',
 };
 
 export const statusBarLeftGroupSx: SxProps<Theme> = {
     display: 'flex',
     alignItems: 'center',
     gap: GROUP_GAP,
+    minWidth: 0,
+    flex: 1,
+    overflow: 'hidden',
 };
 
 export const statusBarRightGroupSx: SxProps<Theme> = {
-    ...statusBarLeftGroupSx,
+    display: 'flex',
+    alignItems: 'center',
+    gap: GROUP_GAP,
     minWidth: 0,
+    marginLeft: 'auto',
+    flexShrink: 0,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
 };
 
 export const statusBarDividerSx: SxProps<Theme> = {

@@ -33,6 +33,7 @@ const AppStatusBarItem: React.FC<AppStatusBarItemProps> = ({ title, children, on
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: 1,
+                minWidth: 0,
                 px: 1,
                 height: '100%',
                 transition: 'background 0.15s',

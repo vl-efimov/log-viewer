@@ -1494,7 +1494,25 @@ const DashboardPage: React.FC = () => {
     const hasComponentLevelChartData = chartAnalytics.componentLevelValues.length > 0;
     const hasAnyTopChartData = hasLevelChartData || hasStatusChartData || hasMethodChartData || hasComponentLevelChartData;
     const hasTimelineData = histogramSourceLines.some((row) => row.parsed && extractTimestampFromParsedLine(row.parsed) !== null);
-    const topChartGridMd = hasComponentLevelChartData ? 3 : 4;
+    const topChartCount = [hasLevelChartData, hasStatusChartData, hasMethodChartData, hasComponentLevelChartData]
+        .filter(Boolean)
+        .length;
+    const topChartGridSize = topChartCount <= 1
+        ? { xs: 12 }
+        : topChartCount === 2
+            ? { xs: 12, md: 6 }
+            : topChartCount === 3
+                ? { xs: 12, md: 6, xl: 4 }
+                : { xs: 12, md: 6, xl: 3 };
+    const facetGridSize = chartAnalytics.facets.length <= 1
+        ? { xs: 12 }
+        : chartAnalytics.facets.length === 2
+            ? { xs: 12, md: 6 }
+            : { xs: 12, md: 6, xl: 4 };
+    const singleChartContentSx = {
+        width: { xs: '100%', md: '75%', lg: '62%', xl: '54%' },
+        maxWidth: 920,
+    };
     const shouldShowBottomNoDataMessage = (
         (hasActiveTimeRange || hasActiveCategoryFilter)
         && chartAnalytics.analyzedLines === 0
@@ -1757,51 +1775,60 @@ const DashboardPage: React.FC = () => {
                                 <Grid
                                     container
                                     spacing={2}
+                                    justifyContent="flex-start"
                                 >
                                     {hasLevelChartData && (
-                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                        <Grid size={topChartGridSize}>
                                             <Card>
                                                 <CardContent>
-                                                    <ReactECharts
-                                                        option={toChartOption(t('dashboard.charts.levels'), chartAnalytics.levelValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                        style={{ height: 260 }}
-                                                    />
+                                                    <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
+                                                        <ReactECharts
+                                                            option={toChartOption(t('dashboard.charts.levels'), chartAnalytics.levelValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                            style={{ height: 260 }}
+                                                        />
+                                                    </Box>
                                                 </CardContent>
                                             </Card>
                                         </Grid>
                                     )}
                                     {hasStatusChartData && (
-                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                        <Grid size={topChartGridSize}>
                                             <Card>
                                                 <CardContent>
-                                                    <ReactECharts
-                                                        option={toChartOption(t('dashboard.charts.httpStatus'), chartAnalytics.statusValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                        style={{ height: 260 }}
-                                                    />
+                                                    <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
+                                                        <ReactECharts
+                                                            option={toChartOption(t('dashboard.charts.httpStatus'), chartAnalytics.statusValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                            style={{ height: 260 }}
+                                                        />
+                                                    </Box>
                                                 </CardContent>
                                             </Card>
                                         </Grid>
                                     )}
                                     {hasMethodChartData && (
-                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                        <Grid size={topChartGridSize}>
                                             <Card>
                                                 <CardContent>
-                                                    <ReactECharts
-                                                        option={toChartOption(t('dashboard.charts.httpMethods'), chartAnalytics.methodValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                        style={{ height: 260 }}
-                                                    />
+                                                    <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
+                                                        <ReactECharts
+                                                            option={toChartOption(t('dashboard.charts.httpMethods'), chartAnalytics.methodValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                            style={{ height: 260 }}
+                                                        />
+                                                    </Box>
                                                 </CardContent>
                                             </Card>
                                         </Grid>
                                     )}
                                     {hasComponentLevelChartData && (
-                                        <Grid size={{ xs: 12, md: topChartGridMd }}>
+                                        <Grid size={topChartGridSize}>
                                             <Card>
                                                 <CardContent>
-                                                    <ReactECharts
-                                                        option={toChartOption(getFieldTitle('componentLevel', t), chartAnalytics.componentLevelValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                        style={{ height: 260 }}
-                                                    />
+                                                    <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
+                                                        <ReactECharts
+                                                            option={toChartOption(getFieldTitle('componentLevel', t), chartAnalytics.componentLevelValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                            style={{ height: 260 }}
+                                                        />
+                                                    </Box>
                                                 </CardContent>
                                             </Card>
                                         </Grid>
@@ -1844,23 +1871,26 @@ const DashboardPage: React.FC = () => {
                                         <Grid
                                             container
                                             spacing={2}
+                                            justifyContent="flex-start"
                                         >
                                             {chartAnalytics.facets.map((facet) => (
                                                 <Grid
                                                     key={facet.field}
-                                                    size={{ xs: 12, md: 4 }}
+                                                    size={facetGridSize}
                                                 >
-                                                    <ReactECharts
-                                                        option={toChartOption(
-                                                            getFieldTitle(facet.field, t),
-                                                            facet.values,
-                                                            locale,
-                                                            isDarkMode,
-                                                            chartScaleBaseColor,
-                                                            true,
-                                                        )}
-                                                        style={{ height: 260 }}
-                                                    />
+                                                    <Box sx={chartAnalytics.facets.length === 1 ? singleChartContentSx : undefined}>
+                                                        <ReactECharts
+                                                            option={toChartOption(
+                                                                getFieldTitle(facet.field, t),
+                                                                facet.values,
+                                                                locale,
+                                                                isDarkMode,
+                                                                chartScaleBaseColor,
+                                                                true,
+                                                            )}
+                                                            style={{ height: 260 }}
+                                                        />
+                                                    </Box>
                                                 </Grid>
                                             ))}
                                         </Grid>

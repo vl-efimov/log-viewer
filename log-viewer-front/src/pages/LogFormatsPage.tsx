@@ -23,6 +23,8 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import CircularProgress from '@mui/material/CircularProgress';
 import RegexHighlighter from '@/components/log-patterns/RegexHighlighter';
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { baseUrl } from '@/constants/BaseUrl';
 import {
     buildCustomFormatPattern,
@@ -46,6 +48,8 @@ interface LogFormat {
 
 const LogFormatsPage: React.FC = () => {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isTabletLayout = useMediaQuery(theme.breakpoints.down('lg'));
     const [systemFormats, setSystemFormats] = useState<LogFormat[]>([]);
     const [userFormats, setUserFormats] = useState<CustomLogFormatRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,8 +95,49 @@ const LogFormatsPage: React.FC = () => {
 
     const sortedSystemFormats = useMemo(() => [...systemFormats].sort((a, b) => a.name.localeCompare(b.name)), [systemFormats]);
     const sortedUserFormats = useMemo(() => [...userFormats].sort((a, b) => a.name.localeCompare(b.name)), [userFormats]);
-    const nameColumnSx = { width: 130, minWidth: 130, verticalAlign: 'top' };
-    const descriptionColumnSx = { width: 240, minWidth: 240, verticalAlign: 'top' };
+    const cellTextWrapSx = { wordBreak: 'break-word', overflowWrap: 'anywhere' };
+    const customTableSx = { tableLayout: 'fixed' as const, width: '100%' };
+    const supportedTableSx = customTableSx;
+    const customNameColumnSx = {
+        width: isTabletLayout ? '18%' : 130,
+        minWidth: 0,
+        verticalAlign: 'top',
+        ...cellTextWrapSx,
+    };
+    const customDescriptionColumnSx = {
+        width: isTabletLayout ? '24%' : 240,
+        minWidth: 0,
+        verticalAlign: 'top',
+        ...cellTextWrapSx,
+    };
+    const customRegexColumnSx = {
+        width: isTabletLayout ? '50%' : 'auto',
+        minWidth: 0,
+        verticalAlign: 'top',
+    };
+    const actionsColumnSx = {
+        width: isTabletLayout ? '8%' : 64,
+        minWidth: isTabletLayout ? 52 : 64,
+        verticalAlign: 'top',
+        px: isTabletLayout ? 0.5 : 2,
+    };
+    const supportedNameColumnSx = {
+        width: isTabletLayout ? '20%' : 130,
+        minWidth: 0,
+        verticalAlign: 'top',
+        ...cellTextWrapSx,
+    };
+    const supportedDescriptionColumnSx = {
+        width: isTabletLayout ? '26%' : 240,
+        minWidth: 0,
+        verticalAlign: 'top',
+        ...cellTextWrapSx,
+    };
+    const supportedRegexColumnSx = {
+        width: isTabletLayout ? '54%' : 'auto',
+        minWidth: 0,
+        verticalAlign: 'top',
+    };
 
     const handleSaveFormat = useCallback(async (payload: { name: string; description: string; regex: string }) => {
         const id = editingFormat?.id ?? `user-${Date.now()}`;
@@ -181,13 +226,13 @@ const LogFormatsPage: React.FC = () => {
                 component={Paper}
                 sx={{ mb: 4 }}
             >
-                <Table size="small">
+                <Table size="small" sx={customTableSx}>
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={nameColumnSx}>{t('logFormats.custom.table.name')}</TableCell>
-                            <TableCell sx={descriptionColumnSx}>{t('logFormats.custom.table.description')}</TableCell>
-                            <TableCell>{t('logFormats.custom.table.regex')}</TableCell>
-                            <TableCell sx={{ width: 64, minWidth: 64 }}>{t('logFormats.custom.table.actions')}</TableCell>
+                            <TableCell sx={customNameColumnSx}>{t('logFormats.custom.table.name')}</TableCell>
+                            <TableCell sx={customDescriptionColumnSx}>{t('logFormats.custom.table.description')}</TableCell>
+                            <TableCell sx={customRegexColumnSx}>{t('logFormats.custom.table.regex')}</TableCell>
+                            <TableCell sx={actionsColumnSx}>{t('logFormats.custom.table.actions')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -204,12 +249,12 @@ const LogFormatsPage: React.FC = () => {
                         ) : (
                             sortedUserFormats.map((format) => (
                                 <TableRow key={format.id}>
-                                    <TableCell sx={nameColumnSx}>{format.name}</TableCell>
-                                    <TableCell sx={descriptionColumnSx}>{format.description}</TableCell>
-                                    <TableCell sx={{ verticalAlign: 'top' }}>
+                                    <TableCell sx={customNameColumnSx}>{format.name}</TableCell>
+                                    <TableCell sx={customDescriptionColumnSx}>{format.description}</TableCell>
+                                    <TableCell sx={customRegexColumnSx}>
                                         <RegexHighlighter pattern={format.regex} />
                                     </TableCell>
-                                    <TableCell sx={{ width: 64, minWidth: 64, verticalAlign: 'top' }}>
+                                    <TableCell sx={actionsColumnSx}>
                                         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                                             <Tooltip
                                                 title={t('logFormats.custom.actions.edit')}
@@ -303,20 +348,20 @@ const LogFormatsPage: React.FC = () => {
                 </Stack>
             ) : (
                 <TableContainer component={Paper}>
-                    <Table size="small">
+                    <Table size="small" sx={supportedTableSx}>
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={nameColumnSx}>{t('logFormats.supported.table.name')}</TableCell>
-                                <TableCell sx={descriptionColumnSx}>{t('logFormats.supported.table.description')}</TableCell>
-                                <TableCell>{t('logFormats.supported.table.regex')}</TableCell>
+                                <TableCell sx={supportedNameColumnSx}>{t('logFormats.supported.table.name')}</TableCell>
+                                <TableCell sx={supportedDescriptionColumnSx}>{t('logFormats.supported.table.description')}</TableCell>
+                                <TableCell sx={supportedRegexColumnSx}>{t('logFormats.supported.table.regex')}</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {sortedSystemFormats.map((format) => (
                                 <TableRow key={format.id}>
-                                    <TableCell sx={nameColumnSx}>{format.name}</TableCell>
-                                    <TableCell sx={descriptionColumnSx}>{format.description}</TableCell>
-                                    <TableCell sx={{ verticalAlign: 'top' }}>
+                                    <TableCell sx={supportedNameColumnSx}>{format.name}</TableCell>
+                                    <TableCell sx={supportedDescriptionColumnSx}>{format.description}</TableCell>
+                                    <TableCell sx={supportedRegexColumnSx}>
                                         {format.patterns.map((pattern, i) => (
                                             <Box 
                                                 key={i} 

@@ -21,6 +21,7 @@ import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ViewModeEnum } from '@/constants/ViewModeEnum';
 import AnomalySettingsDialog from '@/components/AnomalySettingsDialog';
@@ -28,6 +29,8 @@ import { LogFiltersBar } from '@/components/LogFiltersBar';
 import type { LogFilters } from '@/types/filters';
 import type { LogFormatField } from '@/utils/logFormatDetector';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 const LOG_TABLE_SEARCH_INPUT_ID = 'log-table-search-input';
 
@@ -112,6 +115,8 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
     refreshDisabledReason,
 }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isCompactToolbar = useMediaQuery(theme.breakpoints.down('lg'));
     const [isAnomalySettingsPanelOpen, setIsAnomalySettingsPanelOpen] = useState<boolean>(false);
     const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null);
     const [filtersAnchorEl, setFiltersAnchorEl] = useState<HTMLElement | null>(null);
@@ -125,6 +130,16 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
         fontSize: '0.75rem',
         lineHeight: 1,
     };
+    const iconOnlyButtonSx = {
+        ...compactButtonSx,
+        minWidth: 34,
+        px: 0.75,
+        '& .MuiButton-startIcon': {
+            margin: 0,
+        },
+    };
+    const actionButtonSx = isCompactToolbar ? iconOnlyButtonSx : compactButtonSx;
+    const renderButtonLabel = (label: string) => (isCompactToolbar ? null : label);
 
     const activeFiltersCount = Object.keys(filters).filter((key) => {
         const value = filters[key];
@@ -261,13 +276,16 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.5,
+                    gap: isCompactToolbar ? 0.75 : 1.5,
+                    flexWrap: 'nowrap',
                     mb: 1,
-                    px: 1.5,
+                    px: isCompactToolbar ? 1 : 1.5,
                     py: 0.5,
                     borderRadius: 2,
                     border: '1px solid',
                     borderColor: 'divider',
+                    overflowX: isCompactToolbar ? 'auto' : 'visible',
+                    overflowY: 'hidden',
                 }}
                 elevation={0}
             >
@@ -303,9 +321,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 variant={viewMode === ViewModeEnum.FromStart ? 'contained' : 'outlined'}
                                 onClick={() => onViewModeChange(ViewModeEnum.FromStart)}
                                 startIcon={<VerticalAlignBottomIcon fontSize="small" />}
-                                sx={compactButtonSx}
+                                sx={actionButtonSx}
+                                aria-label={t('toolbar.order.fromStart')}
                             >
-                                {t('toolbar.order.fromStart')}
+                                {renderButtonLabel(t('toolbar.order.fromStart'))}
                             </Button>
                         </Tooltip>
 
@@ -318,9 +337,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 variant={viewMode === ViewModeEnum.FromEnd ? 'contained' : 'outlined'}
                                 onClick={() => onViewModeChange(ViewModeEnum.FromEnd)}
                                 startIcon={<VerticalAlignTopIcon fontSize="small" />}
-                                sx={compactButtonSx}
+                                sx={actionButtonSx}
+                                aria-label={t('toolbar.order.fromEnd')}
                             >
-                                {t('toolbar.order.fromEnd')}
+                                {renderButtonLabel(t('toolbar.order.fromEnd'))}
                             </Button>
                         </Tooltip>
                     </Box>
@@ -354,15 +374,19 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             variant="contained"
                                             onClick={onUploadToServer}
                                             disabled={uploadInProgress || filtersDisabled || !onUploadToServer || Boolean(uploadDisabledReason)}
+                                            startIcon={<CloudUploadIcon fontSize="small" />}
                                             sx={{
-                                                ...compactButtonSx,
+                                                ...(isCompactToolbar ? iconOnlyButtonSx : compactButtonSx),
                                                 minHeight: 24,
                                                 px: 1,
                                             }}
-                                        >
-                                            {uploadInProgress
+                                            aria-label={uploadInProgress
                                                 ? t('toolbar.server.uploadingButton', { progress: uploadProgress })
                                                 : t('toolbar.server.uploadButton')}
+                                        >
+                                            {isCompactToolbar ? null : (uploadInProgress
+                                                ? t('toolbar.server.uploadingButton', { progress: uploadProgress })
+                                                : t('toolbar.server.uploadButton'))}
                                         </Button>
                                     </span>
                                 </Box>
@@ -418,9 +442,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             onClick={onManualRefresh}
                                             disabled={refreshControlsDisabled}
                                             startIcon={<RefreshIcon fontSize="small" />}
-                                            sx={compactButtonSx}
+                                            sx={actionButtonSx}
+                                            aria-label={t('toolbar.refresh.refreshButton')}
                                         >
-                                            {t('toolbar.refresh.refreshButton')}
+                                            {renderButtonLabel(t('toolbar.refresh.refreshButton'))}
                                         </Button>
                                     </span>
                                 </Tooltip>
@@ -437,9 +462,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                             onClick={onToggleAutoRefresh}
                                             disabled={refreshControlsDisabled}
                                             startIcon={<AutorenewIcon fontSize="small" />}
-                                            sx={compactButtonSx}
+                                            sx={actionButtonSx}
+                                            aria-label={t('toolbar.refresh.autoButton')}
                                         >
-                                            {t('toolbar.refresh.autoButton')}
+                                            {renderButtonLabel(t('toolbar.refresh.autoButton'))}
                                         </Button>
                                     </span>
                                 </Tooltip>
@@ -471,9 +497,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 onClick={() => setIsAnomalySettingsPanelOpen((prev) => !prev)}
                                 disabled={controlsDisabled}
                                 startIcon={<AutoAwesomeIcon fontSize="small" />}
-                                sx={compactButtonSx}
+                                sx={actionButtonSx}
+                                aria-label={t('toolbar.anomalies.settings')}
                             >
-                                {t('toolbar.anomalies.settings')}
+                                {renderButtonLabel(t('toolbar.anomalies.settings'))}
                             </Button>
                         </Tooltip>
 
@@ -522,6 +549,8 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         display: 'flex',
                         alignSelf: 'stretch',
                         alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        flexShrink: 0,
                         gap: 1,
                     }}
                 >
@@ -601,9 +630,10 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                     startIcon={(
                                         <FilterAltIcon fontSize="small" />
                                     )}
-                                    sx={compactButtonSx}
+                                    sx={actionButtonSx}
+                                    aria-label={t('toolbar.filters.button')}
                                 >
-                                    {t('toolbar.filters.button')}
+                                    {renderButtonLabel(t('toolbar.filters.button'))}
                                 </Button>
                             </Badge>
 

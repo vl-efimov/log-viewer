@@ -265,6 +265,7 @@
     "description": "Available backend models for anomaly detection.",
     "loading": "Loading models...",
     "status": {
+      "available": "Available",
       "ready": "Ready",
       "installing": "Preparing",
       "unavailable": "Unavailable"

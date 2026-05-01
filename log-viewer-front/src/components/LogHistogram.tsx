@@ -9,6 +9,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReactECharts from 'echarts-for-react';
 import { alpha, useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 import type { ParsedLogLine } from '@/utils/logFormatDetector';
 import { extractTimestampFromParsedLine, parseTimestamp } from '@/utils/logTimestamp';
@@ -448,6 +449,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 }) => {
     const { i18n, t } = useTranslation();
     const theme = useTheme();
+    const isCompactChart = useMediaQuery(theme.breakpoints.down('lg'));
     const isDarkMode = theme.palette.mode === 'dark';
     const chartLabelColor = isDarkMode ? '#cbd5e1' : '#475569';
     const chartGridColor = isDarkMode ? 'rgba(148, 163, 184, 0.28)' : 'rgba(100, 116, 139, 0.22)';
@@ -467,7 +469,9 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     const [sliderReadyVersion, setSliderReadyVersion] = useState(0);
     const [legendSelection, setLegendSelection] = useState<Record<string, boolean>>({});
     const [activeQuickRange, setActiveQuickRange] = useState<QuickRangePreset | null>(null);
+    const [chartContainerWidth, setChartContainerWidth] = useState(0);
     const zoomSliderRef = useRef<ReactECharts | null>(null);
+    const chartContainerRef = useRef<HTMLDivElement | null>(null);
     const quickRangeDispatchRef = useRef(false);
     const externalRangeSyncRef = useRef(false);
 
@@ -569,15 +573,15 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         if (!timeRange) {
             return { chartData: [], logLevels: [], bucketSize: 60000 };
         }
-        return buildHistogram(validLines, { start: timeRange.min, end: timeRange.max });
-    }, [validLines, timeRange, buildHistogram]);
+        return buildHistogram(validLines, { start: timeRange.min, end: timeRange.max }, isCompactChart ? 36 : 50);
+    }, [buildHistogram, isCompactChart, timeRange, validLines]);
 
     const zoomHistogram = useMemo(() => {
         if (!timeRange) {
             return { chartData: [], logLevels: [], bucketSize: 60000 };
         }
-        return buildHistogram(validLines, { start: timeRange.min, end: timeRange.max }, 200);
-    }, [validLines, timeRange, buildHistogram]);
+        return buildHistogram(validLines, { start: timeRange.min, end: timeRange.max }, isCompactChart ? 96 : 200);
+    }, [buildHistogram, isCompactChart, timeRange, validLines]);
 
     const mainHistogram = useMemo(() => {
         if (!timeRange) {
@@ -587,8 +591,8 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         const start = selectedRange.start ?? timeRange.min;
         const end = selectedRange.end ?? timeRange.max;
 
-        return buildHistogram(validLines, { start, end });
-    }, [validLines, timeRange, selectedRange, buildHistogram]);
+        return buildHistogram(validLines, { start, end }, isCompactChart ? 28 : 50);
+    }, [buildHistogram, isCompactChart, selectedRange, timeRange, validLines]);
 
     useEffect(() => {
         setLegendSelection((prev) => {
@@ -600,9 +604,48 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         });
     }, [mainHistogram.logLevels]);
 
+    useEffect(() => {
+        const node = chartContainerRef.current;
+        if (!node) {
+            return;
+        }
+
+        const updateWidth = () => {
+            setChartContainerWidth(node.clientWidth);
+        };
+
+        updateWidth();
+
+        const resizeObserver = new ResizeObserver(() => {
+            updateWidth();
+        });
+
+        resizeObserver.observe(node);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
+
     const selectedCategories = useMemo(() => {
         return mainHistogram.logLevels.filter((level) => legendSelection[level] !== false);
     }, [legendSelection, mainHistogram.logLevels]);
+
+    const shouldShowLegend = useMemo(() => {
+        if (mainHistogram.logLevels.length === 0) {
+            return false;
+        }
+
+        if (chartContainerWidth <= 0) {
+            return !isCompactChart;
+        }
+
+        const estimatedLegendWidth = mainHistogram.logLevels.reduce((sum, level) => {
+            return sum + Math.max(56, (level.length * 8) + 34);
+        }, 0);
+
+        return estimatedLegendWidth <= Math.max(0, chartContainerWidth - 24);
+    }, [chartContainerWidth, isCompactChart, mainHistogram.logLevels]);
 
     useEffect(() => {
         if (!onCategoryFilterChange) {
@@ -638,14 +681,14 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
     const zoomSliderGrid = {
         top: 6,
         right: 20,
-        left: 40,
-        bottom: 28,
+        left: isCompactChart ? 32 : 40,
+        bottom: isCompactChart ? 24 : 28,
     };
 
     const zoomChartGrid = {
         ...zoomSliderGrid,
         top: 6,
-        bottom: 22,
+        bottom: isCompactChart ? 28 : 22,
     };
 
     useEffect(() => {
@@ -776,7 +819,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
         const selectedStart = selectedRange.start ?? timeRange?.min ?? 0;
         const selectedEnd = selectedRange.end ?? timeRange?.max ?? selectedStart;
         const selectedRangeMs = Math.max(1, selectedEnd - selectedStart);
-        const splitNumber = selectedRangeMs <= 3600000
+        const baseSplitNumber = selectedRangeMs <= 3600000
             ? 16
             : selectedRangeMs <= 6 * 3600000
                 ? 14
@@ -787,6 +830,9 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         : selectedRangeMs <= 30 * 86400000
                             ? 14
                             : 12;
+        const splitNumber = isCompactChart
+            ? Math.max(4, Math.min(8, Math.round(baseSplitNumber * 0.55)))
+            : baseSplitNumber;
 
         return {
             tooltip: {
@@ -846,13 +892,20 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 },
             },
             legend: {
+                show: shouldShowLegend,
                 top: 0,
                 selected: legendSelection,
                 textStyle: {
                     color: chartLabelColor,
                 },
             },
-            grid: { top: 20, right: 20, left: 40, bottom: 10 },
+            grid: {
+                top: shouldShowLegend ? (isCompactChart ? 24 : 20) : 12,
+                right: 20,
+                left: isCompactChart ? 32 : 40,
+                bottom: isCompactChart ? 24 : 10,
+                containLabel: true,
+            },
             xAxis: {
                 type: 'time',
                 min: selectedStart,
@@ -876,9 +929,10 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 axisLabel: {
                     fontSize: 10,
                     color: chartLabelColor,
-                    hideOverlap: false,
-                    showMinLabel: true,
+                    hideOverlap: true,
+                    showMinLabel: !isCompactChart,
                     showMaxLabel: true,
+                    margin: isCompactChart ? 10 : 8,
                     formatter: (value: number) => formatAxisTimeLabel(value, selectedRangeMs, mainHistogram.bucketSize, locale),
                 },
             },
@@ -906,7 +960,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
             },
             series,
         };
-    }, [categoryField, chartGridColor, chartLabelColor, legendSelection, locale, mainHistogram, selectedRange, timeRange]);
+    }, [categoryField, chartGridColor, chartLabelColor, isCompactChart, legendSelection, locale, mainHistogram, selectedRange, shouldShowLegend, timeRange]);
 
     const resolvedAnomalyRanges = useMemo((): ResolvedAnomalyRange[] => {
         const zoomLineMinX = timeRange?.min ?? null;
@@ -1354,14 +1408,15 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 type: 'time',
                 min: timeRange?.min,
                 max: timeRange?.max,
-                splitNumber: 6,
+                splitNumber: isCompactChart ? 4 : 6,
                 axisLabel: {
                     show: true,
                     fontSize: 10,
                     color: chartLabelColor,
-                    hideOverlap: false,
-                    showMinLabel: true,
+                    hideOverlap: true,
+                    showMinLabel: !isCompactChart,
                     showMaxLabel: true,
+                    margin: isCompactChart ? 10 : 8,
                     formatter: (value: number) => formatAxisTimeLabel(value, zoomRangeMs, zoomHistogram.bucketSize, locale),
                 },
                 axisTick: {
@@ -1402,7 +1457,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 },
             ],
         };
-    }, [chartGridColor, chartLabelColor, hoveredAnomalyRangeKey, locale, miniLineColor, resolvedAnomalyRanges, timeRange, zoomHistogram]);
+    }, [chartGridColor, chartLabelColor, hoveredAnomalyRangeKey, isCompactChart, locale, miniLineColor, resolvedAnomalyRanges, timeRange, zoomHistogram]);
 
     const zoomSliderOption = useMemo(() => {
         if (!timeRange) {
@@ -1671,6 +1726,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
 
             <Collapse in={!isCollapsed}>
                 <Box
+                    ref={chartContainerRef}
                     sx={{
                         backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
                         borderRadius: 1,
@@ -1682,7 +1738,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                 >
                     <ReactECharts
                         option={chartOption}
-                        style={{ height }}
+                        style={{ height, width: '100%' }}
                         notMerge={true}
                         onEvents={{ legendselectchanged: handleLegendSelectChanged }}
                     />
@@ -1690,7 +1746,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                         <Box sx={{ position: 'relative' }}>
                             <ReactECharts
                                 option={zoomChartOption}
-                                style={{ height: 96, cursor: 'pointer' }}
+                                style={{ height: 96, width: '100%', cursor: 'pointer' }}
                                 notMerge={true}
                             />
                             {hoveredAnomalyRange && hoveredAnomalyPointer && (
@@ -1720,7 +1776,7 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                                 <ReactECharts
                                     ref={zoomSliderRef}
                                     option={zoomSliderOption}
-                                    style={{ height: '100%', cursor: 'grab' }}
+                                    style={{ height: '100%', width: '100%', cursor: 'grab' }}
                                     onChartReady={() => setSliderReadyVersion((v) => v + 1)}
                                     onEvents={{ datazoom: handleZoom }}
                                 />

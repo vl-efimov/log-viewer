@@ -51,9 +51,10 @@ import { RouteViewLogs } from '@/routes/routePaths';
 interface HeaderProps {
     isSidebarOpen: boolean;
     toggleSidebar: () => void;
+    isSidebarToggleDisabled?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
+const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar, isSidebarToggleDisabled = false }) => {
     const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -128,6 +129,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
                             sx={iconButtonSx(textColor)}
                             aria-label={t('common.menu')}
                             onClick={toggleSidebar}
+                            disabled={isSidebarToggleDisabled}
                         >
                             {isSidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
                         </IconButton>
