@@ -1,4 +1,4 @@
-export interface BglPredictRow {
+export interface AnomalyPredictRow {
     message: string;
     timestamp?: string | null;
     datetime?: string | null;
@@ -8,9 +8,9 @@ export interface BglPredictRow {
     created_at?: string | null;
 }
 
-export interface BglPredictRequest {
+export interface AnomalyPredictRequest {
     model_id?: string;
-    rows: BglPredictRow[];
+    rows: AnomalyPredictRow[];
     text_column?: string;
     timestamp_column?: string;
     threshold?: number;
@@ -20,7 +20,7 @@ export interface BglPredictRequest {
     include_windows?: boolean;
 }
 
-export interface BglAnomalyRegion {
+export interface AnomalyRegion {
     start_index: number;
     end_index: number;
     start_line: number;
@@ -30,7 +30,7 @@ export interface BglAnomalyRegion {
     end_timestamp: string | null;
 }
 
-export interface BglPredictResponse {
+export interface AnomalyPredictResponse {
     meta: {
         total_rows: number;
         anomaly_rows: number;
@@ -49,7 +49,7 @@ export interface BglPredictResponse {
     }> | null;
     windows?: Array<unknown> | null;
     anomaly_lines?: number[];
-    anomaly_regions: BglAnomalyRegion[];
+    anomaly_regions: AnomalyRegion[];
 }
 
 export interface IngestStartResponse {
@@ -86,7 +86,7 @@ export interface PretrainedModelInfo {
     prepareError?: string;
 }
 
-export interface BglPredictionProgress {
+export interface AnomalyPredictionProgress {
     running: boolean;
     stage: string;
     processed_windows: number;
@@ -116,7 +116,7 @@ interface ModelStatus {
     };
 }
 
-interface BglHealthResponse {
+interface ModelHealthResponse {
     ok: boolean;
     model_id?: string;
     selected_model_id?: string;
@@ -138,7 +138,8 @@ interface ModelsStatusResponse {
     models: ModelStatus[];
 }
 
-const backendBaseUrl = (import.meta.env.VITE_BGL_API_URL as string | undefined)?.replace(/\/$/, '')
+const backendBaseUrl = (import.meta.env.VITE_ANOMALY_API_URL as string | undefined)?.replace(/\/$/, '')
+    || (import.meta.env.VITE_BGL_API_URL as string | undefined)?.replace(/\/$/, '')
     || 'http://127.0.0.1:8001';
 
 type ActiveRemoteUploadState = {
@@ -238,8 +239,8 @@ function toModelInfo(model: ModelStatus): PretrainedModelInfo {
     };
 }
 
-export async function predictBglAnomalies(payload: BglPredictRequest): Promise<BglPredictResponse> {
-    const response = await fetch(`${backendBaseUrl}/bgl/predict-json`, {
+export async function predictAnomalies(payload: AnomalyPredictRequest): Promise<AnomalyPredictResponse> {
+    const response = await fetch(`${backendBaseUrl}/anomaly/predict-json`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -251,20 +252,20 @@ export async function predictBglAnomalies(payload: BglPredictRequest): Promise<B
         const errorText = await response.text();
         try {
             const parsed = JSON.parse(errorText) as { detail?: string };
-            throw new Error(parsed.detail || `BGL predict request failed (${response.status})`);
+            throw new Error(parsed.detail || `Predict request failed (${response.status})`);
         } catch {
-            throw new Error(errorText || `BGL predict request failed (${response.status})`);
+            throw new Error(errorText || `Predict request failed (${response.status})`);
         }
     }
 
-    return (await response.json()) as BglPredictResponse;
+    return (await response.json()) as AnomalyPredictResponse;
 }
 
-export async function predictBglAnomaliesFromFile(
+export async function predictAnomaliesFromFile(
     file: File,
-    payload: Omit<BglPredictRequest, 'rows'>,
+    payload: Omit<AnomalyPredictRequest, 'rows'>,
     options?: { signal?: AbortSignal },
-): Promise<BglPredictResponse> {
+): Promise<AnomalyPredictResponse> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('model_id', payload.model_id ?? 'bgl');
@@ -291,7 +292,7 @@ export async function predictBglAnomaliesFromFile(
         formData.append('include_windows', String(payload.include_windows));
     }
 
-    const response = await fetch(`${backendBaseUrl}/bgl/predict-file`, {
+    const response = await fetch(`${backendBaseUrl}/anomaly/predict-file`, {
         method: 'POST',
         body: formData,
         signal: options?.signal,
@@ -301,20 +302,20 @@ export async function predictBglAnomaliesFromFile(
         const errorText = await response.text();
         try {
             const parsed = JSON.parse(errorText) as { detail?: string };
-            throw new Error(parsed.detail || `BGL predict request failed (${response.status})`);
+            throw new Error(parsed.detail || `Predict request failed (${response.status})`);
         } catch {
-            throw new Error(errorText || `BGL predict request failed (${response.status})`);
+            throw new Error(errorText || `Predict request failed (${response.status})`);
         }
     }
 
-    return (await response.json()) as BglPredictResponse;
+    return (await response.json()) as AnomalyPredictResponse;
 }
 
-export async function predictBglAnomaliesFromIngest(
+export async function predictAnomaliesFromIngest(
     ingestId: string,
-    payload: Omit<BglPredictRequest, 'rows'>,
+    payload: Omit<AnomalyPredictRequest, 'rows'>,
     options?: { signal?: AbortSignal },
-): Promise<BglPredictResponse> {
+): Promise<AnomalyPredictResponse> {
     const formData = new FormData();
     formData.append('ingest_id', ingestId);
     formData.append('model_id', payload.model_id ?? 'bgl');
@@ -341,7 +342,7 @@ export async function predictBglAnomaliesFromIngest(
         formData.append('include_windows', String(payload.include_windows));
     }
 
-    const response = await fetch(`${backendBaseUrl}/bgl/predict-ingest`, {
+    const response = await fetch(`${backendBaseUrl}/anomaly/predict-ingest`, {
         method: 'POST',
         body: formData,
         signal: options?.signal,
@@ -351,13 +352,13 @@ export async function predictBglAnomaliesFromIngest(
         const errorText = await response.text();
         try {
             const parsed = JSON.parse(errorText) as { detail?: string };
-            throw new Error(parsed.detail || `BGL predict ingest request failed (${response.status})`);
+            throw new Error(parsed.detail || `Predict ingest request failed (${response.status})`);
         } catch {
-            throw new Error(errorText || `BGL predict ingest request failed (${response.status})`);
+            throw new Error(errorText || `Predict ingest request failed (${response.status})`);
         }
     }
 
-    return (await response.json()) as BglPredictResponse;
+    return (await response.json()) as AnomalyPredictResponse;
 }
 
 export async function startRemoteIngest(
@@ -562,16 +563,16 @@ export async function getPretrainedModels(): Promise<PretrainedModelInfo[]> {
     }
 
     try {
-        const [bglStatusResponse, hdfsStatusResponse] = await Promise.all([
+        const [primaryStatusResponse, hdfsStatusResponse] = await Promise.all([
             fetch(`${backendBaseUrl}/prepare/status?model_id=bgl`),
             fetch(`${backendBaseUrl}/prepare/status?model_id=hdfs`),
         ]);
 
-        if (bglStatusResponse.ok || hdfsStatusResponse.ok) {
-            const bglStatus = bglStatusResponse.ok ? await bglStatusResponse.json() as BglHealthResponse : null;
-            const hdfsStatus = hdfsStatusResponse.ok ? await hdfsStatusResponse.json() as BglHealthResponse : null;
+        if (primaryStatusResponse.ok || hdfsStatusResponse.ok) {
+            const primaryStatus = primaryStatusResponse.ok ? await primaryStatusResponse.json() as ModelHealthResponse : null;
+            const hdfsStatus = hdfsStatusResponse.ok ? await hdfsStatusResponse.json() as ModelHealthResponse : null;
             const supportsPerModel = Boolean(
-                bglStatus?.model_id || bglStatus?.selected_model_id || hdfsStatus?.model_id || hdfsStatus?.selected_model_id
+                primaryStatus?.model_id || primaryStatus?.selected_model_id || hdfsStatus?.model_id || hdfsStatus?.selected_model_id
             );
 
             return [
@@ -582,13 +583,13 @@ export async function getPretrainedModels(): Promise<PretrainedModelInfo[]> {
                     dataset: 'BGL',
                     architecture: 'Transformer + BERT embeddings',
                     localPath: 'backend/NeuralLog/saved_models/bgl_transformer.hdf5',
-                    status: (bglStatus?.model_ready || bglStatus?.prepare?.loaded) ? 'ready' : (bglStatus?.prepare?.preparing ? 'installing' : 'unavailable'),
+                    status: (primaryStatus?.model_ready || primaryStatus?.prepare?.loaded) ? 'ready' : (primaryStatus?.prepare?.preparing ? 'installing' : 'unavailable'),
                     backendUrl: backendBaseUrl,
-                    prepared: Boolean(bglStatus?.model_ready || bglStatus?.prepare?.loaded),
-                    prepareProgress: Number(bglStatus?.prepare?.progress ?? 0),
-                    prepareStage: String(bglStatus?.prepare?.stage ?? 'idle'),
-                    prepareMessage: String(bglStatus?.prepare?.message ?? 'Not prepared'),
-                    prepareError: bglStatus?.prepare?.error ?? undefined,
+                    prepared: Boolean(primaryStatus?.model_ready || primaryStatus?.prepare?.loaded),
+                    prepareProgress: Number(primaryStatus?.prepare?.progress ?? 0),
+                    prepareStage: String(primaryStatus?.prepare?.stage ?? 'idle'),
+                    prepareMessage: String(primaryStatus?.prepare?.message ?? 'Not prepared'),
+                    prepareError: primaryStatus?.prepare?.error ?? undefined,
                 },
                 {
                     id: 'neurallog-hdfs-transformer',
@@ -647,7 +648,7 @@ export async function getPretrainedModels(): Promise<PretrainedModelInfo[]> {
     ];
 }
 
-export async function warmupBglModel(modelId: string = 'bgl'): Promise<PretrainedModelInfo['status']> {
+export async function warmupAnomalyModel(modelId: string = 'bgl'): Promise<PretrainedModelInfo['status']> {
     const response = await fetch(`${backendBaseUrl}/prepare/start?model_id=${encodeURIComponent(modelId)}`, {
         method: 'POST',
     });
@@ -657,7 +658,7 @@ export async function warmupBglModel(modelId: string = 'bgl'): Promise<Pretraine
         throw new Error(errorText || `Warmup failed (${response.status})`);
     }
 
-    const payload = await response.json() as BglHealthResponse;
+    const payload = await response.json() as ModelHealthResponse;
     if (payload.model_ready || payload.prepare?.loaded) {
         return 'ready';
     }
@@ -667,18 +668,18 @@ export async function warmupBglModel(modelId: string = 'bgl'): Promise<Pretraine
     return payload.model_exists ? 'installing' : 'unavailable';
 }
 
-export async function isBglModelReady(modelId: string = 'bgl'): Promise<boolean> {
+export async function isAnomalyModelReady(modelId: string = 'bgl'): Promise<boolean> {
     const response = await fetch(`${backendBaseUrl}/health?model_id=${encodeURIComponent(modelId)}`);
     if (!response.ok) {
         return false;
     }
-    const payload = await response.json() as BglHealthResponse;
+    const payload = await response.json() as ModelHealthResponse;
     return Boolean(payload.model_ready);
 }
 
-export async function checkBackendAvailability(modelId: string = 'bgl'): Promise<boolean> {
+export async function checkBackendAvailability(): Promise<boolean> {
     try {
-        const response = await fetch(`${backendBaseUrl}/health?model_id=${encodeURIComponent(modelId)}`, {
+        const response = await fetch(`${backendBaseUrl}/health`, {
             cache: 'no-store',
         });
 
@@ -693,8 +694,8 @@ export async function checkBackendAvailability(modelId: string = 'bgl'): Promise
     }
 }
 
-export async function cancelBglAnomalyPrediction(modelId: string = 'bgl'): Promise<void> {
-    const response = await fetch(`${backendBaseUrl}/bgl/cancel?model_id=${encodeURIComponent(modelId)}`, {
+export async function cancelAnomalyPrediction(modelId: string = 'bgl'): Promise<void> {
+    const response = await fetch(`${backendBaseUrl}/anomaly/cancel?model_id=${encodeURIComponent(modelId)}`, {
         method: 'POST',
     });
 
@@ -704,15 +705,15 @@ export async function cancelBglAnomalyPrediction(modelId: string = 'bgl'): Promi
     }
 }
 
-export async function getBglAnomalyProgress(modelId: string = 'bgl'): Promise<BglPredictionProgress> {
-    const response = await fetch(`${backendBaseUrl}/bgl/progress?model_id=${encodeURIComponent(modelId)}`);
+export async function getAnomalyProgress(modelId: string = 'bgl'): Promise<AnomalyPredictionProgress> {
+    const response = await fetch(`${backendBaseUrl}/anomaly/progress?model_id=${encodeURIComponent(modelId)}`);
     if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || `Progress request failed (${response.status})`);
     }
 
     const payload = await response.json() as {
-        prediction?: Partial<BglPredictionProgress> | null;
+        prediction?: Partial<AnomalyPredictionProgress> | null;
     };
 
     return {

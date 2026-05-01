@@ -6,7 +6,7 @@ import {
     getRemoteLineCount,
     getRemoteLinesRange,
     queryRemoteFilteredLines,
-} from '@/services/bglAnomalyApi';
+} from '@/services/anomalyApi';
 import { parseTimestamp } from '@/utils/logTimestamp';
 
 const DB_NAME = 'log_viewer';

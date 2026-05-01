@@ -4,12 +4,12 @@ import argparse
 import json
 from pathlib import Path
 
-from .inference import BGLAnomalyService
+from .inference import NeuralLogAnomalyService
 from .io_utils import load_rows_from_file
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run BGL NeuralLog anomaly detection on a table/log file")
+    parser = argparse.ArgumentParser(description="Run NeuralLog anomaly detection on a table/log file")
     parser.add_argument("--input", required=True, help="Input table file (.csv/.tsv/.json)")
     parser.add_argument("--output", required=True, help="Output JSON path")
     parser.add_argument("--text-column", default=None, help="Column containing log message text")
@@ -24,7 +24,7 @@ def main() -> None:
     args = build_parser().parse_args()
 
     rows = load_rows_from_file(args.input)
-    service = BGLAnomalyService()
+    service = NeuralLogAnomalyService()
     result = service.predict_rows(
         rows=rows,
         text_column=args.text_column,

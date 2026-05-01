@@ -31,9 +31,9 @@ import {
     checkBackendAvailability,
     cancelActiveAnomalyPredictionSession,
     cancelActiveRemoteUploadSession,
-    cancelBglAnomalyPrediction,
-    getBglAnomalyProgress,
-} from '@/services/bglAnomalyApi';
+    cancelAnomalyPrediction,
+    getAnomalyProgress,
+} from '@/services/anomalyApi';
 import { getAvailableLogFormats, getLogFormatById } from '@/utils/logFormatDetector';
 import AppStatusBarItem from '@/components/AppLayout/AppStatusBarItem';
 import {
@@ -201,7 +201,7 @@ const AppStatusBar: React.FC = () => {
             }
             inFlight = true;
             try {
-                const progress = await getBglAnomalyProgress(modelId);
+                const progress = await getAnomalyProgress(modelId);
                 if (cancelled) {
                     return;
                 }
@@ -263,7 +263,7 @@ const AppStatusBar: React.FC = () => {
 
             inFlight = true;
             try {
-                const online = await checkBackendAvailability('bgl');
+                const online = await checkBackendAvailability();
                 if (!cancelled) {
                     setIsServerOnline(online);
                 }
@@ -426,7 +426,7 @@ const AppStatusBar: React.FC = () => {
             autoHideDuration: 2500,
         }));
         try {
-            await cancelBglAnomalyPrediction(modelId);
+            await cancelAnomalyPrediction(modelId);
             dispatch(setAnomalyStopped());
             dispatch(enqueueNotification({
                 message: t('statusBar.notifications.anomalyCancelled'),

@@ -34,9 +34,9 @@ import {
     beginAnomalyPredictionSession,
     endAnomalyPredictionSession,
     getPretrainedModels,
-    predictBglAnomaliesFromFile,
-    predictBglAnomaliesFromIngest,
-} from '@/services/bglAnomalyApi';
+    predictAnomaliesFromFile,
+    predictAnomaliesFromIngest,
+} from '@/services/anomalyApi';
 import {
     ANOMALY_MIN_REGION_LINES_RANGE,
     ANOMALY_STEP_SIZE_RANGE,
@@ -300,10 +300,10 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
             };
 
             const result = remoteIngestId
-                ? await predictBglAnomaliesFromIngest(remoteIngestId, requestPayload, {
+                ? await predictAnomaliesFromIngest(remoteIngestId, requestPayload, {
                     signal: abortController.signal,
                 })
-                : await predictBglAnomaliesFromFile(activeFile as File, requestPayload, {
+                : await predictAnomaliesFromFile(activeFile as File, requestPayload, {
                     signal: abortController.signal,
                 });
 

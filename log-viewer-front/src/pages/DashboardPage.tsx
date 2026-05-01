@@ -18,7 +18,7 @@ import { parseLogLineAuto, type ParsedLogLine } from '@/utils/logFormatDetector'
 import LogHistogram from '@/components/LogHistogram';
 import { extractTimestampFromParsedLine } from '@/utils/logTimestamp';
 import { getFileHandle, getFileObject } from '@/redux/slices/logFileSlice';
-import { getRemoteExactDashboardSnapshot } from '@/services/bglAnomalyApi';
+import { getRemoteExactDashboardSnapshot } from '@/services/anomalyApi';
 import { getDashboardSnapshot, getLocalExactDashboardSnapshot } from '@/utils/logIndexedDb';
 import {
     countFileLines,

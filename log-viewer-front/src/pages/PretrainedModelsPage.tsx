@@ -8,7 +8,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import { getPretrainedModels, warmupBglModel, type PretrainedModelInfo } from '@/services/bglAnomalyApi';
+import { getPretrainedModels, warmupAnomalyModel, type PretrainedModelInfo } from '@/services/anomalyApi';
 import { useTranslation } from 'react-i18next';
 
 let cachedPretrainedModels: PretrainedModelInfo[] | null = null;
@@ -75,7 +75,7 @@ const PretrainedModelsPage: React.FC = () => {
         setInstalling(true);
         setError('');
         try {
-            await warmupBglModel(modelId);
+            await warmupAnomalyModel(modelId);
             await refreshModels();
         } catch (err) {
             setError(err instanceof Error ? err.message : t('pretrainedModels.errors.prepare'));

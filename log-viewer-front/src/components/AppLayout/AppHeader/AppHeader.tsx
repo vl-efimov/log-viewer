@@ -26,9 +26,9 @@ import { cancelAllIndexing, cancelIndexing, waitForIndexingIdle } from '@/utils/
 import {
     cancelActiveAnomalyPredictionSession,
     cancelActiveRemoteUploadSession,
-    cancelBglAnomalyPrediction,
+    cancelAnomalyPrediction,
     deleteRemoteIngest,
-} from '@/services/bglAnomalyApi';
+} from '@/services/anomalyApi';
 
 import {
     appBarSx,
@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar }) => {
             const activeModelId = cancelActiveAnomalyPredictionSession();
             const modelId = activeModelId ?? fallbackModelId;
             try {
-                await cancelBglAnomalyPrediction(modelId);
+                await cancelAnomalyPrediction(modelId);
             } catch (error) {
                 console.error('Failed to cancel anomaly prediction:', error);
             }

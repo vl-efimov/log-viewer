@@ -29,7 +29,7 @@ from .model_runtime import get_all_runtimes, get_runtime
 from .schemas import PredictJsonRequest
 from .settings import DEFAULT_MODEL_ID, MODEL_CATALOG
 
-app = FastAPI(title="BGL NeuralLog Anomaly API", version="1.0.0")
+app = FastAPI(title="NeuralLog Anomaly API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -175,7 +175,7 @@ def prepare_start(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
     }
 
 
-@app.post("/bgl/cancel")
+@app.post("/anomaly/cancel")
 def cancel_prediction(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
     selected = _normalize_model_id(model_id)
     runtime = get_runtime(selected)
@@ -187,7 +187,7 @@ def cancel_prediction(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
     }
 
 
-@app.get("/bgl/progress")
+@app.get("/anomaly/progress")
 def prediction_progress(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
     selected = _normalize_model_id(model_id)
     runtime = get_runtime(selected)
@@ -198,7 +198,7 @@ def prediction_progress(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
     }
 
 
-@app.post("/bgl/predict-json")
+@app.post("/anomaly/predict-json")
 def predict_json(request: PredictJsonRequest) -> dict[str, Any]:
     try:
         service = services[request.model_id]
@@ -220,7 +220,7 @@ def predict_json(request: PredictJsonRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.post("/bgl/predict-file")
+@app.post("/anomaly/predict-file")
 async def predict_file(
     file: UploadFile = File(...),
     model_id: str = Form(default=DEFAULT_MODEL_ID),
@@ -405,7 +405,7 @@ def log_dashboard_exact(ingest_id: str, payload: dict[str, Any] = Body(default={
     }
 
 
-@app.post("/bgl/predict-ingest")
+@app.post("/anomaly/predict-ingest")
 def predict_ingest(
     ingest_id: str = Form(...),
     model_id: str = Form(default=DEFAULT_MODEL_ID),

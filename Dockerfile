@@ -43,4 +43,4 @@ ENV TF_USE_LEGACY_KERAS=1 \
 
 EXPOSE 8001
 
-CMD ["sh", "-c", "uvicorn bgl_anomaly_service.api:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn anomaly_service.api:app --host 0.0.0.0 --port ${PORT}"]

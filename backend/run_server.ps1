@@ -29,4 +29,4 @@ if ($listeners) {
 }
 
 Set-Location $backendRoot
-& $pythonExe -m uvicorn bgl_anomaly_service.api:app --host 127.0.0.1 --port $port
+& $pythonExe -m uvicorn anomaly_service.api:app --host 127.0.0.1 --port $port

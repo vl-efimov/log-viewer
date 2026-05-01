@@ -48,7 +48,7 @@ import {
     setActiveRemoteUploadIngestId,
     startRemoteIngest,
     uploadRemoteIngestChunk,
-} from '@/services/bglAnomalyApi';
+} from '@/services/anomalyApi';
 import { useAnomalySnapshot } from '@/hooks/useAnomalySnapshot';
 import { useTranslation } from 'react-i18next';
 
