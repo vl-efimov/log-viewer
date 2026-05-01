@@ -49,7 +49,7 @@ import {
     startRemoteIngest,
     uploadRemoteIngestChunk,
 } from '@/services/bglAnomalyApi';
-import { useAnomalySnapshot } from '@/pages/viewLogs/hooks/useAnomalySnapshot';
+import { useAnomalySnapshot } from '@/hooks/useAnomalySnapshot';
 import { useTranslation } from 'react-i18next';
 
 const LINE_INDEX_CHUNK_BYTES = 4 * 1024 * 1024;

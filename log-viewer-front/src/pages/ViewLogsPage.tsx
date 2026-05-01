@@ -5,12 +5,12 @@ import { FileSelectionView } from '@/components/FileSelectionView';
 import LogLinesList from '@/components/LogLinesList';
 import LogToolbar from '@/components/LogToolbar';
 import AddLogFormatDialog from '@/components/log-patterns/AddLogFormatDialog';
-import LogViewHistogramPanel from '@/pages/viewLogs/components/LogViewHistogramPanel';
-import LogViewMonitoringBanner from '@/pages/viewLogs/components/LogViewMonitoringBanner';
-import FormatChangeConfirmDialog from '@/pages/viewLogs/components/FormatChangeConfirmDialog';
-import UnknownFormatConfirmDialog from '@/pages/viewLogs/components/UnknownFormatConfirmDialog';
+import LogViewHistogramPanel from '@/components/view-logs/LogViewHistogramPanel';
+import LogViewMonitoringBanner from '@/components/view-logs/LogViewMonitoringBanner';
+import FormatChangeConfirmDialog from '@/components/view-logs/FormatChangeConfirmDialog';
+import UnknownFormatConfirmDialog from '@/components/view-logs/UnknownFormatConfirmDialog';
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog';
-import { useViewLogsController } from '@/pages/viewLogs/useViewLogsController';
+import { useViewLogsController } from '@/hooks/useViewLogsController';
 import { useTranslation } from 'react-i18next';
 
 const ViewLogsPage: React.FC = () => {
