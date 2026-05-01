@@ -20,6 +20,7 @@ const STORE_CUSTOM_FORMATS = 'customFormats';
 const MAX_FILTER_LINES_DEFAULT = 200_000;
 const MIN_TIMESTAMP_MS = -8640000000000000;
 const MAX_TIMESTAMP_MS = 8640000000000000;
+const MAX_DATE_FILTER_CACHE_ENTRIES = 6;
 
 export type LogSessionRecord = {
     sessionId: string;
@@ -122,6 +123,15 @@ type QueryFilteredLinesOptions = {
 };
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+
+type DateFilterWindowCacheEntry = {
+    windowStartIndex: number;
+    windowEndIndex: number;
+    recordsByLineNumber: Map<number, LogLineRecord>;
+};
+
+const dateFilterLineCache = new Map<string, Uint32Array>();
+const dateFilterWindowCache = new Map<string, DateFilterWindowCacheEntry>();
 
 const REMOTE_PREFIX = 'remote:';
 
@@ -236,6 +246,113 @@ const transactionDone = (tx: IDBTransaction): Promise<void> => {
     });
 };
 
+const buildDateFilterCacheKey = (sessionId: string, startMs: number | null, endMs: number | null): string => {
+    const startKey = startMs === null ? 'null' : String(startMs);
+    const endKey = endMs === null ? 'null' : String(endMs);
+    return `${sessionId}|${startKey}|${endKey}`;
+};
+
+const rememberDateFilterLines = (cacheKey: string, lineNumbers: number[]): Uint32Array => {
+    const compactLineNumbers = Uint32Array.from(lineNumbers);
+
+    if (dateFilterLineCache.has(cacheKey)) {
+        dateFilterLineCache.delete(cacheKey);
+    }
+    dateFilterLineCache.set(cacheKey, compactLineNumbers);
+
+    while (dateFilterLineCache.size > MAX_DATE_FILTER_CACHE_ENTRIES) {
+        const oldestKey = dateFilterLineCache.keys().next().value as string | undefined;
+        if (!oldestKey) {
+            break;
+        }
+        dateFilterLineCache.delete(oldestKey);
+        dateFilterWindowCache.delete(oldestKey);
+    }
+
+    return compactLineNumbers;
+};
+
+const getCachedDateFilterLines = (cacheKey: string): Uint32Array | null => {
+    const cached = dateFilterLineCache.get(cacheKey);
+    if (!cached) {
+        return null;
+    }
+
+    dateFilterLineCache.delete(cacheKey);
+    dateFilterLineCache.set(cacheKey, cached);
+    return cached;
+};
+
+const rememberDateFilterWindow = (cacheKey: string, entry: DateFilterWindowCacheEntry): DateFilterWindowCacheEntry => {
+    if (dateFilterWindowCache.has(cacheKey)) {
+        dateFilterWindowCache.delete(cacheKey);
+    }
+    dateFilterWindowCache.set(cacheKey, entry);
+    return entry;
+};
+
+const getCachedDateFilterWindow = (cacheKey: string): DateFilterWindowCacheEntry | null => {
+    const cached = dateFilterWindowCache.get(cacheKey);
+    if (!cached) {
+        return null;
+    }
+
+    dateFilterWindowCache.delete(cacheKey);
+    dateFilterWindowCache.set(cacheKey, cached);
+    return cached;
+};
+
+const invalidateDateFilterCacheForSession = (sessionId: string): void => {
+    for (const cacheKey of Array.from(dateFilterLineCache.keys())) {
+        if (cacheKey.startsWith(`${sessionId}|`)) {
+            dateFilterLineCache.delete(cacheKey);
+            dateFilterWindowCache.delete(cacheKey);
+        }
+    }
+};
+
+export const clearDateFilterCache = (sessionId?: string): void => {
+    if (sessionId) {
+        invalidateDateFilterCacheForSession(sessionId);
+        return;
+    }
+
+    dateFilterLineCache.clear();
+    dateFilterWindowCache.clear();
+};
+
+const lowerBoundNumber = (values: ArrayLike<number>, target: number): number => {
+    let left = 0;
+    let right = values.length;
+
+    while (left < right) {
+        const middle = left + Math.floor((right - left) / 2);
+        if (values[middle] < target) {
+            left = middle + 1;
+        } else {
+            right = middle;
+        }
+    }
+
+    return left;
+};
+
+const upperBoundNumber = (values: ArrayLike<number>, target: number): number => {
+    let left = 0;
+    let right = values.length;
+
+    while (left < right) {
+        const middle = left + Math.floor((right - left) / 2);
+        if (values[middle] <= target) {
+            left = middle + 1;
+        } else {
+            right = middle;
+        }
+    }
+
+    return left;
+};
+
 const openLogDb = (): Promise<IDBDatabase> => {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -285,6 +402,8 @@ const getLogDb = async (): Promise<IDBDatabase> => {
 export const deleteAllLogData = async (): Promise<void> => {
     const db = await getLogDb();
     const storesToClear = [STORE_SESSIONS, STORE_LINES, STORE_STATS];
+
+    clearDateFilterCache();
 
     for (const storeName of storesToClear) {
         if (!db.objectStoreNames.contains(storeName)) {
@@ -473,6 +592,8 @@ const deleteByIndex = async (
 export const deleteSessionData = async (sessionId: string): Promise<void> => {
     const db = await getLogDb();
 
+    invalidateDateFilterCacheForSession(sessionId);
+
     const range = IDBKeyRange.only(sessionId);
     await deleteByIndex(db, STORE_LINES, 'by_session', range);
     await deleteByIndex(db, STORE_STATS, 'by_session', range);
@@ -484,6 +605,11 @@ export const deleteSessionData = async (sessionId: string): Promise<void> => {
 
 export const putLineBatch = async (lines: LogLineRecord[]): Promise<void> => {
     if (lines.length === 0) return;
+
+    const touchedSessionIds = new Set(lines.map((line) => line.sessionId));
+    for (const sessionId of touchedSessionIds) {
+        invalidateDateFilterCacheForSession(sessionId);
+    }
 
     const db = await getLogDb();
     const tx = db.transaction(STORE_LINES, 'readwrite');
@@ -971,6 +1097,50 @@ const fetchLineRecords = async (sessionId: string, lineNumbers: number[]): Promi
     return records;
 };
 
+const getDateFilterWindowRecords = async (
+    cacheKey: string,
+    sessionId: string,
+    orderedMatchedLineNumbers: ArrayLike<number>,
+    desiredWindowStart: number,
+    desiredWindowEnd: number,
+): Promise<DateFilterWindowCacheEntry> => {
+    const cachedWindow = getCachedDateFilterWindow(cacheKey);
+    const recordsByLineNumber = new Map<number, LogLineRecord>();
+
+    if (cachedWindow) {
+        const overlapStart = Math.max(desiredWindowStart, cachedWindow.windowStartIndex);
+        const overlapEnd = Math.min(desiredWindowEnd, cachedWindow.windowEndIndex);
+        for (let index = overlapStart; index < overlapEnd; index += 1) {
+            const lineNumber = orderedMatchedLineNumbers[index];
+            const cachedRecord = cachedWindow.recordsByLineNumber.get(lineNumber);
+            if (cachedRecord) {
+                recordsByLineNumber.set(lineNumber, cachedRecord);
+            }
+        }
+    }
+
+    const missingLineNumbers: number[] = [];
+    for (let index = desiredWindowStart; index < desiredWindowEnd; index += 1) {
+        const lineNumber = orderedMatchedLineNumbers[index];
+        if (!recordsByLineNumber.has(lineNumber)) {
+            missingLineNumbers.push(lineNumber);
+        }
+    }
+
+    if (missingLineNumbers.length > 0) {
+        const fetchedRecords = await fetchLineRecords(sessionId, missingLineNumbers);
+        for (const record of fetchedRecords) {
+            recordsByLineNumber.set(record.lineNumber, record);
+        }
+    }
+
+    return rememberDateFilterWindow(cacheKey, {
+        windowStartIndex: desiredWindowStart,
+        windowEndIndex: desiredWindowEnd,
+        recordsByLineNumber,
+    });
+};
+
 const fetchLinesByGroupIds = async (sessionId: string, groupIds: number[]): Promise<LogLineRecord[]> => {
     if (groupIds.length === 0) return [];
     const db = await getLogDb();
@@ -1031,6 +1201,244 @@ const matchesDateRange = (record: LogLineRecord, startMs: number | null, endMs: 
     if (startMs !== null && record.timestampMs < startMs) return false;
     if (endMs !== null && record.timestampMs > endMs) return false;
     return true;
+};
+
+const scanSessionLinesWithFilters = async (
+    sessionId: string,
+    options: {
+        limit: number;
+        order: 'asc' | 'desc';
+        signal?: AbortSignal;
+        onProgress?: (partial: FilteredLinesResult) => void;
+        progressChunkSize: number;
+        matchesParsedRecord: (record: LogLineRecord) => boolean;
+        isLineWithinCursorBounds: (lineNumber: number) => boolean;
+    },
+): Promise<FilteredLinesResult & { nextAfterLine?: number | null; nextBeforeLine?: number | null; hasMore?: boolean }> => {
+    const db = await getLogDb();
+    const tx = db.transaction(STORE_LINES, 'readonly');
+    const index = tx.objectStore(STORE_LINES).index('by_session');
+
+    const lines: Array<{ lineNumber: number; raw: string }> = [];
+    let hasMore = false;
+    let activeMatchedGroupId: number | null = null;
+    let lastReportedCount = 0;
+    let progressChunk: Array<{ lineNumber: number; raw: string }> = [];
+
+    await new Promise<void>((resolve, reject) => {
+        const request = index.openCursor(IDBKeyRange.only(sessionId), options.order === 'desc' ? 'prev' : 'next');
+        request.onsuccess = () => {
+            if (options.signal?.aborted) {
+                reject(new DOMException('Filtering aborted', 'AbortError'));
+                return;
+            }
+
+            const cursor = request.result;
+            if (!cursor) {
+                resolve();
+                return;
+            }
+
+            const record = cursor.value as LogLineRecord;
+
+            if (record.parsed) {
+                const parsedMatches = options.matchesParsedRecord(record);
+
+                if (parsedMatches) {
+                    activeMatchedGroupId = record.groupId;
+                    if (options.isLineWithinCursorBounds(record.lineNumber)) {
+                        if (lines.length < options.limit) {
+                            const row = { lineNumber: record.lineNumber, raw: record.raw };
+                            lines.push(row);
+                            progressChunk.push(row);
+                        } else {
+                            hasMore = true;
+                            resolve();
+                            return;
+                        }
+                    }
+                } else {
+                    activeMatchedGroupId = null;
+                }
+            } else if (activeMatchedGroupId !== null && record.groupId === activeMatchedGroupId) {
+                if (options.isLineWithinCursorBounds(record.lineNumber)) {
+                    if (lines.length < options.limit) {
+                        const row = { lineNumber: record.lineNumber, raw: record.raw };
+                        lines.push(row);
+                        progressChunk.push(row);
+                    } else {
+                        hasMore = true;
+                        resolve();
+                        return;
+                    }
+                }
+            }
+
+            if (options.onProgress && lines.length - lastReportedCount >= options.progressChunkSize && progressChunk.length > 0) {
+                lastReportedCount = lines.length;
+                options.onProgress({
+                    totalMatches: lines.length,
+                    lines: progressChunk,
+                });
+                progressChunk = [];
+            }
+
+            cursor.continue();
+        };
+        request.onerror = () => reject(request.error);
+    });
+
+    if (options.onProgress && progressChunk.length > 0) {
+        options.onProgress({
+            totalMatches: lines.length,
+            lines: progressChunk,
+        });
+    }
+
+    await transactionDone(tx);
+    return {
+        totalMatches: lines.length,
+        lines,
+        nextAfterLine: options.order === 'asc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+        nextBeforeLine: options.order === 'desc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+        hasMore,
+    };
+};
+
+const queryDateOnlyFilteredLines = async (
+    sessionId: string,
+    options: {
+        limit: number;
+        order: 'asc' | 'desc';
+        startMs: number | null;
+        endMs: number | null;
+        startAfter: number;
+        endBefore: number;
+    },
+): Promise<FilteredLinesResult & { nextAfterLine?: number | null; nextBeforeLine?: number | null; hasMore?: boolean }> => {
+    const cacheKey = buildDateFilterCacheKey(sessionId, options.startMs, options.endMs);
+    const cachedLineNumbers = getCachedDateFilterLines(cacheKey);
+    const orderedMatchedLineNumbers = cachedLineNumbers
+        ?? rememberDateFilterLines(
+            cacheKey,
+            Array.from(await collectLineNumbersByTimestamp(sessionId, options.startMs, options.endMs)).sort((left, right) => left - right),
+        );
+
+    if (orderedMatchedLineNumbers.length === 0) {
+        return {
+            totalMatches: 0,
+            lines: [],
+            nextAfterLine: null,
+            nextBeforeLine: null,
+            hasMore: false,
+        };
+    }
+
+    const eligibleStartIndex = upperBoundNumber(orderedMatchedLineNumbers, options.startAfter);
+    const eligibleEndIndex = lowerBoundNumber(orderedMatchedLineNumbers, options.endBefore);
+
+    const eligibleCount = Math.max(0, eligibleEndIndex - eligibleStartIndex);
+    const hasMore = eligibleCount > options.limit;
+
+    const pageStartIndex = options.order === 'desc'
+        ? Math.max(eligibleStartIndex, eligibleEndIndex - options.limit)
+        : eligibleStartIndex;
+    const pageEndIndex = options.order === 'desc'
+        ? eligibleEndIndex
+        : Math.min(eligibleEndIndex, eligibleStartIndex + options.limit);
+
+    const desiredWindowStart = Math.max(eligibleStartIndex, pageStartIndex - options.limit);
+    const desiredWindowEnd = Math.min(eligibleEndIndex, pageEndIndex + options.limit);
+    const cachedWindow = await getDateFilterWindowRecords(
+        cacheKey,
+        sessionId,
+        orderedMatchedLineNumbers,
+        desiredWindowStart,
+        desiredWindowEnd,
+    );
+
+    let selectedParsedRecords: LogLineRecord[] = [];
+    if (options.order === 'desc') {
+        for (let index = pageEndIndex - 1; index >= pageStartIndex; index -= 1) {
+            const lineNumber = orderedMatchedLineNumbers[index];
+            const record = cachedWindow.recordsByLineNumber.get(lineNumber);
+            if (record) {
+                selectedParsedRecords.push(record);
+            }
+        }
+    } else {
+        for (let index = pageStartIndex; index < pageEndIndex; index += 1) {
+            const lineNumber = orderedMatchedLineNumbers[index];
+            const record = cachedWindow.recordsByLineNumber.get(lineNumber);
+            if (record) {
+                selectedParsedRecords.push(record);
+            }
+        }
+    }
+
+    if (selectedParsedRecords.length === 0) {
+        return {
+            totalMatches: 0,
+            lines: [],
+            nextAfterLine: null,
+            nextBeforeLine: null,
+            hasMore,
+        };
+    }
+
+    const matchedGroupIds = new Set<number>();
+    for (const record of selectedParsedRecords) {
+        if (record.parsed) {
+            matchedGroupIds.add(record.groupId);
+        }
+    }
+
+    const groupLines = await fetchLinesByGroupIds(sessionId, Array.from(matchedGroupIds));
+    const unique = new Map<number, LogLineRecord>();
+    for (const record of [...selectedParsedRecords, ...groupLines]) {
+        unique.set(record.lineNumber, record);
+    }
+
+    const sorted = Array.from(unique.values()).sort((left, right) => left.lineNumber - right.lineNumber);
+    const lines: Array<{ lineNumber: number; raw: string }> = [];
+
+    if (options.order === 'desc') {
+        for (let index = sorted.length - 1; index >= 0; index -= 1) {
+            const record = sorted[index];
+            if (!(record.lineNumber > options.startAfter && record.lineNumber < options.endBefore)) {
+                continue;
+            }
+
+            if (lines.length < options.limit) {
+                lines.push({ lineNumber: record.lineNumber, raw: record.raw });
+                continue;
+            }
+
+            break;
+        }
+    } else {
+        for (let index = 0; index < sorted.length; index += 1) {
+            const record = sorted[index];
+            if (!(record.lineNumber > options.startAfter && record.lineNumber < options.endBefore)) {
+                continue;
+            }
+
+            if (lines.length < options.limit) {
+                lines.push({ lineNumber: record.lineNumber, raw: record.raw });
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    return {
+        totalMatches: lines.length,
+        lines,
+        nextAfterLine: options.order === 'asc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+        nextBeforeLine: options.order === 'desc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
+        hasMore,
+    };
 };
 
 export const queryFilteredLines = async (
@@ -1185,6 +1593,18 @@ export const queryFilteredLines = async (
         }
     }
 
+    if ((rangeStart !== null || rangeEnd !== null) && enumFilters.length === 0 && textFilters.length === 0) {
+        throwIfAborted();
+        return queryDateOnlyFilteredLines(sessionId, {
+            limit,
+            order,
+            startMs: rangeStart,
+            endMs: rangeEnd,
+            startAfter,
+            endBefore,
+        });
+    }
+
     if (rangeStart !== null || rangeEnd !== null) {
         throwIfAborted();
         const matches = await collectLineNumbersByTimestamp(sessionId, rangeStart, rangeEnd);
@@ -1192,97 +1612,19 @@ export const queryFilteredLines = async (
     }
 
     if (!candidateLines) {
-        // Scan all lines.
-        const db = await getLogDb();
-        const tx = db.transaction(STORE_LINES, 'readonly');
-        const index = tx.objectStore(STORE_LINES).index('by_session');
-
-        const lines: Array<{ lineNumber: number; raw: string }> = [];
-        let hasMore = false;
-        let activeMatchedGroupId: number | null = null;
-        let lastReportedCount = 0;
-        let progressChunk: Array<{ lineNumber: number; raw: string }> = [];
-
-        await new Promise<void>((resolve, reject) => {
-            const request = index.openCursor(IDBKeyRange.only(sessionId), order === 'desc' ? 'prev' : 'next');
-            request.onsuccess = () => {
-                if (signal?.aborted) {
-                    reject(new DOMException('Filtering aborted', 'AbortError'));
-                    return;
-                }
-                const cursor = request.result;
-                if (!cursor) {
-                    resolve();
-                    return;
-                }
-                const record = cursor.value as LogLineRecord;
-
-                if (record.parsed) {
-                    const parsedMatches = (
-                        matchesDateRange(record, rangeStart, rangeEnd)
-                        && matchesEnumFilters(record, enumFilters)
-                        && matchesTextFilters(record, textFilters)
-                    );
-
-                    if (parsedMatches) {
-                        activeMatchedGroupId = record.groupId;
-                        if (isLineWithinCursorBounds(record.lineNumber)) {
-                            if (lines.length < limit) {
-                                const row = { lineNumber: record.lineNumber, raw: record.raw };
-                                lines.push(row);
-                                progressChunk.push(row);
-                            } else {
-                                hasMore = true;
-                                resolve();
-                                return;
-                            }
-                        }
-                    } else {
-                        activeMatchedGroupId = null;
-                    }
-                } else if (activeMatchedGroupId !== null && record.groupId === activeMatchedGroupId) {
-                    if (isLineWithinCursorBounds(record.lineNumber)) {
-                        if (lines.length < limit) {
-                            const row = { lineNumber: record.lineNumber, raw: record.raw };
-                            lines.push(row);
-                            progressChunk.push(row);
-                        } else {
-                            hasMore = true;
-                            resolve();
-                            return;
-                        }
-                    }
-                }
-
-                if (onProgress && lines.length - lastReportedCount >= PROGRESS_CHUNK_SIZE && progressChunk.length > 0) {
-                    lastReportedCount = lines.length;
-                    onProgress({
-                        totalMatches: lines.length,
-                        lines: progressChunk,
-                    });
-                    progressChunk = [];
-                }
-
-                cursor.continue();
-            };
-            request.onerror = () => reject(request.error);
+        return scanSessionLinesWithFilters(sessionId, {
+            limit,
+            order,
+            signal,
+            onProgress,
+            progressChunkSize: PROGRESS_CHUNK_SIZE,
+            matchesParsedRecord: (record) => (
+                matchesDateRange(record, rangeStart, rangeEnd)
+                && matchesEnumFilters(record, enumFilters)
+                && matchesTextFilters(record, textFilters)
+            ),
+            isLineWithinCursorBounds,
         });
-
-        if (onProgress && progressChunk.length > 0) {
-            onProgress({
-                totalMatches: lines.length,
-                lines: progressChunk,
-            });
-        }
-
-        await transactionDone(tx);
-        return {
-            totalMatches: lines.length,
-            lines,
-            nextAfterLine: order === 'asc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
-            nextBeforeLine: order === 'desc' && lines.length > 0 ? lines[lines.length - 1].lineNumber : null,
-            hasMore,
-        };
     }
 
     throwIfAborted();

@@ -29,6 +29,7 @@ import { applyLogFilters } from '@/utils/logFilters';
 import { useFileLoader } from '@/hooks/useFileLoader';
 import { useParsedRowsCache } from '@/hooks/useParsedRowsCache';
 import {
+    clearDateFilterCache,
     findAdjacentLineMatch,
     getDashboardSnapshot,
     getSession,
@@ -319,6 +320,8 @@ const splitAnomalyFilter = (filters: LogFilters): {
 export const useViewLogsController = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
     const virtuosoRef = useRef<VirtuosoHandle>(null);
+    const previousAnalyticsSessionIdRef = useRef<string | null>(null);
+    const previousHasActiveFiltersRef = useRef<boolean>(false);
     const [viewMode, setViewMode] = useState<ViewModeEnum>(ViewModeEnum.FromEnd);
     const viewModeRef = useRef<ViewModeEnum>(ViewModeEnum.FromEnd);
 
@@ -2358,18 +2361,8 @@ export const useViewLogsController = () => {
         setDbVirtualWindowStart(nextWindowStart);
     }, [clampWindowStart, dbLineCount, dbVirtualWindowStart, filters, getVirtualWindowSize, requestDbRangeLoad, isDbView, viewMode]);
 
-    const handleRemoteFilteredRangeChange = useCallback((startIndex: number, endIndex: number) => {
-        if (!isDbView || !hasActiveFiltersApplied) {
-            return;
-        }
-
-        const previousStart = remoteFilteredRangeRef.current.start;
-        remoteFilteredRangeRef.current = {
-            start: startIndex,
-            end: endIndex,
-            previousStart,
-        };
-
+    const maybeLoadRemoteFilteredEdge = useCallback((startIndex: number, endIndex: number) => {
+        const pagination = remoteFilterPaginationRef.current;
         const count = indexedFilteredRows.length;
         if (count === 0) {
             return;
@@ -2383,13 +2376,27 @@ export const useViewLogsController = () => {
             return;
         }
 
+        const previousStart = remoteFilteredRangeRef.current.previousStart;
         const movingDown = startIndex > previousStart;
 
         const topDirection = viewMode === ViewModeEnum.FromEnd ? 'newer' : 'older';
         const bottomDirection = viewMode === ViewModeEnum.FromEnd ? 'older' : 'newer';
+        const canLoadDirection = (direction: 'older' | 'newer') => (direction === 'older'
+            ? pagination.hasMoreOlder
+            : pagination.hasMoreNewer);
 
         if (nearTop && nearBottom) {
-            void loadMoreRemoteFilteredRows(movingDown ? bottomDirection : topDirection);
+            const preferredDirection = movingDown ? bottomDirection : topDirection;
+            const fallbackDirection = preferredDirection === topDirection ? bottomDirection : topDirection;
+
+            if (canLoadDirection(preferredDirection)) {
+                void loadMoreRemoteFilteredRows(preferredDirection);
+                return;
+            }
+
+            if (canLoadDirection(fallbackDirection)) {
+                void loadMoreRemoteFilteredRows(fallbackDirection);
+            }
             return;
         }
 
@@ -2402,6 +2409,77 @@ export const useViewLogsController = () => {
             void loadMoreRemoteFilteredRows(bottomDirection);
         }
     }, [indexedFilteredRows.length, hasActiveFiltersApplied, isDbView, loadMoreRemoteFilteredRows, viewMode]);
+
+    const handleRemoteFilteredRangeChange = useCallback((startIndex: number, endIndex: number) => {
+        if (!isDbView || !hasActiveFiltersApplied) {
+            return;
+        }
+
+        const previousStart = remoteFilteredRangeRef.current.start;
+        remoteFilteredRangeRef.current = {
+            start: startIndex,
+            end: endIndex,
+            previousStart,
+        };
+
+        maybeLoadRemoteFilteredEdge(startIndex, endIndex);
+    }, [hasActiveFiltersApplied, isDbView, maybeLoadRemoteFilteredEdge]);
+
+    useEffect(() => {
+        if (!isDbView || !hasActiveFiltersApplied || indexedFilteredRows.length === 0) {
+            return;
+        }
+
+        const { start, end } = remoteFilteredRangeRef.current;
+        maybeLoadRemoteFilteredEdge(start, end);
+    }, [hasActiveFiltersApplied, indexedFilteredRows.length, isDbView, maybeLoadRemoteFilteredEdge]);
+
+    useEffect(() => {
+        const previousSessionId = previousAnalyticsSessionIdRef.current;
+        previousAnalyticsSessionIdRef.current = analyticsSessionId ?? null;
+
+        if (!previousSessionId || previousSessionId === analyticsSessionId || previousSessionId.startsWith('remote:')) {
+            return;
+        }
+
+        clearDateFilterCache(previousSessionId);
+    }, [analyticsSessionId]);
+
+    useEffect(() => {
+        const hadActiveFilters = previousHasActiveFiltersRef.current;
+        previousHasActiveFiltersRef.current = hasActiveFiltersApplied;
+
+        if (!hadActiveFilters || hasActiveFiltersApplied) {
+            return;
+        }
+
+        if (analyticsSessionId && !analyticsSessionId.startsWith('remote:')) {
+            clearDateFilterCache(analyticsSessionId);
+        }
+
+        remoteFilteredRangeRef.current = {
+            start: 0,
+            end: 0,
+            previousStart: 0,
+        };
+
+        if (isDbView) {
+            setDbVirtualWindowStart(0);
+            dbRebaseAnchorRef.current = null;
+        }
+
+        if (isStreamView) {
+            setVirtualWindowStart(0);
+        }
+
+        requestAnimationFrame(() => {
+            virtuosoRef.current?.scrollToIndex({
+                index: 0,
+                align: 'start',
+                behavior: 'auto',
+            });
+        });
+    }, [analyticsSessionId, hasActiveFiltersApplied, isDbView, isStreamView]);
 
     useEffect(() => {
         if (!isDbView || hasActiveFilters(filters)) {

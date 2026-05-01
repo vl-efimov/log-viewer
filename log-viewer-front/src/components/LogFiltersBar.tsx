@@ -120,22 +120,31 @@ export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
 
     const handleTimestampStartChange = (field: string, value: string) => {
         const filterKey = field as keyof LogFilters;
+        const parsedValue = value ? new Date(value) : null;
+        if (parsedValue) {
+            parsedValue.setSeconds(0, 0);
+        }
         setPendingFilters({
             ...pendingFilters,
             [filterKey]: {
                 ...(pendingFilters[filterKey] as DateRangeFilter),
-                start: value ? new Date(value) : null,
+                start: parsedValue,
             },
         });
     };
 
     const handleTimestampEndChange = (field: string, value: string) => {
         const filterKey = field as keyof LogFilters;
+        const parsedValue = value ? new Date(value) : null;
+        if (parsedValue) {
+            // `datetime-local` has minute precision; treat the end as inclusive for the whole minute.
+            parsedValue.setSeconds(59, 999);
+        }
         setPendingFilters({
             ...pendingFilters,
             [filterKey]: {
                 ...(pendingFilters[filterKey] as DateRangeFilter),
-                end: value ? new Date(value) : null,
+                end: parsedValue,
             },
         });
     };
