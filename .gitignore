@@ -1,3 +1,4 @@
 # Python virtual environment
 backend/.venv
 backend/anomaly_service/__pycache__
+testing/__pycache__

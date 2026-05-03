@@ -1,0 +1,22 @@
+{
+  "datasets": [
+    {
+      "name": "HDFS (Anomaly)",
+      "file": "log-samples/HDFS_2k.log",
+      "format_id": "hdfs",
+      "model_id": "hdfs"
+    },
+    {
+      "name": "BGL (Anomaly)",
+      "file": "log-samples/BGL_2k.log",
+      "format_id": "bgl",
+      "model_id": "bgl"
+    },
+    {
+      "name": "BGL (Large)",
+      "file": "log-samples/BGL.log",
+      "format_id": "bgl",
+      "model_id": "bgl"
+    }
+  ]
+}

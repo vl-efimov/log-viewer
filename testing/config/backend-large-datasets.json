@@ -1,0 +1,19 @@
+{
+  "datasets": [
+    {
+      "name": "Web Access (Large)",
+      "file": "log-samples/access.log",
+      "format_id": "web-access-generic"
+    },
+    {
+      "name": "HDFS (Large)",
+      "file": "log-samples/HDFS.log",
+      "format_id": "hdfs"
+    },
+    {
+      "name": "BGL (Large)",
+      "file": "log-samples/BGL.log",
+      "format_id": "bgl"
+    }
+  ]
+}

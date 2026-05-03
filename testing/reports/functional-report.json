@@ -1,0 +1,150 @@
+{
+  "suite": "backend-functional",
+  "base_url": "http://127.0.0.1:8001",
+  "health": {
+    "ok": true,
+    "selected_model_id": "bgl",
+    "model_id": "bgl",
+    "name": "NeuralLog Transformer (BGL)",
+    "dataset": "BGL",
+    "model_path": "/app/NeuralLog/saved_models/bgl_transformer.hdf5",
+    "model_exists": true,
+    "model_loaded": true,
+    "model_ready": true,
+    "prepare": {
+      "preparing": false,
+      "stage": "ready",
+      "progress": 100,
+      "message": "Model is ready",
+      "error": null,
+      "loaded": true
+    }
+  },
+  "models": {
+    "ok": true,
+    "models": [
+      {
+        "model_id": "bgl",
+        "name": "NeuralLog Transformer (BGL)",
+        "dataset": "BGL",
+        "model_path": "/app/NeuralLog/saved_models/bgl_transformer.hdf5",
+        "model_exists": true,
+        "model_loaded": true,
+        "model_ready": true,
+        "prepare": {
+          "preparing": false,
+          "stage": "ready",
+          "progress": 100,
+          "message": "Model is ready",
+          "error": null,
+          "loaded": true
+        }
+      },
+      {
+        "model_id": "hdfs",
+        "name": "NeuralLog Transformer (HDFS)",
+        "dataset": "HDFS",
+        "model_path": "/app/NeuralLog/saved_models/hdfs_transformer.hdf5",
+        "model_exists": true,
+        "model_loaded": true,
+        "model_ready": true,
+        "prepare": {
+          "preparing": false,
+          "stage": "ready",
+          "progress": 100,
+          "message": "Model is ready",
+          "error": null,
+          "loaded": true
+        }
+      }
+    ]
+  },
+  "datasets": [
+    {
+      "dataset": "Web Access (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\access.log",
+      "format_id": "web-access-generic",
+      "parser_pattern": null,
+      "upload_ms": 265186.372,
+      "finish_status": "ready",
+      "ingest_id": "23454cf8-f9e0-4f5e-8024-fb8b2e920654",
+      "line_count": 10365152,
+      "preview_lines": 5,
+      "filter_probe_token": "+http://ahrefs.com/robot",
+      "filter_total_matches": 10,
+      "dashboard_keys": [
+        "kind",
+        "sampledLines",
+        "sessionId",
+        "stats",
+        "updatedAt"
+      ],
+      "exact_dashboard_keys": [
+        "kind",
+        "sessionId",
+        "stats",
+        "updatedAt"
+      ],
+      "status": "passed"
+    },
+    {
+      "dataset": "HDFS (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\HDFS.log",
+      "format_id": "hdfs",
+      "parser_pattern": null,
+      "upload_ms": 232643.951,
+      "finish_status": "ready",
+      "ingest_id": "61b5de43-bf10-4e4b-ad3f-8be8846f6aaa",
+      "line_count": 11175629,
+      "preview_lines": 5,
+      "filter_probe_token": "dest",
+      "filter_total_matches": 10,
+      "dashboard_keys": [
+        "kind",
+        "sampledLines",
+        "sessionId",
+        "stats",
+        "updatedAt"
+      ],
+      "exact_dashboard_keys": [
+        "kind",
+        "sessionId",
+        "stats",
+        "updatedAt"
+      ],
+      "status": "passed"
+    },
+    {
+      "dataset": "BGL (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\BGL.log",
+      "format_id": "bgl",
+      "parser_pattern": null,
+      "upload_ms": 96269.772,
+      "finish_status": "ready",
+      "ingest_id": "802cb39c-6ef8-453e-9d32-bffe286c60ea",
+      "line_count": 4747963,
+      "preview_lines": 5,
+      "filter_probe_token": "corrected",
+      "filter_total_matches": 10,
+      "dashboard_keys": [
+        "kind",
+        "sampledLines",
+        "sessionId",
+        "stats",
+        "updatedAt"
+      ],
+      "exact_dashboard_keys": [
+        "kind",
+        "sessionId",
+        "stats",
+        "updatedAt"
+      ],
+      "status": "passed"
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "suite": "backend-performance",
+  "base_url": "http://127.0.0.1:8001",
+  "datasets": [
+    {
+      "dataset": "Web Access (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\access.log",
+      "status": "completed",
+      "line_count": 10365152,
+      "timings_ms": {
+        "ingest": 261825.557,
+        "line_count": 198.085,
+        "dashboard": 4281.799,
+        "dashboard_exact": 2556.406,
+        "filter_message": 30.799
+      },
+      "normalized_ms_per_1000_lines": {
+        "ingest": 25.26,
+        "dashboard": 0.413,
+        "dashboard_exact": 0.247,
+        "filter_message": 0.003
+      }
+    },
+    {
+      "dataset": "HDFS (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\HDFS.log",
+      "status": "completed",
+      "line_count": 11175629,
+      "timings_ms": {
+        "ingest": 239384.661,
+        "line_count": 209.172,
+        "dashboard": 3403.674,
+        "dashboard_exact": 1975.831,
+        "filter_message": 21.729
+      },
+      "normalized_ms_per_1000_lines": {
+        "ingest": 21.42,
+        "dashboard": 0.305,
+        "dashboard_exact": 0.177,
+        "filter_message": 0.002
+      }
+    },
+    {
+      "dataset": "BGL (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\BGL.log",
+      "status": "completed",
+      "line_count": 4747963,
+      "timings_ms": {
+        "ingest": 100676.925,
+        "line_count": 77.24,
+        "dashboard": 1527.896,
+        "dashboard_exact": 947.907,
+        "filter_message": 22.837
+      },
+      "normalized_ms_per_1000_lines": {
+        "ingest": 21.204,
+        "dashboard": 0.322,
+        "dashboard_exact": 0.2,
+        "filter_message": 0.005
+      }
+    }
+  ],
+  "summary": {
+    "ingest": {
+      "count": 3,
+      "min_ms": 100676.925,
+      "max_ms": 261825.557,
+      "avg_ms": 200629.048
+    },
+    "dashboard": {
+      "count": 3,
+      "min_ms": 1527.896,
+      "max_ms": 4281.799,
+      "avg_ms": 3071.123
+    },
+    "dashboard_exact": {
+      "count": 3,
+      "min_ms": 947.907,
+      "max_ms": 2556.406,
+      "avg_ms": 1826.714
+    },
+    "filter_message": {
+      "count": 3,
+      "min_ms": 21.729,
+      "max_ms": 30.799,
+      "avg_ms": 25.122
+    }
+  }
+}
