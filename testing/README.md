@@ -51,7 +51,7 @@ Hlavní soubory a jejich role:
 Tyto soubory jsou vhodné pro lokální práci ve frontendu a pro stručné manuální ověření hlavních uživatelských workflow.
 
 | Dataset | Soubor | Parser | Zdroj |
-| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | Apache | `log-samples/Apache_2k.log` | built-in `apache` | [Loghub](https://github.com/logpai/loghub) |
 | Linux (Syslog) | `log-samples/Linux_2k.log` | built-in `syslog` | [Loghub](https://github.com/logpai/loghub) |
 | HDFS (Small) | `log-samples/HDFS_2k.log` | built-in `hdfs` | [Loghub](https://github.com/logpai/loghub) |
@@ -63,22 +63,22 @@ Tyto soubory jsou vhodné pro lokální práci ve frontendu a pro stručné manu
 Tyto soubory se používají v automatických backendových testech zaměřených na ingest, filtrování a dashboard nad velkými daty.
 
 | Dataset | Soubor | Parser | Zdroj |
-| --- | --- | --- | --- | --- |
-| Web Access (Large) | `log-samples/access.log` | built-in `web-access-generic` | [Kaggle](https://www.kaggle.com/datasets/eliasdabbas/web-server-access-logs?resource=download) |
-| HDFS (Large) | `log-samples/HDFS.log` | built-in `hdfs` | [Zenodo](https://zenodo.org/records/8196385) |
-| BGL (Large) | `log-samples/BGL.log` | built-in `bgl` | [Zenodo](https://zenodo.org/records/8196385) |
+| --- | --- | --- | --- |
+| Web Access (Large) | `log-samples/Large/access.log` | built-in `web-access-generic` | [Kaggle](https://www.kaggle.com/datasets/eliasdabbas/web-server-access-logs?resource=download) |
+| HDFS (Large) | `log-samples/Large/HDFS.log` | built-in `hdfs` | [Zenodo](https://zenodo.org/records/8196385) |
+| BGL (Large) | `log-samples/Large/BGL.log` | built-in `bgl` | [Zenodo](https://zenodo.org/records/8196385) |
 
 ### 4.3 Datasety pro backendové testy detekce anomálií
 
 Tyto soubory se používají pro integrační ověření backendové detekce anomálií.
 
 | Dataset | Soubor | Model | Zdroj |
-| --- | --- | --- | --- | --- |
-| HDFS (Anomaly) | `log-samples/HDFS_2k.log` | `hdfs` | [Loghub](https://github.com/logpai/loghub) |
-| BGL (Anomaly) | `log-samples/BGL_2k.log` | `bgl` | [Loghub](https://github.com/logpai/loghub) |
-| BGL (Large) | `log-samples/BGL.log` | `bgl` | [Zenodo](https://zenodo.org/records/8196385) |
+| --- | --- | --- | --- |
+| HDFS (Small) | `log-samples/HDFS_2k.log` | `hdfs` | [Loghub](https://github.com/logpai/loghub) |
+| BGL (Small) | `log-samples/BGL_2k.log` | `bgl` | [Loghub](https://github.com/logpai/loghub) |
+| BGL (Large) | `log-samples/Large/BGL.log` | `bgl` | [Zenodo](https://zenodo.org/records/8196385) |
 
-## 45. Co je testováno
+## 5. Co je testováno
 
 ### 5.1  Plán frontendové manuální testování
 
@@ -135,6 +135,8 @@ Kontrolované oblasti:
 ## 6. Jak testy spouštět
 
 ### 6.1 Spuštění všech backendových automatických testů
+
+Pro backendové testy velkých souborů je navíc nutné mít rozbalené velké datasety ve složce `log-samples/Large`. Pokud jsou soubory dostupné pouze v archivu `log-samples/Lage.rar`, je třeba tento archiv před spuštěním testů rozbalit tak, aby ve složce `log-samples/Large` byly dostupné soubory `access.log`, `HDFS.log` a `BGL.log`.
 
 ```bash
 python testing/run_all_tests.py --warmup

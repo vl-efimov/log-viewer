@@ -197,24 +197,6 @@ def dataset_section(functional_report: dict[str, Any] | None, performance_report
     ]
     return "\n".join(lines)
 
-
-def manual_section() -> str:
-
-    return "\n".join(
-        [
-            "## Frontendové manuální testování",
-            "",
-            "Frontendové scénáře nejsou součástí automatických backendových běhů.",
-            "Manuální ověření je popsáno v souborech:",
-            "",
-            "- testing/frontend-manual-test-plan.md",
-            "- testing/online-offline-manual-checklist.md",
-            "",
-            "Tyto plány pokrývají lokální práci s menšími soubory, vlastní regex parser, vizualizaci v UI, PWA a online/offline scénáře.",
-        ]
-    )
-
-
 # Build the anomaly integration section of the summary.
 def anomaly_section(report: dict[str, Any] | None) -> str:
 
@@ -280,7 +262,6 @@ def main() -> int:
             "",
             "Tento souhrnný report kombinuje manuální frontendové plány a automatické backendové reporty uložené ve složce testing/reports.",
             "",
-            manual_section(),
             functional_section(functional_report),
             performance_section(performance_report),
             dataset_section(functional_report, performance_report),

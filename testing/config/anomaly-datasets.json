@@ -14,7 +14,7 @@
     },
     {
       "name": "BGL (Large)",
-      "file": "log-samples/BGL.log",
+      "file": "log-samples/Large/BGL.log",
       "format_id": "bgl",
       "model_id": "bgl"
     }

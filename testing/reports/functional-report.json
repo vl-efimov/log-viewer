@@ -62,7 +62,7 @@
   "datasets": [
     {
       "dataset": "Web Access (Large)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\access.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\Large\\access.log",
       "format_id": "web-access-generic",
       "parser_pattern": null,
       "upload_ms": 265186.372,
@@ -89,7 +89,7 @@
     },
     {
       "dataset": "HDFS (Large)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\HDFS.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\Large \\HDFS.log",
       "format_id": "hdfs",
       "parser_pattern": null,
       "upload_ms": 232643.951,
@@ -116,7 +116,7 @@
     },
     {
       "dataset": "BGL (Large)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\Vova\\log-viewer\\log-samples\\BGL.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\Large\\BGL.log",
       "format_id": "bgl",
       "parser_pattern": null,
       "upload_ms": 96269.772,

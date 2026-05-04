@@ -1,16 +1,5 @@
 # Souhrnný report testování
 
-Tento souhrnný report kombinuje manuální frontendové plány a automatické backendové reporty uložené ve složce testing/reports.
-
-## Frontendové manuální testování
-
-Frontendové scénáře nejsou součástí automatických backendových běhů.
-Manuální ověření je popsáno v souborech:
-
-- testing/frontend-manual-test-plan.md
-- testing/online-offline-manual-checklist.md
-
-Tyto plány pokrývají lokální práci s menšími soubory, vlastní regex parser, vizualizaci v UI, PWA a online/offline scénáře.
 ## Testování aplikace
 
 ### Funkční testy velkých souborů
