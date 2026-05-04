@@ -8,9 +8,6 @@ import type { RootState } from '@/redux/store';
 import { isLargeFileByThreshold } from '@/utils/fileSizeSettings';
 import { getLastSession, touchSession } from '@/utils/logIndexedDb';
 
-console.log(baseUrl, 'baseUrl');
-
-
 const router = createBrowserRouter(AppRoutes, {
     basename: baseUrl,
     future: {

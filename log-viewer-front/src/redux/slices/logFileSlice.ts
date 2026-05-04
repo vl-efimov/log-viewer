@@ -66,7 +66,6 @@ const logFileSlice = createSlice({
             isLargeFile?: boolean;
             analyticsSessionId?: string;
         }>) => {
-            console.log('setLogFile');
             state.name = action.payload.name;
             state.size = action.payload.size;
             state.content = action.payload.content ?? '';
@@ -83,8 +82,6 @@ const logFileSlice = createSlice({
             state.loaded = true;
         },
         updateLogContent: (state, action: PayloadAction<{ content: string; lastModified?: number; size?: number }>) => {
-            console.log('updateLogContent');
-            
             if (!state.isLargeFile) {
                 state.content = action.payload.content;
             }

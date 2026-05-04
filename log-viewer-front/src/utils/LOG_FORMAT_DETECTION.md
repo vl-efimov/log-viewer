@@ -32,7 +32,6 @@ import { detectLogFormat } from '@/utils/logFormatDetector';
 
 const logContent = "..."; // Your log file content
 const format = detectLogFormat(logContent);
-console.log(`Detected format: ${format}`);
 ```
 
 ### Parse Individual Log Lines
@@ -45,15 +44,11 @@ const line = "2025-10-30 12:34:56,789 INFO org.example.MyClass: Starting applica
 const parsed = parseLogLine(line, 'hdfs-v2');
 
 if (parsed) {
-  console.log('Timestamp:', parsed.fields.timestamp);
-  console.log('Level:', parsed.fields.level);
-  console.log('Class:', parsed.fields.class);
-  console.log('Message:', parsed.fields.message);
+  const { timestamp, level, class: className, message } = parsed.fields;
 }
 
 // Auto-detect format and parse
 const autoParsed = parseLogLineAuto(line);
-console.log('Detected format:', autoParsed?.formatId);
 ```
 
 ### Get Field Definitions
@@ -63,7 +58,7 @@ import { getFormatFields } from '@/utils/logFormatDetector';
 
 const fields = getFormatFields('nginx');
 fields.forEach(field => {
-  console.log(`${field.name}: ${field.description} (${field.type})`);
+  const { name, description, type } = field;
 });
 ```
 
@@ -74,7 +69,7 @@ import { getAvailableLogFormats } from '@/utils/logFormatDetector';
 
 const formats = getAvailableLogFormats();
 formats.forEach(format => {
-  console.log(`${format.name}: ${format.description}`);
+  const { name, description } = format;
 });
 ```
 

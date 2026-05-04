@@ -342,7 +342,6 @@ export async function loadLogFormatsFromJSON(): Promise<void> {
             patterns: format.patterns.map((pattern: string) => new RegExp(pattern, 'm'))
         }));
         
-        console.log('Loaded log formats:', LOG_FORMAT_PATTERNS.length);
     } catch (error) {
         console.error('Failed to load log formats from JSON:', error);
         // Fallback to empty array

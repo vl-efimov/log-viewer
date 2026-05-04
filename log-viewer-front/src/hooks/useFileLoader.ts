@@ -299,8 +299,6 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
             });
 
             const file = await handle.getFile();
-            console.log('File size:', file.size);
-            
             await loadFile(file, handle);
             return true;
         } catch (error) {
