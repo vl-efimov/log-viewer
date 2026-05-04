@@ -420,7 +420,8 @@
       "parameterLoadNeedsConfirm": "Confirmation is required before starting.",
       "disabled": {
         "indexing": "Wait until data is loaded into the database.",
-        "selectFile": "Select a file for monitoring.",
+        "selectFile": "File is read from IndexedDB. Re-select the file to upload it to the server.",
+        "offline": "Server is not available. Check your connection.",
         "noRows": "No log rows to analyze. Load or attach a log file first.",
         "checkingModel": "Checking model readiness...",
         "prepareModel": "Prepare selected model ({{model}}) in Pretrained Models first."

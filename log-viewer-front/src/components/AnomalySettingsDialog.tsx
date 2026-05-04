@@ -32,6 +32,7 @@ import { enqueueNotification } from '@/redux/slices/notificationsSlice';
 import { deleteAnomalySnapshot } from '@/utils/logIndexedDb';
 import {
     beginAnomalyPredictionSession,
+    checkBackendAvailability,
     endAnomalyPredictionSession,
     getPretrainedModels,
     predictAnomaliesFromFile,
@@ -62,6 +63,8 @@ type ParameterLoadWarning = {
     multiplierLabel: string;
     shouldConfirmBeforeAnalyze: boolean;
 };
+
+const SERVER_STATUS_POLL_MS = 5000;
 
 function formatMultiplier(multiplier: number): string {
     const rounded = Math.round(multiplier * 10) / 10;
@@ -146,6 +149,7 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     const [anomalySettings, setAnomalySettings] = useState<AnomalySettings>(() => loadAnomalySettings(loadSelectedAnomalyModelId()));
     const [isModelReady, setIsModelReady] = useState<boolean>(false);
     const [isModelReadyLoading, setIsModelReadyLoading] = useState<boolean>(false);
+    const [isServerOnline, setIsServerOnline] = useState<boolean>(true);
     const [isAnalyzeConfirmOpen, setIsAnalyzeConfirmOpen] = useState(false);
     const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
     const cancelRequestSeqRef = useRef(cancelRequestSeq);
@@ -226,6 +230,45 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
             cancelled = true;
         };
     }, [open, selectedModelId, totalRowsHint]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        let cancelled = false;
+        let inFlight = false;
+
+        const checkConnection = async () => {
+            if (inFlight) {
+                return;
+            }
+
+            inFlight = true;
+            try {
+                const online = await checkBackendAvailability();
+                if (!cancelled) {
+                    setIsServerOnline(online);
+                }
+            } catch {
+                if (!cancelled) {
+                    setIsServerOnline(false);
+                }
+            } finally {
+                inFlight = false;
+            }
+        };
+
+        void checkConnection();
+        const timer = window.setInterval(() => {
+            void checkConnection();
+        }, SERVER_STATUS_POLL_MS);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, [open]);
 
     useEffect(() => {
         setAnomalySettings(loadAnomalySettings(selectedModelId));
@@ -423,9 +466,12 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
         && !isModelReadyLoading
         && isModelReady
         && !isSmallFileIndexing
-        && !requiresMonitoringReattach;
+        && !requiresMonitoringReattach
+        && isServerOnline;
     let anomalyDisabledReason: string | undefined;
-    if (isSmallFileIndexing) {
+    if (!isServerOnline) {
+        anomalyDisabledReason = t('anomaly.dialog.disabled.offline');
+    } else if (isSmallFileIndexing) {
         anomalyDisabledReason = t('anomaly.dialog.disabled.indexing');
     } else if (requiresMonitoringReattach) {
         anomalyDisabledReason = t('anomaly.dialog.disabled.selectFile');

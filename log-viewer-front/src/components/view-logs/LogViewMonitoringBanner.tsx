@@ -48,9 +48,8 @@ const LogViewMonitoringBanner: FC<LogViewMonitoringBannerProps> = ({
                         minWidth: 0,
                     },
                     '& .MuiAlert-action': {
-                        ml: 'auto',
-                        pl: 2,
-                        mr: 0,
+                        p: 0,
+                        m: 0,
                         alignItems: 'center',
                         display: 'flex',
                     },

@@ -419,7 +419,8 @@
       "parameterLoadNeedsConfirm": "Před spuštěním je vyžadováno potvrzení.",
       "disabled": {
         "indexing": "Počkejte, až se data načtou do databáze.",
-        "selectFile": "Vyberte soubor pro monitoring.",
+        "selectFile": "Soubor je načten z IndexedDB. Pro odeslání na server jej vyberte znovu.",
+        "offline": "Server není dostupný. Zkontrolujte připojení.",
         "noRows": "Žádné řádky k analýze. Nejprve načtěte nebo připojte soubor.",
         "checkingModel": "Kontroluji připravenost modelu...",
         "prepareModel": "Nejprve připravte vybraný model ({{model}}) na stránce Předtrénované modely."
