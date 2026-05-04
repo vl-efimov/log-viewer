@@ -85,7 +85,7 @@
       "reconnecting": "No connection to the server. Reconnecting..."
     },
     "monitoringBanner": {
-      "message": "To monitor new lines, please re-select the same file.",
+      "message": "File content is read from IndexedDB, and the link to the file in the filesystem is missing. To monitor file changes and upload it to the server, re-select the file.",
       "actionLabel": "Select file for monitoring"
     },
     "refreshDisabledReason": {

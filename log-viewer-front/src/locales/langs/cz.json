@@ -85,7 +85,7 @@
       "reconnecting": "Žádné spojení se serverem. Znovu připojuji..."
     },
     "monitoringBanner": {
-      "message": "Pro sledování nových řádků prosím znovu vyberte stejný soubor.",
+      "message": "Obsah souboru se načítá z IndexedDB a odkaz na soubor v souborovém systému chybí. Pro sledování změn v souboru a jeho odeslání na server jej vyberte znovu.",
       "actionLabel": "Vybrat soubor pro monitoring"
     },
     "refreshDisabledReason": {
