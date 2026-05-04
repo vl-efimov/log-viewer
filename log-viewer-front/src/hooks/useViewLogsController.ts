@@ -46,6 +46,7 @@ import {
     endRemoteUploadSession,
     finishRemoteIngest,
     getRemoteIngestStatus,
+    RemoteIngestNetworkError,
     setActiveRemoteUploadIngestId,
     startRemoteIngest,
     uploadRemoteIngestChunk,
@@ -1139,9 +1140,11 @@ export const useViewLogsController = () => {
             remoteExpectedLineCountRef.current = 0;
             if ((error as Error).name !== 'AbortError') {
                 console.error('Failed to upload large file to server:', error);
-                const message = error instanceof Error && error.message
-                    ? error.message
-                    : t('viewLogs.serverUpload.failed');
+                const message = error instanceof RemoteIngestNetworkError
+                    ? t('viewLogs.serverUpload.backendUnavailable', { url: error.backendUrl })
+                    : error instanceof Error && error.message
+                        ? error.message
+                        : t('viewLogs.serverUpload.failed');
                 dispatch(enqueueNotification({
                     message,
                     severity: 'error',

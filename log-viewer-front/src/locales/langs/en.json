@@ -98,7 +98,8 @@
     "serverUpload": {
       "successWithLines": "Upload to server completed: {{count}} lines.",
       "success": "File upload to server completed.",
-      "failed": "Failed to upload file to server."
+      "failed": "Failed to upload file to server.",
+      "backendUnavailable": "The backend server is unavailable at {{url}}. Check that it is running and reachable, then try again."
     },
     "formatChange": {
       "formatNotFound": "Selected format was not found.",

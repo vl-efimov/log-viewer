@@ -142,6 +142,31 @@ const backendBaseUrl = (import.meta.env.VITE_ANOMALY_API_URL as string | undefin
     || (import.meta.env.VITE_BGL_API_URL as string | undefined)?.replace(/\/$/, '')
     || 'http://127.0.0.1:8001';
 
+export class RemoteIngestNetworkError extends Error {
+    readonly backendUrl: string;
+
+    constructor(action: string, backendUrl: string) {
+        super(`${action} failed because the backend server is unavailable.`);
+        this.name = 'RemoteIngestNetworkError';
+        this.backendUrl = backendUrl;
+    }
+}
+
+function normalizeRemoteIngestNetworkError(error: unknown, action: string): Error {
+    if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+            return error;
+        }
+
+        const message = error.message.trim();
+        if (message && message !== 'Failed to fetch' && message !== 'Load failed' && message !== 'NetworkError when attempting to fetch resource.') {
+            return error;
+        }
+    }
+
+    return new RemoteIngestNetworkError(action, backendBaseUrl);
+}
+
 type ActiveRemoteUploadState = {
     controller: AbortController;
     ingestId: string | null;
@@ -379,10 +404,15 @@ export async function startRemoteIngest(
         formData.append('parser_pattern', options.parserPattern);
     }
 
-    const response = await fetch(`${backendBaseUrl}/ingest/start`, {
-        method: 'POST',
-        body: formData,
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${backendBaseUrl}/ingest/start`, {
+            method: 'POST',
+            body: formData,
+        });
+    } catch (error) {
+        throw normalizeRemoteIngestNetworkError(error, 'Starting file upload');
+    }
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -402,14 +432,19 @@ export async function uploadRemoteIngestChunk(
     chunk: ArrayBuffer,
     options?: { signal?: AbortSignal },
 ): Promise<void> {
-    const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/chunk`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/octet-stream',
-        },
-        body: chunk,
-        signal: options?.signal,
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/chunk`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/octet-stream',
+            },
+            body: chunk,
+            signal: options?.signal,
+        });
+    } catch (error) {
+        throw normalizeRemoteIngestNetworkError(error, 'Uploading file to the server');
+    }
 
     if (!response.ok) {
         const text = await response.text();
@@ -418,9 +453,14 @@ export async function uploadRemoteIngestChunk(
 }
 
 export async function finishRemoteIngest(ingestId: string): Promise<IngestStatusResponse> {
-    const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/finish`, {
-        method: 'POST',
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/finish`, {
+            method: 'POST',
+        });
+    } catch (error) {
+        throw normalizeRemoteIngestNetworkError(error, 'Completing file upload');
+    }
 
     if (!response.ok) {
         const text = await response.text();

@@ -98,7 +98,8 @@
     "serverUpload": {
       "successWithLines": "Nahrání na server dokončeno: {{count}} řádků.",
       "success": "Nahrání souboru na server dokončeno.",
-      "failed": "Soubor se nepodařilo nahrát na server."
+      "failed": "Soubor se nepodařilo nahrát na server.",
+      "backendUnavailable": "Backend server není dostupný na adrese {{url}}. Zkontrolujte, že běží a je dosažitelný, a potom akci opakujte."
     },
     "formatChange": {
       "formatNotFound": "Vybraný formát nebyl nalezen.",
