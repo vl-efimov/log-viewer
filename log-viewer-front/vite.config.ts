@@ -42,9 +42,9 @@ export default defineConfig(({ mode }) => {
                     "**/*",
                 ],
                 manifest: {
-                    "name": "My PWA App",
-                    "short_name": "PWA App",
-                    "description": "A simple PWA built with React, TypeScript, and Vite",
+                    "name": "LuVo - log viewer",
+                    "short_name": "LuVo",
+                    "description": "Lightweight log viewer with monitoring, analytics, and anomaly detection.",
                     "start_url": BASE_URL,
                     "display": "standalone",
                     "background_color": "#ffffff",
