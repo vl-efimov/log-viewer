@@ -226,7 +226,10 @@ const LogFormatsPage: React.FC = () => {
                 component={Paper}
                 sx={{ mb: 4 }}
             >
-                <Table size="small" sx={customTableSx}>
+                <Table
+                    size="small"
+                    sx={customTableSx}
+                >
                     <TableHead>
                         <TableRow>
                             <TableCell sx={customNameColumnSx}>{t('logFormats.custom.table.name')}</TableCell>
@@ -348,7 +351,10 @@ const LogFormatsPage: React.FC = () => {
                 </Stack>
             ) : (
                 <TableContainer component={Paper}>
-                    <Table size="small" sx={supportedTableSx}>
+                    <Table
+                        size="small"
+                        sx={supportedTableSx}
+                    >
                         <TableHead>
                             <TableRow>
                                 <TableCell sx={supportedNameColumnSx}>{t('logFormats.supported.table.name')}</TableCell>

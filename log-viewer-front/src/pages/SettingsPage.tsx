@@ -160,7 +160,10 @@ const SettingsPage: React.FC = () => {
                             title={t('settings.largeFileThreshold.tooltip')}
                             arrow
                         >
-                            <InfoOutlinedIcon fontSize="small" color="action" />
+                            <InfoOutlinedIcon
+                                fontSize="small"
+                                color="action"
+                            />
                         </Tooltip>
                     </Stack>
                     <Typography

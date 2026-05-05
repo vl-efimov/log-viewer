@@ -74,87 +74,87 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                     },
                 }}
             >
-            <Typography
-                variant="h4"
-                sx={{ mb: 1.5, fontWeight: 700, mt: 0.5 }}
-            >
-                {t('fileSelection.title')}
-            </Typography>
-            <Typography
-                variant="body1"
-                color="text.secondary"
-                sx={{
-                    maxWidth: 520,
-                    mx: 'auto',
-                    mb: 1.5,
-                }}
-            >
-                {t('fileSelection.description')}
-            </Typography>
-            <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 4 }}
-            >
-                TXT, LOG, JSON
-            </Typography>
-            {indexing ? (
-                <Box
+                <Typography
+                    variant="h4"
+                    sx={{ mb: 1.5, fontWeight: 700, mt: 0.5 }}
+                >
+                    {t('fileSelection.title')}
+                </Typography>
+                <Typography
+                    variant="body1"
+                    color="text.secondary"
                     sx={{
-                        display: 'inline-flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 2,
-                        px: 3,
-                        py: 2.5,
-                        borderRadius: 3,
-                        backgroundColor: (theme) => alpha(theme.palette.background.paper, theme.palette.mode === 'light' ? 0.55 : 0.22),
-                        border: (theme) => `1px solid ${alpha(theme.palette.divider, 0.9)}`,
+                        maxWidth: 520,
+                        mx: 'auto',
+                        mb: 1.5,
                     }}
                 >
-                    <CircularProgress size={28} />
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                    >
-                        {t('fileSelection.indexing')}
-                    </Typography>
-                </Box>
-            ) : (
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <Button
-                        variant="contained"
-                        startIcon={<CloudUploadIcon />}
-                        size="large"
-                        onClick={handleButtonClick}
+                    {t('fileSelection.description')}
+                </Typography>
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 4 }}
+                >
+                TXT, LOG, JSON
+                </Typography>
+                {indexing ? (
+                    <Box
                         sx={{
-                            px: 3.5,
-                            py: 1.2,
-                            borderRadius: 2.5,
-                            textTransform: 'uppercase',
-                            fontWeight: 700,
-                            letterSpacing: '0.03em',
-                            boxShadow: (theme) => `0 12px 28px ${alpha(theme.palette.primary.main, 0.28)}`,
+                            display: 'inline-flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 2,
+                            px: 3,
+                            py: 2.5,
+                            borderRadius: 3,
+                            backgroundColor: (theme) => alpha(theme.palette.background.paper, theme.palette.mode === 'light' ? 0.55 : 0.22),
+                            border: (theme) => `1px solid ${alpha(theme.palette.divider, 0.9)}`,
                         }}
                     >
-                        {t('fileSelection.selectButton')}
-                    </Button>
-                </Box>
-            )}
-            <input
-                type="file"
-                accept=".txt,.json,.log"
-                style={{ display: 'none' }}
-                ref={fileInputRef}
-                onChange={onFileInputChange}
-                onDrop={(event) => {
-                    if (!onFileDrop) return;
-                    const file = event.dataTransfer.files?.[0];
-                    if (!file) return;
-                    void onFileDrop(file);
-                }}
-            />
-        </Box>
+                        <CircularProgress size={28} />
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                        >
+                            {t('fileSelection.indexing')}
+                        </Typography>
+                    </Box>
+                ) : (
+                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<CloudUploadIcon />}
+                            size="large"
+                            onClick={handleButtonClick}
+                            sx={{
+                                px: 3.5,
+                                py: 1.2,
+                                borderRadius: 2.5,
+                                textTransform: 'uppercase',
+                                fontWeight: 700,
+                                letterSpacing: '0.03em',
+                                boxShadow: (theme) => `0 12px 28px ${alpha(theme.palette.primary.main, 0.28)}`,
+                            }}
+                        >
+                            {t('fileSelection.selectButton')}
+                        </Button>
+                    </Box>
+                )}
+                <input
+                    type="file"
+                    accept=".txt,.json,.log"
+                    style={{ display: 'none' }}
+                    ref={fileInputRef}
+                    onChange={onFileInputChange}
+                    onDrop={(event) => {
+                        if (!onFileDrop) return;
+                        const file = event.dataTransfer.files?.[0];
+                        if (!file) return;
+                        void onFileDrop(file);
+                    }}
+                />
+            </Box>
         </Box>
     );
 };

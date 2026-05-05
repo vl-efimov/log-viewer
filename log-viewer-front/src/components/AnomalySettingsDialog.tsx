@@ -591,7 +591,10 @@ const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
                             </Stack>
                         </Stack>
 
-                        <Stack spacing={1.5} sx={{ width: '100%' }}>
+                        <Stack
+                            spacing={1.5}
+                            sx={{ width: '100%' }}
+                        >
                             <Box sx={{ width: '100%' }}>
                                 <Stack
                                     direction="row"
