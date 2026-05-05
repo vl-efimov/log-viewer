@@ -264,28 +264,6 @@ function toModelInfo(model: ModelStatus): PretrainedModelInfo {
     };
 }
 
-export async function predictAnomalies(payload: AnomalyPredictRequest): Promise<AnomalyPredictResponse> {
-    const response = await fetch(`${backendBaseUrl}/anomaly/predict-json`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        try {
-            const parsed = JSON.parse(errorText) as { detail?: string };
-            throw new Error(parsed.detail || `Predict request failed (${response.status})`);
-        } catch {
-            throw new Error(errorText || `Predict request failed (${response.status})`);
-        }
-    }
-
-    return (await response.json()) as AnomalyPredictResponse;
-}
-
 export async function predictAnomaliesFromFile(
     file: File,
     payload: Omit<AnomalyPredictRequest, 'rows'>,

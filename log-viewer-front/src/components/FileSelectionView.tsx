@@ -96,7 +96,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                     color="text.secondary"
                     sx={{ mb: 4 }}
                 >
-                TXT, LOG, JSON
+                TXT, LOG
                 </Typography>
                 {indexing ? (
                     <Box
@@ -143,7 +143,7 @@ export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
                 )}
                 <input
                     type="file"
-                    accept=".txt,.json,.log"
+                    accept=".txt,.log"
                     style={{ display: 'none' }}
                     ref={fileInputRef}
                     onChange={onFileInputChange}

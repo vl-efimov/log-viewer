@@ -10,7 +10,7 @@ from .io_utils import load_rows_from_file
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run NeuralLog anomaly detection on a table/log file")
-    parser.add_argument("--input", required=True, help="Input table file (.csv/.tsv/.json)")
+    parser.add_argument("--input", required=True, help="Input table file (.csv/.tsv/.log/.txt)")
     parser.add_argument("--output", required=True, help="Output JSON path")
     parser.add_argument("--text-column", default=None, help="Column containing log message text")
     parser.add_argument("--timestamp-column", default=None, help="Column containing timestamp values")

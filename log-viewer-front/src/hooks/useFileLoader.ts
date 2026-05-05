@@ -291,7 +291,6 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                         description: t('fileSelection.filePickerDescription'),
                         accept: {
                             'text/plain': ['.txt', '.log'],
-                            'application/json': ['.json'],
                         },
                     },
                 ],
@@ -330,7 +329,6 @@ export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
                         description: t('fileSelection.filePickerDescription'),
                         accept: {
                             'text/plain': ['.txt', '.log'],
-                            'application/json': ['.json'],
                         },
                     },
                 ],

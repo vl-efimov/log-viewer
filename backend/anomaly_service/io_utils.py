@@ -2,24 +2,14 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 from pathlib import Path
 from typing import Any
-
-
-def _parse_json_rows(payload: Any) -> list[dict[str, Any]]:
-    if isinstance(payload, list):
-        return [dict(row) for row in payload if isinstance(row, dict)]
-    if isinstance(payload, dict) and isinstance(payload.get("rows"), list):
-        return [dict(row) for row in payload["rows"] if isinstance(row, dict)]
-    raise ValueError("JSON must be an array of objects or an object with a 'rows' array")
-
 
 def parse_rows_from_text(text: str, source_name: str = "") -> list[dict[str, Any]]:
     suffix = Path(source_name).suffix.lower()
 
     if suffix == ".json":
-        return _parse_json_rows(json.loads(text))
+        raise ValueError("JSON log files are not supported")
 
     if suffix in {".log", ".txt"}:
         return [{"message": line} for line in text.splitlines() if line.strip()]
