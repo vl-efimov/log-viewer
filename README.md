@@ -1,4 +1,6 @@
-# log-viewer
+# LuVo - log viewer
+
+This project was created as part of a 2026 diploma thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
 
 ## Backend (FastAPI) + ClickHouse (Docker)
 
