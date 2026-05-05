@@ -1,50 +1,28 @@
-# React + TypeScript + Vite
+# LuVo - log viewer (frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project was created as part of a 2026 diploma thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
 
-Currently, two official plugins are available:
+This is the client-side application for LuVo. It provides the UI and communicates with the backend API.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Quick start
 
-## Expanding the ESLint configuration
+From the repository root:
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+cd log-viewer-front
+npm install
+npm run dev
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+Open the dev server URL printed by Vite (usually http://127.0.0.1:5173).
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Backend URL
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+The frontend reads the backend URL from `VITE_ANOMALY_API_URL` (or `VITE_BGL_API_URL` as a fallback) and defaults to `http://127.0.0.1:8001`.
+
+## Scripts
+
+- `npm run dev` - start the dev server
+- `npm run build` - build production assets
+- `npm run preview` - preview the production build
+- `npm run lint` - run linting
