@@ -12,6 +12,9 @@ const LANGUAGES = [Languages.EN, Languages.RU, Languages.CZ];
 
 const flagStyle = { marginRight: 8, width: 20, height: 15 };
 
+/**
+ * Language picker dropdown for i18n.
+ */
 const LanguageSelect = () => {
     const { i18n, t } = useTranslation();
     const [locale, setLocale] = useState<Languages>(() => {

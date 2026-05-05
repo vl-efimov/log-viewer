@@ -14,6 +14,9 @@ const FLAG_MAP: Record<string, string> = {
     cz: czFlag,
 };
 
+/**
+ * Render a flag icon for a language code.
+ */
 const Flag: React.FC<FlagProps> = (props: FlagProps) => {
     const code = props.language === Languages.EN ? 'gb' : props.language;
     const src = FLAG_MAP[code];

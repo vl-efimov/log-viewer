@@ -19,6 +19,9 @@ const router = createBrowserRouter(AppRoutes, {
     },
 });
 
+/**
+ * Root application component with router and session restore logic.
+ */
 export default function App () {
     const dispatch = useDispatch();
     const store = useStore<RootState>();

@@ -6,6 +6,9 @@ import { FileSelectionView } from '@/components/FileSelectionView';
 import { MonitoringActiveView } from '@/components/MonitoringActiveView';
 import { RouteViewLogs } from '@/routes/routePaths';
 
+/**
+ * Page for selecting log files and managing monitoring mode.
+ */
 const AddLogsPage: React.FC = () => {
     const { isMonitoring, name: fileName } = useSelector((state: RootState) => state.logFile);
     const navigate = useNavigate();

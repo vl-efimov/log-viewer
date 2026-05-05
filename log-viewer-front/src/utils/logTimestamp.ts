@@ -1,5 +1,8 @@
 import type { ParsedLogLine } from '@/utils/logFormatDetector';
 
+/**
+ * Parse a log timestamp string into a Date when possible.
+ */
 export function parseTimestamp(timestamp: string): Date | null {
     if (!timestamp) return null;
 
@@ -92,6 +95,9 @@ export function parseTimestamp(timestamp: string): Date | null {
     return null;
 }
 
+/**
+ * Extract a timestamp in milliseconds from a parsed log line.
+ */
 export function extractTimestampFromParsedLine(parsed: ParsedLogLine): number | null {
     const directCandidates = [parsed.fields.timestamp, parsed.fields.datetime];
 

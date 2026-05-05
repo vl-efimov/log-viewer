@@ -28,6 +28,9 @@ interface LogViewHistogramPanelProps {
     selectedTimeRange?: { start: number | null; end: number | null };
 }
 
+/**
+ * Container for the histogram with loading and empty states.
+ */
 const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
     isLargeFile,
     isIndexing,

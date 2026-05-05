@@ -432,8 +432,7 @@ function subtractMonths(timestamp: number, months: number): number {
 }
 
 /**
- * LogHistogram component - displays a histogram of log entries over time,
- * with stacked bars colored by log level and a range slider
+ * Histogram chart for log volumes and anomalies over time.
  */
 export const LogHistogram: React.FC<LogHistogramProps> = ({
     parsedLines,

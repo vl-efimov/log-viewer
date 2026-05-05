@@ -20,6 +20,9 @@ export const menuBoxSx: SxProps<Theme> = {
     height: '100%',
 };
 
+/**
+ * Style for the left header area that reacts to sidebar width.
+ */
 export const headerLeftSx = (isSidebarOpen: boolean): SxProps<Theme> => ({
     display: 'flex',
     alignItems: 'center',
@@ -54,6 +57,9 @@ export const fileBadgeSx: SxProps<Theme> = {
     minWidth: 0,
 };
 
+/**
+ * Style for file badge action button with optional color override.
+ */
 export const fileActionButtonSx = (color: string | undefined): SxProps<Theme> => ({
     minWidth: 0,
     flex: 1,
@@ -71,6 +77,9 @@ export const fileActionButtonSx = (color: string | undefined): SxProps<Theme> =>
     },
 });
 
+/**
+ * Style for the close icon segment inside the file badge.
+ */
 export const fileCloseSegmentSx = (color: string | undefined): SxProps<Theme> => ({
     ...iconButtonSx(color),
     alignSelf: 'stretch',
@@ -80,6 +89,9 @@ export const fileCloseSegmentSx = (color: string | undefined): SxProps<Theme> =>
     px: 1,
 });
 
+/**
+ * Style for the clear file icon button.
+ */
 export const fileClearButtonSx = (color: string | undefined): SxProps<Theme> => ({
     ...iconButtonSx(color),
     p: 0.5,
@@ -89,10 +101,16 @@ export const fileBadgeSpacerSx: SxProps<Theme> = {
     flexGrow: 1,
 };
 
+/**
+ * Style helper for icon buttons with optional color.
+ */
 export const iconButtonSx = (color: string | undefined): SxProps<Theme> => ({
     color,
 });
 
+/**
+ * Style helper for the header title text.
+ */
 export const titleSx = (color: string | undefined): SxProps<Theme> => ({
     color,
 });
@@ -102,6 +120,9 @@ export const rightGroupSx: SxProps<Theme> = {
     gap: 2,
 };
 
+/**
+ * Style helper for the language selector container.
+ */
 export const langBoxSx = (color: string | undefined): SxProps<Theme> => ({
     color,
 });

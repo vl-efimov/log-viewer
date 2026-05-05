@@ -36,7 +36,7 @@ def clean_text(text: str) -> str:
 
 
 def maybe_strip_bgl_label_prefix(text: str) -> str:
-    """Remove the leading BGL label token when present (e.g. '-', '1', 'Anomaly')."""
+    """Remove a leading BGL label token when present."""
     value = text.strip()
     if " " not in value:
         return value
@@ -49,14 +49,17 @@ def maybe_strip_bgl_label_prefix(text: str) -> str:
 
 
 def prepare_log_message(text: str) -> str:
+    """Normalize and clean a log message for embedding."""
     return clean_text(maybe_strip_bgl_label_prefix(text).lower())
 
 
 def normalize_key(value: str) -> str:
+    """Normalize column keys for matching against known candidates."""
     return value.strip().lower().replace(" ", "_")
 
 
 def extract_message(row: dict[str, Any], forced_column: str | None = None) -> str:
+    """Extract a message field from a row using heuristics."""
     if forced_column:
         return str(row.get(forced_column, "") or "")
 
@@ -109,6 +112,7 @@ def _try_parse_datetime(value: str) -> datetime | None:
 
 
 def extract_timestamp_iso(row: dict[str, Any], forced_column: str | None = None) -> str | None:
+    """Extract an ISO timestamp string from a row when possible."""
     if forced_column:
         candidate = row.get(forced_column)
         if candidate is None:

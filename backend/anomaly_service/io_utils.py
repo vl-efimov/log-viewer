@@ -5,7 +5,9 @@ import io
 from pathlib import Path
 from typing import Any
 
+
 def parse_rows_from_text(text: str, source_name: str = "") -> list[dict[str, Any]]:
+    """Parse delimited or line-based log text into row dictionaries."""
     suffix = Path(source_name).suffix.lower()
 
     if suffix == ".json":
@@ -27,11 +29,13 @@ def parse_rows_from_text(text: str, source_name: str = "") -> list[dict[str, Any
 
 
 def parse_rows_from_bytes(data: bytes, source_name: str = "") -> list[dict[str, Any]]:
+    """Decode bytes and parse the content into row dictionaries."""
     text = data.decode("utf-8-sig", errors="replace")
     return parse_rows_from_text(text, source_name=source_name)
 
 
 def load_rows_from_file(path: str) -> list[dict[str, Any]]:
+    """Load a file from disk and parse it into row dictionaries."""
     file_path = Path(path)
     raw = file_path.read_bytes()
     return parse_rows_from_bytes(raw, source_name=file_path.name)

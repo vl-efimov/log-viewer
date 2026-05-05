@@ -19,6 +19,9 @@ import {
     RouteNotFound
 } from '@/routes/routePaths';
 
+/**
+ * Application route configuration for the main router.
+ */
 const AppRoutes: RouteObject[] = [
     {
         path: RouteRoot,

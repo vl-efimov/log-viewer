@@ -54,6 +54,9 @@ interface HeaderProps {
     isSidebarToggleDisabled?: boolean;
 }
 
+/**
+ * Top application header with navigation and actions.
+ */
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar, isSidebarToggleDisabled = false }) => {
     const { t } = useTranslation();
     const dispatch = useDispatch();

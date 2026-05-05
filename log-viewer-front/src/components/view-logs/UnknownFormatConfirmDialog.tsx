@@ -18,6 +18,9 @@ interface UnknownFormatConfirmDialogProps {
     onCancel: () => void;
 }
 
+/**
+ * Dialog asking how to proceed with an unknown log format.
+ */
 const UnknownFormatConfirmDialog: React.FC<UnknownFormatConfirmDialogProps> = ({
     open,
     fileName,

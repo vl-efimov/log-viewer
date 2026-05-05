@@ -68,14 +68,23 @@ export type IndexingOptions = {
 const activeIndexers = new Map<string, AbortController>();
 const cancelledSessions = new Set<string>();
 
+/**
+ * Register an abort controller for an active indexing session.
+ */
 export const registerIndexingController = (sessionId: string, controller: AbortController) => {
     activeIndexers.set(sessionId, controller);
 };
 
+/**
+ * Remove the abort controller for a session.
+ */
 export const clearIndexingController = (sessionId: string) => {
     activeIndexers.delete(sessionId);
 };
 
+/**
+ * Cancel indexing work for a specific session.
+ */
 export const cancelIndexing = (sessionId: string) => {
     cancelledSessions.add(sessionId);
     const controller = activeIndexers.get(sessionId);
@@ -85,6 +94,9 @@ export const cancelIndexing = (sessionId: string) => {
     }
 };
 
+/**
+ * Cancel all active indexing operations.
+ */
 export const cancelAllIndexing = (): void => {
     for (const [sessionId, controller] of activeIndexers.entries()) {
         cancelledSessions.add(sessionId);
@@ -93,6 +105,9 @@ export const cancelAllIndexing = (): void => {
     activeIndexers.clear();
 };
 
+/**
+ * Wait until all indexing operations complete or a timeout elapses.
+ */
 export const waitForIndexingIdle = async (timeoutMs: number = 3000): Promise<void> => {
     if (activeIndexers.size === 0) {
         return;
@@ -314,6 +329,9 @@ const pushSampledLine = (
     }
 };
 
+/**
+ * Create a new session record with generated identifiers.
+ */
 export const createSessionRecord = (payload: Omit<LogSessionRecord, 'sessionId' | 'createdAt' | 'lastOpenedAt' | 'isIndexed' | 'lineCount'>): LogSessionRecord => {
     return {
         sessionId: createLogSessionId(),
@@ -325,6 +343,9 @@ export const createSessionRecord = (payload: Omit<LogSessionRecord, 'sessionId' 
     };
 };
 
+/**
+ * Index a log file into IndexedDB and build histogram stats.
+ */
 export const indexLogFile = async (
     file: File,
     session: LogSessionRecord,
@@ -532,6 +553,9 @@ const didEndWithNewline = async (file: File, size: number): Promise<boolean> => 
     return tail.length === 1 && tail[0] === 10;
 };
 
+/**
+ * Append new lines from a growing log file into the index.
+ */
 export const appendLogFileToIndex = async (
     file: File,
     sessionId: string,

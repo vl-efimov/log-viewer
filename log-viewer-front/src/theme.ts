@@ -2,6 +2,9 @@
 import { alpha, createTheme, Theme } from '@mui/material/styles';
 import { ColorModeEnum } from '@/constants/ColorModeEnum';
 
+/**
+ * Build a Material UI theme from a color mode and primary color.
+ */
 export const getCustomTheme = (
     mode: ColorModeEnum,
     primary: string,

@@ -230,6 +230,9 @@ interface LogLinesListProps {
     virtuosoRef: RefObject<VirtuosoHandle | null>;
 }
 
+/**
+ * Virtualized list for rendering log lines with parsing highlights.
+ */
 const LogLinesList: FC<LogLinesListProps> = ({
     displayLines,
     totalCount,

@@ -16,6 +16,9 @@ const clampThresholdMb = (value: number): number => {
     );
 };
 
+/**
+ * Normalize a stored threshold value and clamp it to valid bounds.
+ */
 export const sanitizeLargeFileThresholdMb = (value: unknown): number => {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
         return LARGE_FILE_THRESHOLD_DEFAULT_MB;
@@ -24,6 +27,9 @@ export const sanitizeLargeFileThresholdMb = (value: unknown): number => {
     return clampThresholdMb(value);
 };
 
+/**
+ * Load the large-file threshold (in MB) from local storage.
+ */
 export const loadLargeFileThresholdMb = (): number => {
     try {
         const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -37,6 +43,9 @@ export const loadLargeFileThresholdMb = (): number => {
     }
 };
 
+/**
+ * Persist the large-file threshold (in MB) to local storage.
+ */
 export const saveLargeFileThresholdMb = (value: number): number => {
     const safeValue = sanitizeLargeFileThresholdMb(value);
 
@@ -49,6 +58,12 @@ export const saveLargeFileThresholdMb = (value: number): number => {
     return safeValue;
 };
 
+/**
+ * Return the large-file threshold in bytes.
+ */
 export const getLargeFileThresholdBytes = (): number => loadLargeFileThresholdMb() * 1024 * 1024;
 
+/**
+ * Determine whether a file size exceeds the configured threshold.
+ */
 export const isLargeFileByThreshold = (fileSizeBytes: number): boolean => fileSizeBytes >= getLargeFileThresholdBytes();

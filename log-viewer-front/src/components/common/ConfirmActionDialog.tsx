@@ -18,6 +18,9 @@ interface ConfirmActionDialogProps {
     onCancel: () => void;
 }
 
+/**
+ * Confirmation dialog with primary and secondary actions.
+ */
 const ConfirmActionDialog: React.FC<ConfirmActionDialogProps> = ({
     open,
     message,

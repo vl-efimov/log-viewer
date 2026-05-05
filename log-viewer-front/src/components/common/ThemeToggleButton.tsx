@@ -9,6 +9,9 @@ interface ThemeToggleButtonProps {
     toggleTheme: () => void;
 }
 
+/**
+ * Icon button that toggles light/dark color mode.
+ */
 const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ mode, toggleTheme }) => (
     <IconButton
         onClick={toggleTheme}

@@ -3,18 +3,30 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 let globalFileHandle: FileSystemFileHandle | null = null;
 let globalFileObject: File | null = null;
 
+/**
+ * Cache the current File System Access API handle outside Redux.
+ */
 export const setFileHandle = (handle: FileSystemFileHandle | null) => {
     globalFileHandle = handle;
 };
 
+/**
+ * Return the cached File System Access API handle.
+ */
 export const getFileHandle = (): FileSystemFileHandle | null => {
     return globalFileHandle;
 };
 
+/**
+ * Cache the current File object outside Redux.
+ */
 export const setFileObject = (file: File | null) => {
     globalFileObject = file;
 };
 
+/**
+ * Return the cached File object.
+ */
 export const getFileObject = (): File | null => {
     return globalFileObject;
 };

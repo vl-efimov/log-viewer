@@ -10,6 +10,9 @@ interface LogViewMonitoringBannerProps {
     onAction?: () => void;
 }
 
+/**
+ * Inline banner that shows monitoring status and actions.
+ */
 const LogViewMonitoringBanner: FC<LogViewMonitoringBannerProps> = ({
     message,
     actionLabel,

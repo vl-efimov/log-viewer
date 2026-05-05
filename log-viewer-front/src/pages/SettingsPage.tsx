@@ -60,6 +60,9 @@ const resolveLanguage = (lang: string): Languages => {
     return Languages.EN;
 };
 
+/**
+ * Settings page for theme, language, and file thresholds.
+ */
 const SettingsPage: React.FC = () => {
     const { t, i18n } = useTranslation();
     const themeCtx = useContext(ThemeContext);

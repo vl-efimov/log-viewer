@@ -49,6 +49,9 @@ interface LogFiltersBarProps {
     onCloseRequested?: () => void;
 }
 
+/**
+ * Filter panel for log fields and anomaly status.
+ */
 export const LogFiltersBar: React.FC<LogFiltersBarProps> = ({
     filters,
     onFiltersChange,

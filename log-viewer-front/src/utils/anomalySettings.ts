@@ -57,6 +57,9 @@ function normalizeNumber(value: unknown, fallback: number, min: number, max: num
     return clamp(parsed, min, max);
 }
 
+/**
+ * Normalize and clamp anomaly settings to safe defaults.
+ */
 export function sanitizeAnomalySettings(input: Partial<AnomalySettings> | null | undefined): AnomalySettings {
     const settings = input ?? {};
     const safeModelId: AnomalyModelId = settings.modelId === 'hdfs' ? 'hdfs' : 'bgl';
@@ -157,11 +160,17 @@ function writePersistedSettings(payload: PersistedAnomalySettingsV2): void {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
+/**
+ * Load the last selected anomaly model identifier.
+ */
 export function loadSelectedAnomalyModelId(): AnomalyModelId {
     const persisted = parsePersistedSettings();
     return persisted.selectedModelId ?? 'bgl';
 }
 
+/**
+ * Persist the selected anomaly model identifier.
+ */
 export function saveSelectedAnomalyModelId(modelId: AnomalyModelId): void {
     const persisted = parsePersistedSettings();
     writePersistedSettings({
@@ -170,6 +179,9 @@ export function saveSelectedAnomalyModelId(modelId: AnomalyModelId): void {
     });
 }
 
+/**
+ * Load anomaly settings for a model, falling back to defaults.
+ */
 export function loadAnomalySettings(modelId: AnomalyModelId = loadSelectedAnomalyModelId()): AnomalySettings {
     const persisted = parsePersistedSettings();
     const settings = persisted.models?.[modelId];
@@ -180,6 +192,9 @@ export function loadAnomalySettings(modelId: AnomalyModelId = loadSelectedAnomal
     return sanitizeModelSettings(modelId, settings);
 }
 
+/**
+ * Save anomaly settings for the selected model.
+ */
 export function saveAnomalySettings(settings: AnomalySettings): void {
     const safe = sanitizeAnomalySettings(settings);
     const persisted = parsePersistedSettings();

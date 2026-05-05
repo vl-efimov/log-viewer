@@ -14,6 +14,9 @@ interface FileSelectionViewProps {
     onFileDrop?: (file: File) => Promise<void> | void;
 }
 
+/**
+ * Landing view that prompts the user to select a log file.
+ */
 export const FileSelectionView: React.FC<FileSelectionViewProps> = ({
     indexing,
     onFileSelect,

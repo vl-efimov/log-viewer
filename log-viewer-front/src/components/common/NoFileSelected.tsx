@@ -12,6 +12,9 @@ interface NoFileSelectedProps {
     buttonText?: string;
 }
 
+/**
+ * Empty state when no log file is selected.
+ */
 const NoFileSelected: React.FC<NoFileSelectedProps> = ({ 
     title = "No file selected",
     description = "Please select a log file from the Home page to start monitoring.",

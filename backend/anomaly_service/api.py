@@ -48,6 +48,7 @@ init_db()
 
 
 class SPAStaticFiles(StaticFiles):
+    """Serve SPA assets with an index.html fallback for client routes."""
     async def get_response(self, path: str, scope):  # type: ignore[override]
         response = await super().get_response(path, scope)
         if response.status_code != 404:
@@ -101,6 +102,7 @@ def _model_status(model_id: str) -> dict[str, Any]:
 
 @app.get("/health")
 def health(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    """Return API health and the selected model status."""
     selected = _normalize_model_id(model_id)
     selected_status = _model_status(selected)
     return {
@@ -112,6 +114,7 @@ def health(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
 
 @app.post("/warmup")
 def warmup(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    """Load the selected model into memory."""
     selected = _normalize_model_id(model_id)
     services[selected].warmup()
     return {"ok": True, **_model_status(selected)}
@@ -119,6 +122,7 @@ def warmup(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
 
 @app.get("/models/status")
 def models_status() -> dict[str, Any]:
+    """Return readiness status for all known models."""
     items = [_model_status(model_id) for model_id in MODEL_CATALOG.keys()]
     return {
         "ok": True,
@@ -128,12 +132,14 @@ def models_status() -> dict[str, Any]:
 
 @app.get("/prepare/status")
 def prepare_status(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    """Return preparation status for a single model."""
     selected = _normalize_model_id(model_id)
     return {"ok": True, **_model_status(selected)}
 
 
 @app.post("/prepare/start")
 def prepare_start(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    """Start background model preparation if needed."""
     selected = _normalize_model_id(model_id)
     runtime = get_runtime(selected)
     service = services[selected]
@@ -177,6 +183,7 @@ def prepare_start(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
 
 @app.post("/anomaly/cancel")
 def cancel_prediction(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    """Request cancellation for the current prediction."""
     selected = _normalize_model_id(model_id)
     runtime = get_runtime(selected)
     runtime.request_cancel()
@@ -189,6 +196,7 @@ def cancel_prediction(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
 
 @app.get("/anomaly/progress")
 def prediction_progress(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
+    """Return current prediction progress information."""
     selected = _normalize_model_id(model_id)
     runtime = get_runtime(selected)
     return {
@@ -200,6 +208,7 @@ def prediction_progress(model_id: str = DEFAULT_MODEL_ID) -> dict[str, Any]:
 
 @app.post("/anomaly/predict-json")
 def predict_json(request: PredictJsonRequest) -> dict[str, Any]:
+    """Run anomaly detection on JSON rows payload."""
     try:
         service = services[request.model_id]
         service.runtime.reset_cancel()
@@ -232,6 +241,7 @@ async def predict_file(
     include_rows: bool = Form(default=True),
     include_windows: bool = Form(default=True),
 ) -> dict[str, Any]:
+    """Run anomaly detection on an uploaded log file."""
     try:
         selected = _normalize_model_id(model_id)
         service = services[selected]
@@ -266,6 +276,7 @@ def ingest_start(
     format_id: str | None = Form(default=None),
     parser_pattern: str | None = Form(default=None),
 ) -> dict[str, Any]:
+    """Create a new ingest session for streaming log data."""
     try:
         ingest_id = create_ingest(
             file_name=file_name,
@@ -286,6 +297,7 @@ def ingest_start(
 
 @app.put("/ingest/{ingest_id}/chunk")
 async def ingest_chunk(ingest_id: str, chunk: bytes = Body(...)) -> dict[str, Any]:
+    """Append a binary chunk to an ingest session."""
     try:
         result = append_chunk(ingest_id, chunk)
         return {"ok": True, **result}
@@ -297,6 +309,7 @@ async def ingest_chunk(ingest_id: str, chunk: bytes = Body(...)) -> dict[str, An
 
 @app.post("/ingest/{ingest_id}/finish")
 def ingest_finish(ingest_id: str) -> dict[str, Any]:
+    """Finalize ingest and flush any pending lines."""
     try:
         status = finish_ingest(ingest_id)
         return {"ok": True, **status}
@@ -308,6 +321,7 @@ def ingest_finish(ingest_id: str) -> dict[str, Any]:
 
 @app.get("/ingest/{ingest_id}/status")
 def ingest_status(ingest_id: str) -> dict[str, Any]:
+    """Return the current ingest metadata and status."""
     status = get_ingest(ingest_id)
     if status is None:
         raise HTTPException(status_code=404, detail="Unknown ingest_id")
@@ -316,6 +330,7 @@ def ingest_status(ingest_id: str) -> dict[str, Any]:
 
 @app.delete("/ingest/{ingest_id}")
 def ingest_delete(ingest_id: str) -> dict[str, Any]:
+    """Delete ingest metadata and log events."""
     try:
         delete_ingest(ingest_id)
         return {
@@ -329,6 +344,7 @@ def ingest_delete(ingest_id: str) -> dict[str, Any]:
 
 @app.get("/logs/{ingest_id}/line-count")
 def log_line_count(ingest_id: str) -> dict[str, Any]:
+    """Return total line count for an ingest session."""
     return {
         "ok": True,
         "ingest_id": ingest_id,
@@ -338,6 +354,7 @@ def log_line_count(ingest_id: str) -> dict[str, Any]:
 
 @app.get("/logs/{ingest_id}/lines")
 def log_lines(ingest_id: str, start_line: int, end_line: int) -> dict[str, Any]:
+    """Return raw log lines within a line number range."""
     if start_line <= 0 or end_line < start_line:
         raise HTTPException(status_code=400, detail="Invalid line range")
     return {
@@ -348,6 +365,7 @@ def log_lines(ingest_id: str, start_line: int, end_line: int) -> dict[str, Any]:
 
 @app.post("/logs/{ingest_id}/filter")
 def log_filter(ingest_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Return filtered log lines using server-side query."""
     filters = payload.get("filters") if isinstance(payload, dict) else {}
     limit = int(payload.get("limit", 50000)) if isinstance(payload, dict) else 50000
     after_line_raw = payload.get("after_line") if isinstance(payload, dict) else None
@@ -371,6 +389,7 @@ def log_filter(ingest_id: str, payload: dict[str, Any]) -> dict[str, Any]:
 
 @app.get("/logs/{ingest_id}/dashboard")
 def log_dashboard(ingest_id: str) -> dict[str, Any]:
+    """Return a sampled dashboard snapshot for the ingest."""
     return {
         "ok": True,
         "snapshot": build_dashboard_snapshot(ingest_id),
@@ -379,6 +398,7 @@ def log_dashboard(ingest_id: str) -> dict[str, Any]:
 
 @app.post("/logs/{ingest_id}/dashboard/exact")
 def log_dashboard_exact(ingest_id: str, payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+    """Return an exact dashboard snapshot with optional filters."""
     start_ms_raw = payload.get("start_ms") if isinstance(payload, dict) else None
     end_ms_raw = payload.get("end_ms") if isinstance(payload, dict) else None
     category_field_raw = payload.get("category_field") if isinstance(payload, dict) else None
@@ -417,6 +437,7 @@ def predict_ingest(
     include_rows: bool = Form(default=True),
     include_windows: bool = Form(default=True),
 ) -> dict[str, Any]:
+    """Run anomaly detection over ingested log data."""
     try:
         selected = _normalize_model_id(model_id)
         service = services[selected]

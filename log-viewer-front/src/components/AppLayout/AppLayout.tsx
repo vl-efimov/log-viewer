@@ -17,7 +17,9 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-
+/**
+ * Main app shell with header, sidebar, and routed content.
+ */
 export default function MainLayout () {
     const { t } = useTranslation();
     const theme = useTheme();

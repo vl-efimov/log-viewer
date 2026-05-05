@@ -36,6 +36,9 @@ interface UseAnomalySnapshotOptions {
     totalRows: number;
 }
 
+/**
+ * Hook that hydrates and persists anomaly results in IndexedDB.
+ */
 export const useAnomalySnapshot = ({
     storageKey,
     isRunning,

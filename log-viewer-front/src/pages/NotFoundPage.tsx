@@ -6,6 +6,9 @@ import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * 404 page for unknown routes.
+ */
 const NotFoundPage: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();

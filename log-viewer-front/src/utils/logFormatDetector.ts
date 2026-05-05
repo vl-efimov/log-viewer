@@ -242,6 +242,9 @@ function normalizeParsedFields(formatId: string, rawFields: Record<string, strin
 export let LOG_FORMAT_PATTERNS: LogFormatPattern[] = [];
 const CUSTOM_FORMAT_PRIORITY = 10000;
 
+/**
+ * Extract named capture group identifiers from a regex source.
+ */
 export function extractNamedGroups(regexSource: string): string[] {
     const groups = new Set<string>();
     const namedGroupRegex = /\(\?<([A-Za-z_][A-Za-z0-9_]*)>/g;

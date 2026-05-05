@@ -23,6 +23,9 @@ type ParsedRowCacheEntry = {
 
 const DEFAULT_PARSED_ROWS_CACHE_CAPACITY = 20000;
 
+/**
+ * Hook that caches parsed log rows using an LRU strategy.
+ */
 export const useParsedRowsCache = (capacity = DEFAULT_PARSED_ROWS_CACHE_CAPACITY) => {
     const cacheRef = useRef<LRUCache<number, ParsedRowCacheEntry>>(new LRUCache<number, ParsedRowCacheEntry>(capacity));
 

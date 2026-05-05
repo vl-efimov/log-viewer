@@ -21,15 +21,18 @@ from .settings import (
 
 @dataclass
 class Region:
+    """Contiguous region of anomalous line indices."""
     start_index: int
     end_index: int
 
     @property
     def count(self) -> int:
+        """Return the number of lines in the region."""
         return self.end_index - self.start_index + 1
 
 
 class PredictionCancelledError(RuntimeError):
+    """Raised when a prediction is cancelled by the user."""
     pass
 
 
@@ -129,12 +132,14 @@ def _build_overlay_payload(regions: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 class NeuralLogAnomalyService:
+    """Run NeuralLog inference and prepare anomaly outputs."""
     def __init__(self, model_id: str = DEFAULT_MODEL_ID) -> None:
         self.model_id = model_id
         self.runtime = get_runtime(model_id)
         self._embedding_cache: dict[str, np.ndarray] = {}
 
     def warmup(self) -> None:
+        """Load model assets into memory."""
         self.runtime.load()
 
     def _embed(self, text: str) -> np.ndarray:
@@ -155,6 +160,7 @@ class NeuralLogAnomalyService:
         include_rows: bool = True,
         include_windows: bool = True,
     ) -> dict[str, Any]:
+        """Predict anomaly scores and regions for parsed rows."""
         def raise_if_cancelled() -> None:
             if self.runtime.is_cancel_requested():
                 raise PredictionCancelledError("Prediction cancelled by user")
@@ -336,5 +342,6 @@ class NeuralLogAnomalyService:
 
 
 class BGLAnomalyService(NeuralLogAnomalyService):
+    """Convenience service for the BGL pretrained model."""
     def __init__(self) -> None:
         super().__init__(model_id="bgl")

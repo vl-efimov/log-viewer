@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next';
 
 let cachedPretrainedModels: PretrainedModelInfo[] | null = null;
 
+/**
+ * Page listing available pretrained anomaly models.
+ */
 const PretrainedModelsPage: React.FC = () => {
     const { t } = useTranslation();
     const [models, setModels] = useState<PretrainedModelInfo[]>(() => cachedPretrainedModels ?? []);

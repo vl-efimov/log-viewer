@@ -127,6 +127,9 @@ const autoRenameDuplicateGroupNames = (regexSource: string): string => {
     });
 };
 
+/**
+ * Dialog for creating or editing a custom log format pattern.
+ */
 const AddLogFormatDialog: React.FC<AddLogFormatDialogProps> = ({
     open,
     onClose,

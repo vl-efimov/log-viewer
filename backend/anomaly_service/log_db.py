@@ -36,6 +36,7 @@ CANONICAL_FIELD_ALIASES: dict[str, str] = {
 
 @dataclass
 class IngestState:
+    """In-memory state for a streaming ingest session."""
     decoder: codecs.IncrementalDecoder
     carry: str
     line_number: int
@@ -112,6 +113,7 @@ def _insert_ingest_snapshot(
 
 
 def init_db() -> None:
+    """Ensure ClickHouse schema exists and is ready to use."""
     max_wait_s = float(os.getenv("CLICKHOUSE_INIT_MAX_WAIT_S", "30") or "30")
     started_at = time.time()
 
@@ -325,6 +327,7 @@ def create_ingest(
     format_id: str | None = None,
     parser_pattern: str | None = None,
 ) -> str:
+    """Create a new ingest session and return its ID."""
     ingest_id = str(uuid.uuid4())
     created_at = _utc_now()
     normalized_format_id = format_id.strip() if format_id and format_id.strip() else None
@@ -384,6 +387,7 @@ def _insert_lines(
 
 
 def append_chunk(ingest_id: str, chunk: bytes) -> dict[str, Any]:
+    """Append a binary chunk to an ingest session."""
     with _ingest_lock:
         state = _ingest_states.get(ingest_id)
     if state is None:
@@ -408,6 +412,7 @@ def append_chunk(ingest_id: str, chunk: bytes) -> dict[str, Any]:
 
 
 def finish_ingest(ingest_id: str) -> dict[str, Any]:
+    """Finalize ingest, flush trailing data, and return summary."""
     with _ingest_lock:
         state = _ingest_states.get(ingest_id)
     if state is None:
@@ -435,6 +440,7 @@ def finish_ingest(ingest_id: str) -> dict[str, Any]:
 
 
 def get_ingest(ingest_id: str) -> dict[str, Any] | None:
+    """Return the latest ingest metadata from ClickHouse."""
     row = _get_client().query(
         """
         SELECT
@@ -472,6 +478,7 @@ def get_ingest(ingest_id: str) -> dict[str, Any] | None:
 
 
 def get_line_count(ingest_id: str) -> int:
+    """Return the total number of unique lines ingested."""
     row = _get_client().query(
         """
         SELECT uniqExact(line_number)
@@ -484,6 +491,7 @@ def get_line_count(ingest_id: str) -> int:
 
 
 def get_lines_range(ingest_id: str, start_line: int, end_line: int) -> list[dict[str, Any]]:
+    """Fetch raw log lines for a line-number range."""
     rows = _get_client().query(
         """
                 SELECT line_number, any(raw) AS raw
@@ -591,6 +599,7 @@ def query_filtered_lines(
     before_line: int | None = None,
     order: str = "asc",
 ) -> dict[str, Any]:
+    """Query logs with filters, pagination, and ordering."""
     message_q, levels, methods, start_ms, end_ms = _parse_filter_payload(filters)
     direction = "desc" if str(order).strip().lower() == "desc" else "asc"
 
@@ -696,6 +705,7 @@ def build_dashboard_exact_snapshot(
     category_field: str | None = None,
     category_values: list[str] | None = None,
 ) -> dict[str, Any]:
+    """Build an exact dashboard snapshot with optional filters."""
     client = _default_client(CLICKHOUSE_DB)
     where_sql, params = _build_dashboard_where_clause(
         ingest_id=ingest_id,
@@ -784,6 +794,7 @@ def build_dashboard_exact_snapshot(
 
 
 def build_dashboard_snapshot(ingest_id: str, sample_limit: int = 2000) -> dict[str, Any]:
+    """Build a sampled dashboard snapshot for quick rendering."""
     client = _default_client(CLICKHOUSE_DB)
 
     total_row = client.query(
@@ -936,6 +947,7 @@ def build_dashboard_snapshot(ingest_id: str, sample_limit: int = 2000) -> dict[s
 
 
 def get_rows_for_anomaly(ingest_id: str) -> list[dict[str, Any]]:
+    """Fetch message/timestamp pairs for anomaly prediction."""
     rows = _get_client().query(
         """
         SELECT
@@ -959,6 +971,7 @@ def get_rows_for_anomaly(ingest_id: str) -> list[dict[str, Any]]:
 
 
 def delete_ingest(ingest_id: str) -> None:
+    """Delete ingest data and remove any in-memory state."""
     client = _get_client()
     # ClickHouse performs table deletes asynchronously; this is expected for MergeTree tables.
     client.command(

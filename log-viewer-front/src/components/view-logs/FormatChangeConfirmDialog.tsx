@@ -16,6 +16,9 @@ interface FormatChangeConfirmDialogProps {
     onCancel: () => void;
 }
 
+/**
+ * Dialog confirming a requested log format change.
+ */
 const FormatChangeConfirmDialog: React.FC<FormatChangeConfirmDialogProps> = ({
     open,
     message,

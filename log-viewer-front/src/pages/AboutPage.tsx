@@ -6,6 +6,9 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { ColorModeEnum } from '@/constants/ColorModeEnum';
 
+/**
+ * About page with project overview and attribution.
+ */
 const AboutPage: React.FC = () => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();

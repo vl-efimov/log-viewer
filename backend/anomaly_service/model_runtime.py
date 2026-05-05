@@ -23,6 +23,7 @@ from .settings import (
 
 
 class ModelRuntime:
+    """Manage model loading, prediction state, and inference helpers."""
     def __init__(self, *, model_id: str, model_path: Path, model_label: str) -> None:
         self.model_id = model_id
         self.model_path = model_path
@@ -55,6 +56,7 @@ class ModelRuntime:
         self._classifier = None
 
     def recover(self, reason: str) -> None:
+        """Reset runtime state after an unrecoverable inference error."""
         with self._lock:
             self._set_prepare_state(
                 stage="recovering",
@@ -82,6 +84,7 @@ class ModelRuntime:
             self._prepare_error = error
 
     def get_prepare_status(self) -> dict[str, object]:
+        """Return the current model preparation status."""
         with self._state_lock:
             return {
                 "preparing": self._preparing,
@@ -99,6 +102,7 @@ class ModelRuntime:
         stage: str = "embedding",
         total_rows: int = 0,
     ) -> None:
+        """Initialize prediction progress tracking."""
         now_ms = int(time.time() * 1000)
         with self._state_lock:
             self._prediction_running = True
@@ -111,6 +115,7 @@ class ModelRuntime:
             self._prediction_updated_at_ms = now_ms
 
     def reset_prediction_status(self) -> None:
+        """Clear prediction progress state."""
         with self._state_lock:
             self._prediction_running = False
             self._prediction_stage = "idle"
@@ -130,6 +135,7 @@ class ModelRuntime:
         total_rows: int | None = None,
         stage: str | None = None,
     ) -> None:
+        """Update prediction progress counters and stage."""
         now_ms = int(time.time() * 1000)
         with self._state_lock:
             if total_windows is not None:
@@ -161,6 +167,7 @@ class ModelRuntime:
             self._prediction_updated_at_ms = now_ms
 
     def finish_prediction(self, *, stage: str = "done") -> None:
+        """Mark prediction as finished with a final stage."""
         now_ms = int(time.time() * 1000)
         with self._state_lock:
             if stage == "done" and self._prediction_total_windows > 0:
@@ -172,6 +179,7 @@ class ModelRuntime:
             self._prediction_updated_at_ms = now_ms
 
     def get_prediction_status(self) -> dict[str, object]:
+        """Return a snapshot of prediction progress."""
         with self._state_lock:
             total = self._prediction_total_windows
             processed = self._prediction_processed_windows
@@ -198,15 +206,19 @@ class ModelRuntime:
             }
 
     def request_cancel(self) -> None:
+        """Request cancellation of the current prediction."""
         self._cancel_event.set()
 
     def reset_cancel(self) -> None:
+        """Clear any pending cancellation request."""
         self._cancel_event.clear()
 
     def is_cancel_requested(self) -> bool:
+        """Return whether cancellation was requested."""
         return self._cancel_event.is_set()
 
     def load(self) -> None:
+        """Load tokenizer, encoder, and classifier weights."""
         with self._lock:
             if self._loaded:
                 self._set_prepare_state(
@@ -296,6 +308,7 @@ class ModelRuntime:
                 raise
 
     def encode_text(self, text: str) -> np.ndarray:
+        """Encode text into a dense embedding using BERT."""
         self.load()
         assert self._tokenizer is not None
         assert self._bert_model is not None
@@ -306,6 +319,7 @@ class ModelRuntime:
         return vector.astype(np.float32)
 
     def predict_window_batch(self, batch: np.ndarray) -> np.ndarray:
+        """Predict anomaly scores for a batch of windows."""
         self.load()
         assert self._classifier is not None
 
@@ -341,6 +355,7 @@ class ModelRuntime:
 
     @property
     def is_loaded(self) -> bool:
+        """Return True if model assets are loaded."""
         return self._loaded
 
 
@@ -355,6 +370,7 @@ _runtimes: dict[str, ModelRuntime] = {
 
 
 def get_runtime(model_id: str) -> ModelRuntime:
+    """Return the runtime for a given model ID."""
     model_key = (model_id or DEFAULT_MODEL_ID).lower()
     runtime = _runtimes.get(model_key)
     if runtime is None:
@@ -364,6 +380,7 @@ def get_runtime(model_id: str) -> ModelRuntime:
 
 
 def get_all_runtimes() -> dict[str, ModelRuntime]:
+    """Return a shallow copy of all model runtimes."""
     return dict(_runtimes)
 
 

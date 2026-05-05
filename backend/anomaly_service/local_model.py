@@ -6,6 +6,7 @@ from tensorflow.keras import Model, Sequential, layers
 
 
 def positional_encoding(position: int, d_model: int) -> tf.Tensor:
+    """Create sinusoidal positional encodings for sequence positions."""
     angle_rates = 1 / np.power(10000, (2 * (np.arange(d_model)[np.newaxis, :] // 2)) / np.float32(d_model))
     angle_rads = np.arange(position)[:, np.newaxis] * angle_rates
 
@@ -16,16 +17,19 @@ def positional_encoding(position: int, d_model: int) -> tf.Tensor:
 
 
 class PositionEmbedding(layers.Layer):
+    """Add fixed positional encodings to input embeddings."""
     def __init__(self, max_len: int, embed_dim: int) -> None:
         super().__init__()
         self.pos_encoding = positional_encoding(max_len, embed_dim)
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
+        """Apply positional encodings to the input sequence."""
         seq_len = tf.shape(x)[1]
         return x + self.pos_encoding[:, :seq_len, :]
 
 
 class TransformerBlock(layers.Layer):
+    """Transformer encoder block with attention and feed-forward layers."""
     def __init__(self, embed_dim: int, num_heads: int, ff_dim: int, rate: float = 0.1) -> None:
         super().__init__()
         self.att = layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
@@ -41,6 +45,7 @@ class TransformerBlock(layers.Layer):
         self.dropout2 = layers.Dropout(rate)
 
     def call(self, inputs: tf.Tensor, training: bool = False) -> tf.Tensor:
+        """Run a forward pass through attention and feed-forward layers."""
         attn_output = self.att(inputs, inputs)
         attn_output = self.dropout1(attn_output, training=training)
         out1 = self.layernorm1(inputs + attn_output)
@@ -56,6 +61,7 @@ def build_neurallog_classifier(
     num_heads: int,
     dropout: float = 0.1,
 ):
+    """Build the NeuralLog transformer classifier model."""
     inputs = layers.Input(shape=(max_len, embed_dim))
     x = PositionEmbedding(1024, embed_dim)(inputs)
     x = TransformerBlock(embed_dim, num_heads, ff_dim)(x)

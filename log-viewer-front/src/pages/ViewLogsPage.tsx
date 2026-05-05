@@ -13,6 +13,9 @@ import ConfirmActionDialog from '@/components/common/ConfirmActionDialog';
 import { useViewLogsController } from '@/hooks/useViewLogsController';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * Main log viewing page with histogram, filters, and table.
+ */
 const ViewLogsPage: React.FC = () => {
     const { t } = useTranslation();
     const {

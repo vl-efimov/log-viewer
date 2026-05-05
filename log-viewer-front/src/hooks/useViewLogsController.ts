@@ -318,6 +318,9 @@ const splitAnomalyFilter = (filters: LogFilters): {
     };
 };
 
+/**
+ * Hook that drives log viewing state, filtering, and remote ingest flows.
+ */
 export const useViewLogsController = () => {
     const [selectedLine, setSelectedLine] = useState<number | null>(null);
     const virtuosoRef = useRef<VirtuosoHandle>(null);

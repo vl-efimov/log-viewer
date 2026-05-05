@@ -312,6 +312,9 @@ const invalidateDateFilterCacheForSession = (sessionId: string): void => {
     }
 };
 
+/**
+ * Clear cached date filter results, optionally for a single session.
+ */
 export const clearDateFilterCache = (sessionId?: string): void => {
     if (sessionId) {
         invalidateDateFilterCacheForSession(sessionId);
@@ -400,6 +403,9 @@ const getLogDb = async (): Promise<IDBDatabase> => {
     return dbPromise;
 };
 
+/**
+ * Delete all stored sessions, lines, and stats from IndexedDB.
+ */
 export const deleteAllLogData = async (): Promise<void> => {
     const db = await getLogDb();
     const storesToClear = [STORE_SESSIONS, STORE_LINES, STORE_STATS];
@@ -417,10 +423,16 @@ export const deleteAllLogData = async (): Promise<void> => {
     }
 };
 
+/**
+ * Generate a new log session identifier.
+ */
 export const createLogSessionId = (): string => {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 };
 
+/**
+ * Return all custom log formats ordered by most recently updated.
+ */
 export const getCustomLogFormats = async (): Promise<CustomLogFormatRecord[]> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_CUSTOM_FORMATS, 'readonly');
@@ -449,6 +461,9 @@ export const getCustomLogFormats = async (): Promise<CustomLogFormatRecord[]> =>
     return result;
 };
 
+/**
+ * Insert or update a custom log format definition.
+ */
 export const upsertCustomLogFormat = async (
     format: Pick<CustomLogFormatRecord, 'id' | 'name' | 'description' | 'regex'>,
 ): Promise<CustomLogFormatRecord> => {
@@ -501,6 +516,9 @@ export const upsertCustomLogFormat = async (
     return next;
 };
 
+/**
+ * Delete a custom log format by ID.
+ */
 export const deleteCustomLogFormat = async (id: string): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_CUSTOM_FORMATS, 'readwrite');
@@ -508,6 +526,9 @@ export const deleteCustomLogFormat = async (id: string): Promise<void> => {
     await transactionDone(tx);
 };
 
+/**
+ * Insert or update a log session record.
+ */
 export const upsertSession = async (session: LogSessionRecord): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_SESSIONS, 'readwrite');
@@ -515,6 +536,9 @@ export const upsertSession = async (session: LogSessionRecord): Promise<void> =>
     await transactionDone(tx);
 };
 
+/**
+ * Fetch a session record by ID.
+ */
 export const getSession = async (sessionId: string): Promise<LogSessionRecord | null> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_SESSIONS, 'readonly');
@@ -524,6 +548,9 @@ export const getSession = async (sessionId: string): Promise<LogSessionRecord | 
     return result ?? null;
 };
 
+/**
+ * Return the line count for a session (local or remote).
+ */
 export const getSessionLineCount = async (sessionId: string): Promise<number> => {
     if (isRemoteSessionId(sessionId)) {
         return getRemoteLineCount(toRemoteIngestId(sessionId));
@@ -533,6 +560,9 @@ export const getSessionLineCount = async (sessionId: string): Promise<number> =>
     return session?.lineCount ?? 0;
 };
 
+/**
+ * Update the session last-opened timestamp.
+ */
 export const touchSession = async (sessionId: string): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_SESSIONS, 'readwrite');
@@ -545,6 +575,9 @@ export const touchSession = async (sessionId: string): Promise<void> => {
     await transactionDone(tx);
 };
 
+/**
+ * Return the most recently opened session.
+ */
 export const getLastSession = async (): Promise<LogSessionRecord | null> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_SESSIONS, 'readonly');
@@ -590,6 +623,9 @@ const deleteByIndex = async (
     await transactionDone(tx);
 };
 
+/**
+ * Delete all data for a specific session.
+ */
 export const deleteSessionData = async (sessionId: string): Promise<void> => {
     const db = await getLogDb();
 
@@ -604,6 +640,9 @@ export const deleteSessionData = async (sessionId: string): Promise<void> => {
     await transactionDone(tx);
 };
 
+/**
+ * Store a batch of log line records.
+ */
 export const putLineBatch = async (lines: LogLineRecord[]): Promise<void> => {
     if (lines.length === 0) return;
 
@@ -623,6 +662,9 @@ export const putLineBatch = async (lines: LogLineRecord[]): Promise<void> => {
     await transactionDone(tx);
 };
 
+/**
+ * Fetch a range of lines for a session (local or remote).
+ */
 export const getLinesRange = async (
     sessionId: string,
     startLine: number,
@@ -668,6 +710,9 @@ export const getLinesRange = async (
     return records;
 };
 
+/**
+ * Find the next or previous line containing a search term.
+ */
 export const findAdjacentLineMatch = async (
     sessionId: string,
     searchTerm: string,
@@ -815,6 +860,9 @@ export const findAdjacentLineMatch = async (
     return found;
 };
 
+/**
+ * Save a dashboard stats snapshot for a session.
+ */
 export const saveDashboardSnapshot = async (sessionId: string, snapshot: LogStatsRecord): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_STATS, 'readwrite');
@@ -822,6 +870,9 @@ export const saveDashboardSnapshot = async (sessionId: string, snapshot: LogStat
     await transactionDone(tx);
 };
 
+/**
+ * Load a dashboard snapshot for a session (local or remote).
+ */
 export const getDashboardSnapshot = async (sessionId: string): Promise<LogStatsRecord | null> => {
     if (isRemoteSessionId(sessionId)) {
         const snapshot = await getRemoteDashboardSnapshot(toRemoteIngestId(sessionId));
@@ -836,6 +887,9 @@ export const getDashboardSnapshot = async (sessionId: string): Promise<LogStatsR
     return result ?? null;
 };
 
+/**
+ * Build an exact dashboard snapshot by scanning local IndexedDB.
+ */
 export const getLocalExactDashboardSnapshot = async (
     sessionId: string,
     filters: ExactDashboardFilters = {},
@@ -956,6 +1010,9 @@ export const getLocalExactDashboardSnapshot = async (
     };
 };
 
+/**
+ * Save anomaly results for a session.
+ */
 export const saveAnomalySnapshot = async (
     sessionId: string,
     snapshot: Omit<AnomalySnapshotRecord, 'sessionId' | 'kind' | 'updatedAt'>
@@ -971,6 +1028,9 @@ export const saveAnomalySnapshot = async (
     await transactionDone(tx);
 };
 
+/**
+ * Load anomaly results for a session.
+ */
 export const getAnomalySnapshot = async (sessionId: string): Promise<AnomalySnapshotRecord | null> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_STATS, 'readonly');
@@ -980,6 +1040,9 @@ export const getAnomalySnapshot = async (sessionId: string): Promise<AnomalySnap
     return result ?? null;
 };
 
+/**
+ * Delete anomaly results for a session.
+ */
 export const deleteAnomalySnapshot = async (sessionId: string): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_STATS, 'readwrite');
@@ -987,6 +1050,9 @@ export const deleteAnomalySnapshot = async (sessionId: string): Promise<void> =>
     await transactionDone(tx);
 };
 
+/**
+ * Delete anomaly snapshots except the optional keep session.
+ */
 export const pruneAnomalySnapshots = async (keepSessionId?: string): Promise<void> => {
     const db = await getLogDb();
     const tx = db.transaction(STORE_STATS, 'readwrite');
@@ -1442,6 +1508,9 @@ const queryDateOnlyFilteredLines = async (
     };
 };
 
+/**
+ * Query filtered lines with optional pagination and progress callbacks.
+ */
 export const queryFilteredLines = async (
     sessionId: string,
     filters: LogFilters,

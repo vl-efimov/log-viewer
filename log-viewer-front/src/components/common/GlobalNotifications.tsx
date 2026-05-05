@@ -8,6 +8,9 @@ import { APP_LAYOUT_TOKENS } from '@/design-tokens';
 
 const statusBarOffsetPx = APP_LAYOUT_TOKENS.statusBar.height + 8;
 
+/**
+ * Snackbar host for app-wide notification messages.
+ */
 const GlobalNotifications: React.FC = () => {
     const dispatch = useDispatch();
     const currentNotification = useSelector((state: RootState) => state.notifications.queue[0] ?? null);

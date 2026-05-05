@@ -7,6 +7,9 @@ import { getCustomTheme } from '@/theme';
 
 const DEFAULT_PRIMARY = '#3b82f6';
 
+/**
+ * App-level theme provider with persisted color preferences.
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [mode, setMode] = useState<ColorModeEnum | null>(null);
     const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_PRIMARY);

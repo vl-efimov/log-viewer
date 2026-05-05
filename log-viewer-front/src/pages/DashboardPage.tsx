@@ -810,6 +810,9 @@ const toChartOption = (
     };
 };
 
+/**
+ * Dashboard page with log analytics and histogram insights.
+ */
 const DashboardPage: React.FC = () => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();

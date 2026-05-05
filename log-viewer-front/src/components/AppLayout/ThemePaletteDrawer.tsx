@@ -38,6 +38,9 @@ const PRIMARY_COLORS = [
     '#f43f5e',
 ];
 
+/**
+ * Drawer for selecting theme mode and primary color.
+ */
 const ThemePaletteDrawer: React.FC<ThemePaletteDrawerProps> = ({ open, onClose, onPrimaryChange, currentPrimary, mode, onThemeToggle }) => {
     const { t } = useTranslation();
 

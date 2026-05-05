@@ -101,6 +101,9 @@ export async function sampleLargeFileForHistogram(
     return result.sampledLines;
 }
 
+/**
+ * Sample a large file and compute aggregate stats for dashboards.
+ */
 export async function sampleAndAnalyzeLargeFile(
     file: File,
     lineCount: number,

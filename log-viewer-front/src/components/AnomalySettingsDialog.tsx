@@ -122,6 +122,9 @@ interface AnomalySettingsDialogProps {
     anomalyStorageKey?: string;
 }
 
+/**
+ * Dialog that configures and triggers anomaly analysis.
+ */
 const AnomalySettingsDialog: React.FC<AnomalySettingsDialogProps> = ({
     open,
     onClose,

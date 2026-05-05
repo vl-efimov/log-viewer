@@ -12,6 +12,9 @@ type AppStatusBarItemProps = {
     disabled?: boolean;
 };
 
+/**
+ * Clickable item wrapper used within the status bar.
+ */
 const AppStatusBarItem: React.FC<AppStatusBarItemProps> = ({ title, children, onClick, disabled = false }) => (
     <Tooltip
         title={title}

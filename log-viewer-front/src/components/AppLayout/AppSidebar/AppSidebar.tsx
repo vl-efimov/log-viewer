@@ -25,6 +25,9 @@ interface SidebarProps {
     isSidebarOpen: boolean;
 }
 
+/**
+ * Sidebar navigation with grouped menu items.
+ */
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
     const [isRendered, setIsRendered] = useState(isSidebarOpen);
     const location = useLocation();

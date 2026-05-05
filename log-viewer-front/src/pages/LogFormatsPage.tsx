@@ -46,6 +46,9 @@ interface LogFormat {
     priority: number;
 }
 
+/**
+ * Page to manage built-in and custom log format patterns.
+ */
 const LogFormatsPage: React.FC = () => {
     const { t } = useTranslation();
     const theme = useTheme();

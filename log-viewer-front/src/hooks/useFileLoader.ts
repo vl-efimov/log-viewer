@@ -65,6 +65,9 @@ type UseFileLoaderOptions = {
 
 let sharedUnknownFormatResolver: UseFileLoaderOptions['resolveUnknownFormat'] | null = null;
 
+/**
+ * Hook that loads log files, resolves formats, and manages indexing state.
+ */
 export const useFileLoader = (options: UseFileLoaderOptions = {}) => {
     const dispatch = useDispatch();
     const { t } = useTranslation();

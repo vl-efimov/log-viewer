@@ -9,6 +9,7 @@ from .io_utils import load_rows_from_file
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Create the CLI argument parser for anomaly prediction."""
     parser = argparse.ArgumentParser(description="Run NeuralLog anomaly detection on a table/log file")
     parser.add_argument("--input", required=True, help="Input table file (.csv/.tsv/.log/.txt)")
     parser.add_argument("--output", required=True, help="Output JSON path")
@@ -21,6 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    """Run the CLI pipeline and write JSON output."""
     args = build_parser().parse_args()
 
     rows = load_rows_from_file(args.input)

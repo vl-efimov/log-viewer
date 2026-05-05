@@ -142,6 +142,9 @@ const backendBaseUrl = (import.meta.env.VITE_ANOMALY_API_URL as string | undefin
     || (import.meta.env.VITE_BGL_API_URL as string | undefined)?.replace(/\/$/, '')
     || 'http://127.0.0.1:8001';
 
+/**
+ * Error indicating the backend is unavailable for ingest operations.
+ */
 export class RemoteIngestNetworkError extends Error {
     readonly backendUrl: string;
 
@@ -180,6 +183,9 @@ type ActiveAnomalyPredictionState = {
 let activeRemoteUploadState: ActiveRemoteUploadState | null = null;
 let activeAnomalyPredictionState: ActiveAnomalyPredictionState | null = null;
 
+/**
+ * Start tracking a remote upload session with an AbortController.
+ */
 export function beginRemoteUploadSession(): AbortController {
     const controller = new AbortController();
     activeRemoteUploadState = {
@@ -189,11 +195,17 @@ export function beginRemoteUploadSession(): AbortController {
     return controller;
 }
 
+/**
+ * Store the ingest ID for the active upload session.
+ */
 export function setActiveRemoteUploadIngestId(ingestId: string): void {
     if (!activeRemoteUploadState) return;
     activeRemoteUploadState.ingestId = ingestId;
 }
 
+/**
+ * Abort the current upload session and return its ingest ID.
+ */
 export function cancelActiveRemoteUploadSession(): string | null {
     if (!activeRemoteUploadState) return null;
     const ingestId = activeRemoteUploadState.ingestId;
@@ -202,6 +214,9 @@ export function cancelActiveRemoteUploadSession(): string | null {
     return ingestId;
 }
 
+/**
+ * Clear the active upload session if the controller matches.
+ */
 export function endRemoteUploadSession(controller?: AbortController): void {
     if (!activeRemoteUploadState) return;
     if (controller && activeRemoteUploadState.controller !== controller) {
@@ -210,6 +225,9 @@ export function endRemoteUploadSession(controller?: AbortController): void {
     activeRemoteUploadState = null;
 }
 
+/**
+ * Start tracking a remote anomaly prediction session.
+ */
 export function beginAnomalyPredictionSession(modelId: string): AbortController {
     const controller = new AbortController();
     activeAnomalyPredictionState = {
@@ -219,6 +237,9 @@ export function beginAnomalyPredictionSession(modelId: string): AbortController 
     return controller;
 }
 
+/**
+ * Abort the active anomaly prediction session.
+ */
 export function cancelActiveAnomalyPredictionSession(): string | null {
     if (!activeAnomalyPredictionState) return null;
     const modelId = activeAnomalyPredictionState.modelId;
@@ -227,6 +248,9 @@ export function cancelActiveAnomalyPredictionSession(): string | null {
     return modelId;
 }
 
+/**
+ * Clear the active anomaly prediction session if the controller matches.
+ */
 export function endAnomalyPredictionSession(controller?: AbortController): void {
     if (!activeAnomalyPredictionState) return;
     if (controller && activeAnomalyPredictionState.controller !== controller) {
@@ -264,6 +288,9 @@ function toModelInfo(model: ModelStatus): PretrainedModelInfo {
     };
 }
 
+/**
+ * Submit a file to the backend for anomaly prediction.
+ */
 export async function predictAnomaliesFromFile(
     file: File,
     payload: Omit<AnomalyPredictRequest, 'rows'>,
@@ -314,6 +341,9 @@ export async function predictAnomaliesFromFile(
     return (await response.json()) as AnomalyPredictResponse;
 }
 
+/**
+ * Submit a remote ingest ID for anomaly prediction.
+ */
 export async function predictAnomaliesFromIngest(
     ingestId: string,
     payload: Omit<AnomalyPredictRequest, 'rows'>,
@@ -364,6 +394,9 @@ export async function predictAnomaliesFromIngest(
     return (await response.json()) as AnomalyPredictResponse;
 }
 
+/**
+ * Start a remote ingest session and return server metadata.
+ */
 export async function startRemoteIngest(
     fileName: string,
     fileSize: number,
@@ -405,6 +438,9 @@ export async function startRemoteIngest(
     return (await response.json()) as IngestStartResponse;
 }
 
+/**
+ * Upload a binary chunk for a remote ingest session.
+ */
 export async function uploadRemoteIngestChunk(
     ingestId: string,
     chunk: ArrayBuffer,
@@ -430,6 +466,9 @@ export async function uploadRemoteIngestChunk(
     }
 }
 
+/**
+ * Finalize a remote ingest session and return its status.
+ */
 export async function finishRemoteIngest(ingestId: string): Promise<IngestStatusResponse> {
     let response: Response;
     try {
@@ -448,6 +487,9 @@ export async function finishRemoteIngest(ingestId: string): Promise<IngestStatus
     return (await response.json()) as IngestStatusResponse;
 }
 
+/**
+ * Fetch the current status of a remote ingest session.
+ */
 export async function getRemoteIngestStatus(ingestId: string): Promise<IngestStatusResponse> {
     const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}/status`);
     if (!response.ok) {
@@ -457,6 +499,9 @@ export async function getRemoteIngestStatus(ingestId: string): Promise<IngestSta
     return (await response.json()) as IngestStatusResponse;
 }
 
+/**
+ * Delete a remote ingest session and its data.
+ */
 export async function deleteRemoteIngest(ingestId: string): Promise<void> {
     const response = await fetch(`${backendBaseUrl}/ingest/${encodeURIComponent(ingestId)}`, {
         method: 'DELETE',
@@ -467,6 +512,9 @@ export async function deleteRemoteIngest(ingestId: string): Promise<void> {
     }
 }
 
+/**
+ * Return the total line count for a remote ingest session.
+ */
 export async function getRemoteLineCount(ingestId: string): Promise<number> {
     const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/line-count`);
     if (!response.ok) {
@@ -477,6 +525,9 @@ export async function getRemoteLineCount(ingestId: string): Promise<number> {
     return Number(payload.line_count ?? 0);
 }
 
+/**
+ * Fetch a range of raw lines for a remote ingest session.
+ */
 export async function getRemoteLinesRange(
     ingestId: string,
     startLine: number,
@@ -493,6 +544,9 @@ export async function getRemoteLinesRange(
     return payload.lines ?? [];
 }
 
+/**
+ * Query remote filtered lines with pagination metadata.
+ */
 export async function queryRemoteFilteredLines(
     ingestId: string,
     filters: Record<string, unknown>,
@@ -525,6 +579,9 @@ export async function queryRemoteFilteredLines(
     return (await response.json()) as { totalMatches: number; lines: Array<{ lineNumber: number; raw: string }> };
 }
 
+/**
+ * Fetch a sampled dashboard snapshot for a remote ingest session.
+ */
 export async function getRemoteDashboardSnapshot(ingestId: string): Promise<unknown> {
     const response = await fetch(`${backendBaseUrl}/logs/${encodeURIComponent(ingestId)}/dashboard`);
     if (!response.ok) {
@@ -535,6 +592,9 @@ export async function getRemoteDashboardSnapshot(ingestId: string): Promise<unkn
     return payload.snapshot;
 }
 
+/**
+ * Fetch an exact dashboard snapshot with server-side filters.
+ */
 export async function getRemoteExactDashboardSnapshot(
     ingestId: string,
     payload: {
@@ -568,6 +628,9 @@ export async function getRemoteExactDashboardSnapshot(
     return result.snapshot;
 }
 
+/**
+ * Fetch pretrained model metadata with compatibility fallbacks.
+ */
 export async function getPretrainedModels(): Promise<PretrainedModelInfo[]> {
     try {
         const response = await fetch(`${backendBaseUrl}/models/status`);
@@ -666,6 +729,9 @@ export async function getPretrainedModels(): Promise<PretrainedModelInfo[]> {
     ];
 }
 
+/**
+ * Trigger backend model warmup and return readiness status.
+ */
 export async function warmupAnomalyModel(modelId: string = 'bgl'): Promise<PretrainedModelInfo['status']> {
     const response = await fetch(`${backendBaseUrl}/prepare/start?model_id=${encodeURIComponent(modelId)}`, {
         method: 'POST',
@@ -686,6 +752,9 @@ export async function warmupAnomalyModel(modelId: string = 'bgl'): Promise<Pretr
     return payload.model_exists ? 'installing' : 'unavailable';
 }
 
+/**
+ * Check whether the backend model is prepared and ready.
+ */
 export async function isAnomalyModelReady(modelId: string = 'bgl'): Promise<boolean> {
     const response = await fetch(`${backendBaseUrl}/health?model_id=${encodeURIComponent(modelId)}`);
     if (!response.ok) {
@@ -695,6 +764,9 @@ export async function isAnomalyModelReady(modelId: string = 'bgl'): Promise<bool
     return Boolean(payload.model_ready);
 }
 
+/**
+ * Verify backend availability via the health endpoint.
+ */
 export async function checkBackendAvailability(): Promise<boolean> {
     try {
         const response = await fetch(`${backendBaseUrl}/health`, {
@@ -712,6 +784,9 @@ export async function checkBackendAvailability(): Promise<boolean> {
     }
 }
 
+/**
+ * Request cancellation for an active anomaly prediction.
+ */
 export async function cancelAnomalyPrediction(modelId: string = 'bgl'): Promise<void> {
     const response = await fetch(`${backendBaseUrl}/anomaly/cancel?model_id=${encodeURIComponent(modelId)}`, {
         method: 'POST',
@@ -723,6 +798,9 @@ export async function cancelAnomalyPrediction(modelId: string = 'bgl'): Promise<
     }
 }
 
+/**
+ * Fetch the backend prediction progress status.
+ */
 export async function getAnomalyProgress(modelId: string = 'bgl'): Promise<AnomalyPredictionProgress> {
     const response = await fetch(`${backendBaseUrl}/anomaly/progress?model_id=${encodeURIComponent(modelId)}`);
     if (!response.ok) {

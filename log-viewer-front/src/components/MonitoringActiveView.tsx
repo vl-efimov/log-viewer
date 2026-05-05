@@ -11,6 +11,9 @@ interface MonitoringActiveViewProps {
     onStopMonitoring: () => void;
 }
 
+/**
+ * View shown when live monitoring is active.
+ */
 export const MonitoringActiveView: React.FC<MonitoringActiveViewProps> = ({
     fileName,
     onViewLogs,

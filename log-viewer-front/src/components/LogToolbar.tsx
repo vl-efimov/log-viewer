@@ -77,6 +77,9 @@ interface LogToolbarProps {
     refreshDisabledReason?: string;
 }
 
+/**
+ * Toolbar with search, filters, refresh, and anomaly actions.
+ */
 const LogToolbar: React.FC<LogToolbarProps> = ({
     onManualRefresh,
     autoRefresh,

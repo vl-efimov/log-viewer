@@ -69,6 +69,9 @@ type AnomalyStatusText = {
 
 const SERVER_STATUS_POLL_MS = 5000;
 
+/**
+ * Status bar showing file, indexing, and anomaly state.
+ */
 const AppStatusBar: React.FC = () => {
     const dispatch = useDispatch();
     const { t } = useTranslation();
