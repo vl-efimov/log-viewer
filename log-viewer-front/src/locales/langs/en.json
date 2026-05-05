@@ -86,7 +86,7 @@
     },
     "monitoringBanner": {
       "message": "File content is read from IndexedDB, and the link to the file in the filesystem is missing. To monitor file changes and upload it to the server, re-select the file.",
-      "actionLabel": "Select file for monitoring"
+      "actionLabel": "Select file"
     },
     "refreshDisabledReason": {
       "monitoringRequired": "File is not available for refresh. Select the file for monitoring."

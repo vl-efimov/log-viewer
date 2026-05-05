@@ -93,10 +93,10 @@ export const getCustomTheme = (
                 styleOverrides: {
                     tooltip: {
                         fontSize: '1rem',
-                            background: isLight ? '#23272f' : '#334155',
+                        background: isLight ? '#23272f' : '#334155',
                     },
                     arrow: {
-                            color: isLight ? '#23272f' : '#334155',
+                        color: isLight ? '#23272f' : '#334155',
                     },
                 },
             },

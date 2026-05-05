@@ -47,7 +47,7 @@ const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
             <Box
                 sx={{
                     height: 150,
-                    borderRadius: 1,
+                    borderRadius: 2,
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     backgroundColor: (theme) => theme.palette.background.paper,
                     display: 'flex',
@@ -55,6 +55,7 @@ const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
                     justifyContent: 'center',
                     gap: 2,
                     px: 2,
+                    mb: 1,
                 }}
             >
                 <CircularProgress size={24} />
