@@ -280,7 +280,7 @@ Pro běžnou práci je vhodné postupovat v tomto pořadí:
 
 ### Soubor se nenačetl správně
 
-- Ověřte, že jde o podporovaný soubor s příponou `.txt`, `.log` nebo `.json`.
+- Ověřte, že jde o podporovaný soubor s příponou `.txt`, `.log`.
 - Pokud formát není rozpoznán, vytvořte vlastní formát v Log Formats.
 - U velkého souboru počítejte s tím, že před nahráním na server bude dostupné pouze základní prohlížení řádků.
 
