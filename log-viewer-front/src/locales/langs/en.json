@@ -6,6 +6,10 @@
   "appLayout": {
     "dropFileToOpen": "Drop log file to open"
   },
+  "browserWarning": {
+    "title": "Browser notice",
+    "message": "This app was developed and tested in Chrome. Functionality in other browsers is not guaranteed."
+  },
   "common": {
     "unknown": "unknown",
     "ok": "OK",

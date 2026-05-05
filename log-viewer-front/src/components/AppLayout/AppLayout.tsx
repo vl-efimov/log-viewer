@@ -1,9 +1,15 @@
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import Header from '@/components/AppLayout/AppHeader/AppHeader';
 import Sidebar from '@/components/AppLayout/AppSidebar/AppSidebar';
 import AppStatusBar from '@/components/AppLayout/AppStatusBar/AppStatusBar';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useFileLoader } from '@/hooks/useFileLoader';
 import GlobalNotifications from '@/components/common/GlobalNotifications';
@@ -21,6 +27,7 @@ export default function MainLayout () {
         return saved !== null ? saved === 'true' : false;
     });
     const [isDragActive, setIsDragActive] = useState(false);
+    const [isBrowserWarningOpen, setIsBrowserWarningOpen] = useState(false);
     const dragCounterRef = useRef(0);
     const { handleFileDrop, handleFileSystemAccess } = useFileLoader();
     const effectiveSidebarOpen = !isTabletLayout && isSidebarOpen;
@@ -77,6 +84,15 @@ export default function MainLayout () {
         // Some drag sources provide only URI/text payloads. Request a real file.
         await handleFileSystemAccess();
     };
+
+    useEffect(() => {
+        const userAgent = navigator.userAgent;
+        const isChrome = /Chrome|CriOS/.test(userAgent)
+            && !/Edg|OPR|Brave|Vivaldi|YaBrowser|SamsungBrowser|DuckDuckGo/.test(userAgent);
+        if (!isChrome) {
+            setIsBrowserWarningOpen(true);
+        }
+    }, []);
 
     return (
         <Box
@@ -159,6 +175,35 @@ export default function MainLayout () {
             </Box>
             <GlobalNotifications />
             <AppStatusBar />
+            <Dialog
+                open={isBrowserWarningOpen}
+                onClose={() => setIsBrowserWarningOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        maxWidth: 520,
+                    },
+                }}
+            >
+                <DialogTitle>{t('browserWarning.title')}</DialogTitle>
+                <DialogContent>
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
+                        {t('browserWarning.message')}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        variant="contained"
+                        onClick={() => setIsBrowserWarningOpen(false)}
+                    >
+                        {t('common.ok')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
             {isDragActive && (
                 <Box
                     sx={{

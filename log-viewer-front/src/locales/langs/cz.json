@@ -6,6 +6,10 @@
   "appLayout": {
     "dropFileToOpen": "Pusťte log soubor pro otevření"
   },
+  "browserWarning": {
+    "title": "Upozornění na prohlížeč",
+    "message": "Aplikace byla vyvinuta a testována v prohlížeči Chrome. Funkčnost v ostatních prohlížečích není zaručena."
+  },
   "common": {
     "unknown": "neznámý",
     "ok": "OK",
