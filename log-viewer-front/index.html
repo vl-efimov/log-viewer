@@ -8,6 +8,19 @@
     <meta name="description" content="LuVo is a web app for viewing, filtering, and monitoring logs with anomaly analysis.">
     <link rel="mask-icon" href="/mask-icon.svg" color="#FFFFFF">
     <meta name="theme-color" content="#ffffff">
+    <script type="text/javascript">
+      (function () {
+        var l = window.location;
+        if (l.search.length > 1 && l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) { return s.replace(/~and~/g, '&'); })
+            .join('?');
+          window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
