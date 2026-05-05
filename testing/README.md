@@ -29,6 +29,12 @@ Spuštění projektu:
 .\start.cmd
 ```
 
+Před spuštěním testů je potřeba nainstalovat závislosti:
+
+```bash
+pip install -r testing/requirements.txt
+```
+
 Po spuštění projektu lze následně spouštět jednotlivé testovací skripty ze složky `testing` podle pokynů v dalších sekcích tohoto dokumentu.
 
 ## 3. Struktura testovací složky
