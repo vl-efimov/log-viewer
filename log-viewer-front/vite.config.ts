@@ -38,9 +38,7 @@ export default defineConfig(({ mode }) => {
                     globPatterns: ["**/*"],
                     maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                 },
-                includeAssets: [
-                    "**/*",
-                ],
+                includeManifestIcons: false,
                 manifest: {
                     "name": "LuVo - log viewer",
                     "short_name": "LuVo",
