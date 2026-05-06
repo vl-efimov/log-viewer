@@ -11,6 +11,7 @@ import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -587,22 +588,28 @@ const AppStatusBar: React.FC = () => {
                                         />
                                         <List sx={{ py: 0, maxHeight: 360, overflowY: 'auto' }}>
                                             {filteredFormatOptions.map((formatOption) => (
-                                                <ListItemButton
+                                                <ListItem
                                                     key={formatOption.id}
-                                                    selected={formatOption.id === normalizedFormatId}
-                                                    onClick={() => handleFormatSelect(formatOption.id)}
+                                                    disablePadding
                                                 >
-                                                    <ListItemText
-                                                        primary={formatOption.name}
-                                                        secondary={formatOption.id === normalizedFormatId ? t('statusBar.formatDialog.current') : undefined}
-                                                    />
-                                                </ListItemButton>
+                                                    <ListItemButton
+                                                        selected={formatOption.id === normalizedFormatId}
+                                                        onClick={() => handleFormatSelect(formatOption.id)}
+                                                    >
+                                                        <ListItemText
+                                                            primary={formatOption.name}
+                                                            secondary={formatOption.id === normalizedFormatId ? t('statusBar.formatDialog.current') : undefined}
+                                                        />
+                                                    </ListItemButton>
+                                                </ListItem>
                                             ))}
                                             {filteredFormatOptions.length === 0 && (
-                                                <ListItemText
-                                                    primary={t('statusBar.formatDialog.empty')}
-                                                    primaryTypographyProps={{ color: 'text.secondary', sx: { px: 2, py: 1 } }}
-                                                />
+                                                <ListItem>
+                                                    <ListItemText
+                                                        primary={t('statusBar.formatDialog.empty')}
+                                                        primaryTypographyProps={{ color: 'text.secondary', sx: { px: 2, py: 1 } }}
+                                                    />
+                                                </ListItem>
                                             )}
                                         </List>
                                     </DialogContent>

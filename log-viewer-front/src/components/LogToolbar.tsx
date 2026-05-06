@@ -437,6 +437,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 <Tooltip
                                     title={refreshDisabledReason || t('toolbar.refresh.refreshNow')}
                                     arrow
+                                    describeChild
                                 >
                                     <span>
                                         <Button
@@ -456,6 +457,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 <Tooltip
                                     title={refreshDisabledReason || (autoRefresh ? t('toolbar.refresh.autoOn') : t('toolbar.refresh.autoOff'))}
                                     arrow
+                                    describeChild
                                 >
                                     <span>
                                         <Button
@@ -510,6 +512,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         <Tooltip
                             title={t('toolbar.anomalies.prev')}
                             arrow
+                            describeChild
                         >
                             <span>
                                 <IconButton
@@ -517,6 +520,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                     onClick={onNavigateToPreviousAnomaly}
                                     disabled={controlsDisabled || !canNavigateToPreviousAnomaly || !onNavigateToPreviousAnomaly}
                                     sx={{ p: 0.5 }}
+                                    aria-label={t('toolbar.anomalies.prev')}
                                 >
                                     <KeyboardArrowUpIcon fontSize="small" />
                                 </IconButton>
@@ -526,6 +530,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         <Tooltip
                             title={t('toolbar.anomalies.next')}
                             arrow
+                            describeChild
                         >
                             <span>
                                 <IconButton
@@ -533,6 +538,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                     onClick={onNavigateToNextAnomaly}
                                     disabled={controlsDisabled || !canNavigateToNextAnomaly || !onNavigateToNextAnomaly}
                                     sx={{ p: 0.5 }}
+                                    aria-label={t('toolbar.anomalies.next')}
                                 >
                                     <KeyboardArrowDownIcon fontSize="small" />
                                 </IconButton>
@@ -560,6 +566,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     <Tooltip
                         title={t('toolbar.search.open')}
                         arrow
+                        describeChild
                     >
                         <span>
                             <IconButton
@@ -569,6 +576,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 disabled={controlsDisabled}
                                 color={isSearchOpen || searchTerm.trim().length > 0 ? 'primary' : 'default'}
                                 sx={{ p: 0.5 }}
+                                aria-label={t('toolbar.search.open')}
                             >
                                 <SearchIcon fontSize="small" />
                             </IconButton>
@@ -578,6 +586,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     <Tooltip
                         title={t('toolbar.search.prev')}
                         arrow
+                        describeChild
                     >
                         <span>
                             <IconButton
@@ -586,6 +595,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 disabled={controlsDisabled || !canNavigateToPreviousSearchMatch || !onNavigateToPreviousSearchMatch}
                                 color={canNavigateToPreviousSearchMatch ? 'primary' : 'default'}
                                 sx={{ p: 0.5 }}
+                                aria-label={t('toolbar.search.prev')}
                             >
                                 <KeyboardArrowUpIcon fontSize="small" />
                             </IconButton>
@@ -595,6 +605,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                     <Tooltip
                         title={t('toolbar.search.next')}
                         arrow
+                        describeChild
                     >
                         <span>
                             <IconButton
@@ -603,6 +614,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                                 disabled={controlsDisabled || !canNavigateToNextSearchMatch || !onNavigateToNextSearchMatch}
                                 color={canNavigateToNextSearchMatch ? 'primary' : 'default'}
                                 sx={{ p: 0.5 }}
+                                aria-label={t('toolbar.search.next')}
                             >
                                 <KeyboardArrowDownIcon fontSize="small" />
                             </IconButton>
@@ -618,6 +630,7 @@ const LogToolbar: React.FC<LogToolbarProps> = ({
                         <Tooltip
                             title={filtersDisabled ? t('toolbar.filters.disabledWhileIndexing') : t('toolbar.filters.tooltip')}
                             arrow
+                            describeChild
                         >
                             <Badge
                                 color="primary"

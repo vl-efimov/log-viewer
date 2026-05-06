@@ -1,5 +1,6 @@
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Box from '@mui/material/Box';
@@ -100,10 +101,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                     {topMenuItems.map((category, index) => (
                         <div key={`sidebar-category-${index}`}>
                             <List
-                                sx={{ paddingY: 0 }}
+                                sx={{
+                                    py: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 1,
+                                }}
                                 subheader={
                                     <ListSubheader
-                                        component="div"
+                                        component="li"
                                         sx={{
                                             lineHeight: '24px',
                                             overflow: 'hidden',
@@ -118,83 +124,91 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
                                     </ListSubheader>
                                 }
                             >
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    {category.items?.map((item, index) => (
-                                        <Box key={`sidebar-item-${index}`}>
-                                            <Tooltip 
-                                                title={item.text}
-                                                placement="right"
-                                                disableHoverListener={isSidebarOpen}
-                                                arrow
+                                {category.items?.map((item, index) => (
+                                    <ListItem
+                                        key={`sidebar-item-${index}`}
+                                        disablePadding
+                                    >
+                                        <Tooltip 
+                                            title={item.text}
+                                            placement="right"
+                                            disableHoverListener={isSidebarOpen}
+                                            arrow
+                                        >
+                                            <ListItemButton
+                                                component={Link}
+                                                to={item.path}
+                                                selected={isSelected(item.path)}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    overflow: 'hidden',
+                                                    whiteSpace: 'nowrap',
+                                                    height: '48px',
+                                                }}
                                             >
-                                                <ListItemButton
-                                                    component={Link}
-                                                    to={item.path}
-                                                    selected={isSelected(item.path)}
-                                                    sx={{
-                                                        borderRadius: 2,
-                                                        overflow: 'hidden',
-                                                        whiteSpace: 'nowrap',
-                                                        height: '48px',
-                                                    }}
-                                                >
-                                                    <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                                                    {isRendered && <ListItemText primary={item.text} />}
-                                                </ListItemButton>
-                                            </Tooltip>
-                                        </Box>
-                                    ))}
-                                </Box>
+                                                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                                                {isRendered && <ListItemText primary={item.text} />}
+                                            </ListItemButton>
+                                        </Tooltip>
+                                    </ListItem>
+                                ))}
                             </List>
                             {index === topMenuItems.length - 1 || <Divider sx={{ marginY: 1 }} />}
                         </div>
                     ))}
                 </div>
 
-                <List>
-                    <Tooltip
-                        title={t('sidebar.items.about')}
-                        placement="right"
-                        disableHoverListener={isSidebarOpen}
-                        arrow
-                    >
-                        <ListItemButton
-                            component={Link}
-                            to={RouteAbout}
-                            selected={isSelected(RouteAbout)}
-                            sx={{
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                                height: '48px',
-                            }}
+                <List sx={{ py: 0 }}>
+                    <ListItem disablePadding>
+                        <Tooltip
+                            title={t('sidebar.items.about')}
+                            placement="right"
+                            disableHoverListener={isSidebarOpen}
+                            arrow
                         >
-                            <ListItemIcon sx={{ minWidth: 40 }}><InfoOutlinedIcon /></ListItemIcon>
-                            {isRendered && <ListItemText primary={t('sidebar.items.about')} />}
-                        </ListItemButton>
-                    </Tooltip>
-                    <Divider sx={{ marginY: 1 }} />
-                    <Tooltip
-                        title={t('sidebar.items.settings')}
-                        placement="right"
-                        disableHoverListener={isSidebarOpen}
-                        arrow
-                    >
-                        <ListItemButton
-                            component={Link}
-                            to={RouteSettings}
-                            selected={isSelected(RouteSettings)}
-                            sx={{
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                                height: '48px',
-                            }}
+                            <ListItemButton
+                                component={Link}
+                                to={RouteAbout}
+                                selected={isSelected(RouteAbout)}
+                                sx={{
+                                    borderRadius: 2,
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                    height: '48px',
+                                }}
+                            >
+                                <ListItemIcon sx={{ minWidth: 40 }}><InfoOutlinedIcon /></ListItemIcon>
+                                {isRendered && <ListItemText primary={t('sidebar.items.about')} />}
+                            </ListItemButton>
+                        </Tooltip>
+                    </ListItem>
+                    <Divider
+                        component="li"
+                        sx={{ marginY: 1 }}
+                    />
+                    <ListItem disablePadding>
+                        <Tooltip
+                            title={t('sidebar.items.settings')}
+                            placement="right"
+                            disableHoverListener={isSidebarOpen}
+                            arrow
                         >
-                            <ListItemIcon sx={{ minWidth: 40 }}><SettingsIcon /></ListItemIcon>
-                            {isRendered && <ListItemText primary={t('sidebar.items.settings')} />}
-                        </ListItemButton>
-                    </Tooltip>
+                            <ListItemButton
+                                component={Link}
+                                to={RouteSettings}
+                                selected={isSelected(RouteSettings)}
+                                sx={{
+                                    borderRadius: 2,
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                    height: '48px',
+                                }}
+                            >
+                                <ListItemIcon sx={{ minWidth: 40 }}><SettingsIcon /></ListItemIcon>
+                                {isRendered && <ListItemText primary={t('sidebar.items.settings')} />}
+                            </ListItemButton>
+                        </Tooltip>
+                    </ListItem>
                 </List>
             </Box>
         </Drawer>

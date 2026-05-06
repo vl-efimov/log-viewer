@@ -366,7 +366,9 @@
     "mode": "Theme mode",
     "light": "Light",
     "dark": "Dark",
-    "primaryColor": "Primary color"
+    "primaryColor": "Primary color",
+    "toggleToLight": "Switch to light theme",
+    "toggleToDark": "Switch to dark theme"
   },
   "notFound": {
     "title": "Page Not Found",

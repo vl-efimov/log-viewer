@@ -232,6 +232,7 @@ const RegexHighlighter: React.FC<RegexHighlighterProps> = ({ pattern }) => {
                 <IconButton
                     size="small"
                     className="regex-copy-button"
+                    aria-label={t('clipboard.copy')}
                     onClick={(event) => {
                         const target = event.currentTarget;
                         event.stopPropagation();

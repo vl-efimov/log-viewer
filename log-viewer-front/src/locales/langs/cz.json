@@ -365,7 +365,9 @@
     "mode": "Režim motivu",
     "light": "Světlý",
     "dark": "Tmavý",
-    "primaryColor": "Primární barva"
+    "primaryColor": "Primární barva",
+    "toggleToLight": "Přepnout na světlý motiv",
+    "toggleToDark": "Přepnout na tmavý motiv"
   },
   "notFound": {
     "title": "Stránka nenalezena",

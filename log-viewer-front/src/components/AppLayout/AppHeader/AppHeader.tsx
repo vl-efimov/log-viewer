@@ -172,6 +172,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, toggleSidebar, isSidebar
                                 <IconButton
                                     onClick={handleClearFile}
                                     size="small"
+                                    aria-label={t('header.closeFileTooltip')}
                                     sx={fileCloseSegmentSx(textColor)}
                                 >
                                     <CloseIcon fontSize="small" />

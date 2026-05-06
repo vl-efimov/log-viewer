@@ -1717,7 +1717,10 @@ export const LogHistogram: React.FC<LogHistogramProps> = ({
                     )}
                 </Typography>
                 <Tooltip title={isCollapsed ? t('viewLogs.histogram.expandTooltip') : t('viewLogs.histogram.collapseTooltip')}>
-                    <IconButton size="small">
+                    <IconButton
+                        size="small"
+                        aria-label={isCollapsed ? t('viewLogs.histogram.expandTooltip') : t('viewLogs.histogram.collapseTooltip')}
+                    >
                         {isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
                     </IconButton>
                 </Tooltip>
