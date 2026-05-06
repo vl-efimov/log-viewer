@@ -473,13 +473,15 @@ const AppStatusBar: React.FC = () => {
             >
                 {t('statusBar.items.formatDetectedTitle')}
             </Typography>
-            <Typography
-                component="span"
-                variant="caption"
-                sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
-            >
-                {t('statusBar.items.formatDetectedHint')}
-            </Typography>
+            {!formatChangeDisabled && 
+                <Typography
+                    component="span"
+                    variant="caption"
+                    sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                >
+                    {t('statusBar.items.formatDetectedHint')}
+                </Typography>
+            }
         </Box>
     );
 
