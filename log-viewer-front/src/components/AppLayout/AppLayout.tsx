@@ -6,10 +6,11 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
 import Header from '@/components/AppLayout/AppHeader/AppHeader';
 import Sidebar from '@/components/AppLayout/AppSidebar/AppSidebar';
 import AppStatusBar from '@/components/AppLayout/AppStatusBar/AppStatusBar';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useFileLoader } from '@/hooks/useFileLoader';
 import GlobalNotifications from '@/components/common/GlobalNotifications';
@@ -171,7 +172,28 @@ export default function MainLayout () {
                             overflow: 'auto',
                         }}
                     >
-                        <Outlet />
+                        <Suspense
+                            fallback={(
+                                <Box
+                                    sx={{
+                                        width: '100%',
+                                        height: '100%',
+                                        minHeight: 240,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 1.5,
+                                    }}
+                                >
+                                    <CircularProgress size={22} />
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('common.loading')}
+                                    </Typography>
+                                </Box>
+                            )}
+                        >
+                            <Outlet />
+                        </Suspense>
                     </Box>
                 </Box>
             </Box>

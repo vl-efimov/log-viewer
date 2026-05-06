@@ -1,13 +1,14 @@
+import { lazy } from 'react';
 import { Navigate, RouteObject } from 'react-router-dom';
 
 import MainLayout from '@/components/AppLayout/AppLayout';
-import DashboardPage from '@/pages/DashboardPage';
-import LogFormatsPage from '@/pages/LogFormatsPage';
-import PretrainedModelsPage from '@/pages/PretrainedModelsPage';
-import SettingsPage from '@/pages/SettingsPage';
-import AboutPage from '@/pages/AboutPage';
-import ViewLogsPage from '@/pages/ViewLogsPage';
-import NotFoundPage from '@/pages/NotFoundPage';
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const LogFormatsPage = lazy(() => import('@/pages/LogFormatsPage'));
+const PretrainedModelsPage = lazy(() => import('@/pages/PretrainedModelsPage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const AboutPage = lazy(() => import('@/pages/AboutPage'));
+const ViewLogsPage = lazy(() => import('@/pages/ViewLogsPage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 import {
     RouteRoot,
     RouteDashboard,
