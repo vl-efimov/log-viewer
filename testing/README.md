@@ -142,7 +142,7 @@ Kontrolované oblasti:
 
 ### 6.1 Spuštění všech backendových automatických testů
 
-Pro backendové testy velkých souborů je navíc nutné mít rozbalené velké datasety ve složce `log-samples/Large`. Pokud jsou soubory dostupné pouze v archivu `log-samples/Large.rar`, je třeba tento archiv před spuštěním testů rozbalit tak, aby ve složce `log-samples/Large` byly dostupné soubory `access.log`, `HDFS.log` a `BGL.log`.
+Pro backendové testy velkých souborů je navíc nutné mít rozbalené velké datasety ve složce `log-samples/Large`. Pokud jsou soubory dostupné pouze v archivu `log-samples/Large.zip`, je třeba tento archiv před spuštěním testů rozbalit tak, aby ve složce `log-samples/Large` byly dostupné soubory `access.log`, `HDFS.log` a `BGL.log`.
 
 ```bash
 python testing/run_all_tests.py --warmup

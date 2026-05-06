@@ -1,8 +1,10 @@
 # LuVo - log viewer
 
-This project was created as part of a 2026 diploma thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
+This project was created as part of a 2026 master’s thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
 
 ## Quick start
+
+Test data can be found in `/log-samples`.
 
 Prerequisites:
 - Docker Desktop (this is the only thing to install)

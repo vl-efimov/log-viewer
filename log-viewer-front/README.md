@@ -1,6 +1,6 @@
 # LuVo - log viewer (frontend)
 
-This project was created as part of a 2026 diploma thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
+This project was created as part of a 2026 master’s thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
 
 This is the client-side application for LuVo. It provides the UI and communicates with the backend API.
 
@@ -22,7 +22,5 @@ The frontend reads the backend URL from `VITE_ANOMALY_API_URL` (or `VITE_BGL_API
 
 ## Scripts
 
-- `npm run dev` - start the dev server
 - `npm run build` - build production assets
 - `npm run preview` - preview the production build
-- `npm run lint` - run linting

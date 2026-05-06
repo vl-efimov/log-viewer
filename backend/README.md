@@ -1,6 +1,6 @@
 # LuVo - log viewer (backend)
 
-This project was created as part of a 2026 diploma thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
+This project was created as part of a 2026 master’s thesis at FIT CTU, Department of Software Engineering, by student Vladimir Efimov.
 
 This is the backend service for LuVo. It provides the API, runs anomaly detection, and stores ingested logs in ClickHouse.
 
