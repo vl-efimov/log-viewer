@@ -11,7 +11,6 @@ const {
     iconSize: ICON_SIZE,
     iconRaise: ICON_RAISE,
     anomalyMaxWidth: ANOMALY_MAX_WIDTH,
-    hoverBg: HOVER_BG,
 } = APP_LAYOUT_TOKENS.statusBar;
 
 export const statusBarSx: SxProps<Theme> = {
@@ -75,7 +74,4 @@ export const anomalyTextSx: SxProps<Theme> = {
 
 export const closeButtonSx: SxProps<Theme> = {
     color: STATUS_BAR_TEXT,
-    '&:hover': {
-        bgcolor: HOVER_BG,
-    },
 };
