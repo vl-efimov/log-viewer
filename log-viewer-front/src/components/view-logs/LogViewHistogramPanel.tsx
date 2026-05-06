@@ -1,9 +1,10 @@
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
-import type { FC } from 'react';
-import { LogHistogram } from '@/components/LogHistogram';
+import { lazy, Suspense, type FC } from 'react';
 import type { ParsedLogLine } from '@/utils/logFormatDetector';
+
+const LogHistogram = lazy(() => import('@/components/LogHistogram'));
 
 interface LogViewHistogramPanelProps {
     isLargeFile: boolean;
@@ -74,17 +75,44 @@ const LogViewHistogramPanel: FC<LogViewHistogramPanelProps> = ({
 
     if (!isIndexing && !isHistogramLoading && parsedLines.length > 0) {
         return (
-            <LogHistogram
-                parsedLines={parsedLines}
-                defaultCollapsed={false}
-                height={150}
-                anomalyRegions={anomalyRegions}
-                anomalyLineNumbers={anomalyLineNumbers}
-                onAnomalyRangeSelect={onAnomalyRangeSelect}
-                onTimeRangeChange={onTimeRangeChange}
-                selectedTimeRange={selectedTimeRange}
-                showQuickRangeButtons={false}
-            />
+            <Suspense
+                fallback={(
+                    <Box
+                        sx={{
+                            height: 150,
+                            borderRadius: 2,
+                            border: (theme) => `1px solid ${theme.palette.divider}`,
+                            backgroundColor: (theme) => theme.palette.background.paper,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 2,
+                            px: 2,
+                            mb: 1,
+                        }}
+                    >
+                        <CircularProgress size={24} />
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                        >
+                            {loadingMessage}
+                        </Typography>
+                    </Box>
+                )}
+            >
+                <LogHistogram
+                    parsedLines={parsedLines}
+                    defaultCollapsed={false}
+                    height={150}
+                    anomalyRegions={anomalyRegions}
+                    anomalyLineNumbers={anomalyLineNumbers}
+                    onAnomalyRangeSelect={onAnomalyRangeSelect}
+                    onTimeRangeChange={onTimeRangeChange}
+                    selectedTimeRange={selectedTimeRange}
+                    showQuickRangeButtons={false}
+                />
+            </Suspense>
         );
     }
 

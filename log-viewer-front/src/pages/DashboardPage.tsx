@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -10,12 +10,10 @@ import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
-import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { RootState } from '@/redux/store';
 import NoFileSelected from '@/components/common/NoFileSelected';
 import { parseLogLineAuto, type ParsedLogLine } from '@/utils/logFormatDetector';
-import LogHistogram from '@/components/LogHistogram';
 import { extractTimestampFromParsedLine } from '@/utils/logTimestamp';
 import { getFileHandle, getFileObject } from '@/redux/slices/logFileSlice';
 import { getRemoteExactDashboardSnapshot } from '@/services/anomalyApi';
@@ -40,6 +38,37 @@ const DASHBOARD_FIELD_ALIASES: Record<string, string> = {
     source: 'class',
     client: 'ip',
 };
+
+const LogHistogram = lazy(() => import('@/components/LogHistogram'));
+const ReactECharts = lazy(() => import('echarts-for-react'));
+
+type ChartFallbackProps = {
+    message: string;
+    height?: number;
+};
+
+const ChartFallback = ({ message, height = 260 }: ChartFallbackProps) => (
+    <Box
+        sx={{
+            height,
+            borderRadius: 1,
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            backgroundColor: (theme) => theme.palette.background.paper,
+        }}
+    >
+        <CircularProgress size={24} />
+        <Typography
+            variant="body2"
+            color="text.secondary"
+        >
+            {message}
+        </Typography>
+    </Box>
+);
 
 const toDashboardCanonicalField = (field: string): string => {
     const normalized = field.trim().toLowerCase();
@@ -1737,37 +1766,46 @@ const DashboardPage: React.FC = () => {
                                             </Typography>
                                         </Box>
                                     ) : (
-                                        <LogHistogram
-                                            parsedLines={histogramSourceLines}
-                                            onTimeRangeChange={(startTime, endTime) => {
-                                                applyTimeRangeSelection(startTime, endTime);
-                                            }}
-                                            onCategoryFilterChange={(payload) => {
-                                                setHistogramCategoryFilter((prev) => {
-                                                    const prevSelected = prev.selectedCategories;
-                                                    const nextSelected = payload.selectedCategories;
-                                                    const sameField = prev.field === payload.field;
-                                                    const sameSelection = (
-                                                        (prevSelected === null && nextSelected === null)
-                                                        || (
-                                                            prevSelected !== null
-                                                            && nextSelected !== null
-                                                            && prevSelected.length === nextSelected.length
-                                                            && prevSelected.every((value, index) => value === nextSelected[index])
-                                                        )
-                                                    );
+                                        <Suspense
+                                            fallback={(
+                                                <ChartFallback
+                                                    message={t('dashboard.loading')}
+                                                    height={160}
+                                                />
+                                            )}
+                                        >
+                                            <LogHistogram
+                                                parsedLines={histogramSourceLines}
+                                                onTimeRangeChange={(startTime, endTime) => {
+                                                    applyTimeRangeSelection(startTime, endTime);
+                                                }}
+                                                onCategoryFilterChange={(payload) => {
+                                                    setHistogramCategoryFilter((prev) => {
+                                                        const prevSelected = prev.selectedCategories;
+                                                        const nextSelected = payload.selectedCategories;
+                                                        const sameField = prev.field === payload.field;
+                                                        const sameSelection = (
+                                                            (prevSelected === null && nextSelected === null)
+                                                            || (
+                                                                prevSelected !== null
+                                                                && nextSelected !== null
+                                                                && prevSelected.length === nextSelected.length
+                                                                && prevSelected.every((value, index) => value === nextSelected[index])
+                                                            )
+                                                        );
 
-                                                    if (sameField && sameSelection) {
-                                                        return prev;
-                                                    }
+                                                        if (sameField && sameSelection) {
+                                                            return prev;
+                                                        }
 
-                                                    return {
-                                                        field: payload.field,
-                                                        selectedCategories: nextSelected ? [...nextSelected] : null,
-                                                    };
-                                                });
-                                            }}
-                                        />
+                                                        return {
+                                                            field: payload.field,
+                                                            selectedCategories: nextSelected ? [...nextSelected] : null,
+                                                        };
+                                                    });
+                                                }}
+                                            />
+                                        </Suspense>
                                     )}
                                 </CardContent>
                             </Card>
@@ -1785,10 +1823,16 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
-                                                        <ReactECharts
-                                                            option={toChartOption(t('dashboard.charts.levels'), chartAnalytics.levelValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                            style={{ height: 260 }}
-                                                        />
+                                                        <Suspense
+                                                            fallback={(
+                                                                <ChartFallback message={t('dashboard.loading')} />
+                                                            )}
+                                                        >
+                                                            <ReactECharts
+                                                                option={toChartOption(t('dashboard.charts.levels'), chartAnalytics.levelValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                                style={{ height: 260 }}
+                                                            />
+                                                        </Suspense>
                                                     </Box>
                                                 </CardContent>
                                             </Card>
@@ -1799,10 +1843,16 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
-                                                        <ReactECharts
-                                                            option={toChartOption(t('dashboard.charts.httpStatus'), chartAnalytics.statusValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                            style={{ height: 260 }}
-                                                        />
+                                                        <Suspense
+                                                            fallback={(
+                                                                <ChartFallback message={t('dashboard.loading')} />
+                                                            )}
+                                                        >
+                                                            <ReactECharts
+                                                                option={toChartOption(t('dashboard.charts.httpStatus'), chartAnalytics.statusValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                                style={{ height: 260 }}
+                                                            />
+                                                        </Suspense>
                                                     </Box>
                                                 </CardContent>
                                             </Card>
@@ -1813,10 +1863,16 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
-                                                        <ReactECharts
-                                                            option={toChartOption(t('dashboard.charts.httpMethods'), chartAnalytics.methodValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                            style={{ height: 260 }}
-                                                        />
+                                                        <Suspense
+                                                            fallback={(
+                                                                <ChartFallback message={t('dashboard.loading')} />
+                                                            )}
+                                                        >
+                                                            <ReactECharts
+                                                                option={toChartOption(t('dashboard.charts.httpMethods'), chartAnalytics.methodValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                                style={{ height: 260 }}
+                                                            />
+                                                        </Suspense>
                                                     </Box>
                                                 </CardContent>
                                             </Card>
@@ -1827,10 +1883,16 @@ const DashboardPage: React.FC = () => {
                                             <Card>
                                                 <CardContent>
                                                     <Box sx={topChartCount === 1 ? singleChartContentSx : undefined}>
-                                                        <ReactECharts
-                                                            option={toChartOption(getFieldTitle('componentLevel', t), chartAnalytics.componentLevelValues, locale, isDarkMode, chartScaleBaseColor)}
-                                                            style={{ height: 260 }}
-                                                        />
+                                                        <Suspense
+                                                            fallback={(
+                                                                <ChartFallback message={t('dashboard.loading')} />
+                                                            )}
+                                                        >
+                                                            <ReactECharts
+                                                                option={toChartOption(getFieldTitle('componentLevel', t), chartAnalytics.componentLevelValues, locale, isDarkMode, chartScaleBaseColor)}
+                                                                style={{ height: 260 }}
+                                                            />
+                                                        </Suspense>
                                                     </Box>
                                                 </CardContent>
                                             </Card>
@@ -1882,17 +1944,23 @@ const DashboardPage: React.FC = () => {
                                                     size={facetGridSize}
                                                 >
                                                     <Box sx={chartAnalytics.facets.length === 1 ? singleChartContentSx : undefined}>
-                                                        <ReactECharts
-                                                            option={toChartOption(
-                                                                getFieldTitle(facet.field, t),
-                                                                facet.values,
-                                                                locale,
-                                                                isDarkMode,
-                                                                chartScaleBaseColor,
-                                                                true,
+                                                        <Suspense
+                                                            fallback={(
+                                                                <ChartFallback message={t('dashboard.loading')} />
                                                             )}
-                                                            style={{ height: 260 }}
-                                                        />
+                                                        >
+                                                            <ReactECharts
+                                                                option={toChartOption(
+                                                                    getFieldTitle(facet.field, t),
+                                                                    facet.values,
+                                                                    locale,
+                                                                    isDarkMode,
+                                                                    chartScaleBaseColor,
+                                                                    true,
+                                                                )}
+                                                                style={{ height: 260 }}
+                                                            />
+                                                        </Suspense>
                                                     </Box>
                                                 </Grid>
                                             ))}
