@@ -80,3 +80,11 @@ The backend uses FastAPI + TensorFlow/Transformers and stores ingested logs in C
 ### Frontend config
 
 The frontend reads the backend URL from `VITE_ANOMALY_API_URL` (or `VITE_BGL_API_URL` as a fallback) and defaults to `http://127.0.0.1:8001`.
+
+## User guide
+
+See [user-guide/User_guide.md](user-guide/User_guide.md).
+
+## Testing
+
+See [testing/README.md](testing/README.md).
