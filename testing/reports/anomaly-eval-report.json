@@ -1,0 +1,105 @@
+{
+  "suite": "backend-anomaly-evaluation",
+  "base_url": "http://127.0.0.1:8001",
+  "parameter_profile": "custom",
+  "threshold": 0.6,
+  "step_size": 20,
+  "min_region_lines": 1,
+  "paper_alignment_note": null,
+  "datasets": [
+    {
+      "dataset": "BGL (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\Large\\BGL.log",
+      "model_id": "bgl",
+      "format_id": "bgl",
+      "label_strategy": "bgl_prefix",
+      "parameter_profile": "custom",
+      "phase": "completed",
+      "status": "completed",
+      "upload_ms": 95137.632,
+      "predict_ms": 1949539.032,
+      "prediction_meta": {
+        "total_rows": 4747963,
+        "anomaly_rows": 1481523,
+        "anomaly_ratio": 0.31203339200410785,
+        "threshold": 0.6,
+        "window_size": 20,
+        "step_size": 20,
+        "min_region_lines": 1,
+        "model_id": "bgl"
+      },
+      "predicted_anomaly_lines": 1481523,
+      "total_lines": 4747963,
+      "evaluation": {
+        "evaluation_unit": "line",
+        "total_units": 4747963,
+        "ground_truth_positive_units": 348460,
+        "predicted_positive_units": 1481523,
+        "metrics": {
+          "tp": 348454,
+          "fp": 1133069,
+          "fn": 6,
+          "tn": 3266434,
+          "precision": 0.2352,
+          "recall": 0.999983,
+          "f1": 0.380828,
+          "accuracy": 0.761356
+        },
+        "ground_truth_source": "BGL prefix token: '-' means normal, any other prefix means anomaly class"
+      },
+      "evaluation_note": "Ground-truth comparison is computed from dataset-specific labels aligned to the model output unit."
+    },
+    {
+      "dataset": "HDFS (Large)",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\Large\\HDFS.log",
+      "model_id": "hdfs",
+      "format_id": "hdfs",
+      "label_strategy": "hdfs_block_csv",
+      "parameter_profile": "custom",
+      "phase": "completed",
+      "status": "completed",
+      "upload_ms": 243817.641,
+      "predict_ms": 4431283.587,
+      "prediction_meta": {
+        "total_rows": 11175629,
+        "anomaly_rows": 626400,
+        "anomaly_ratio": 0.056050536394864216,
+        "threshold": 0.6,
+        "window_size": 20,
+        "step_size": 20,
+        "min_region_lines": 1,
+        "model_id": "hdfs"
+      },
+      "predicted_anomaly_lines": 626400,
+      "total_lines": 11175629,
+      "evaluation": {
+        "evaluation_unit": "block",
+        "total_units": 575061,
+        "ground_truth_positive_units": 16838,
+        "predicted_positive_units": 323124,
+        "metrics": {
+          "tp": 10119,
+          "fp": 313005,
+          "fn": 6719,
+          "tn": 245218,
+          "precision": 0.031316,
+          "recall": 0.600962,
+          "f1": 0.05953,
+          "accuracy": 0.444017
+        },
+        "ground_truth_source": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\Large\\anomaly_label.csv",
+        "notes": {
+          "missing_block_lines": 0,
+          "labels_total": 575061,
+          "labels_observed_in_log": 575061
+        }
+      },
+      "evaluation_note": "Ground-truth comparison is computed from dataset-specific labels aligned to the model output unit."
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "completed": 2,
+    "failed": 0
+  }
+}

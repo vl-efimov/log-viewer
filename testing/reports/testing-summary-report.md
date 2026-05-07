@@ -1,5 +1,7 @@
 # Souhrnný report testování
 
+Tento souhrnný report kombinuje manuální frontendové plány a automatické backendové reporty uložené ve složce testing/reports.
+
 ## Testování aplikace
 
 ### Funkční testy velkých souborů
@@ -42,9 +44,9 @@ Souhrn latencí:
 
 | Dataset | File | File size | Line count | Status | Dashboard ms | Filter ms |
 | --- | --- | --- | --- | --- | --- | --- |
-| BGL (Large) | BGL.log | 708.76 MB | 4747963 | passed | 1527.896 | 22.837 |
-| HDFS (Large) | HDFS.log | 1.47 GB | 11175629 | passed | 3403.674 | 21.729 |
-| Web Access (Large) | access.log | 3.26 GB | 10365152 | passed | 4281.799 | 30.799 |
+| BGL (Large) | BGL.log | - | 4747963 | passed | 1527.896 | 22.837 |
+| HDFS (Large) | HDFS.log | - | 11175629 | passed | 3403.674 | 21.729 |
+| Web Access (Large) | access.log | - | 10365152 | passed | 4281.799 | 30.799 |
 
 ## Backendová detekce anomálií
 
@@ -52,12 +54,30 @@ Souhrn latencí:
 
 | Dataset | Status | Prediction | Meta | Rows | Regions | Predicted lines | Region count |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| HDFS (Anomaly) | completed | True | True | True | True | 220 | 10 |
-| BGL (Anomaly) | completed | True | True | True | True | 900 | 9 |
+| HDFS (Small) | completed | True | True | True | True | 220 | 10 |
+| BGL (Small) | completed | True | True | True | True | 900 | 9 |
 | BGL (Large) | completed | True | True | True | True | 1481523 | 2746 |
 
 ### Poznámky k výsledku
 
-- HDFS (Anomaly): predicted lines sample = [421, 422, 423, 424, 425, 426, 427, 428, 429, 430]; This run validates the backend anomaly workflow and the response shape consumed by the application.
-- BGL (Anomaly): predicted lines sample = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; This run validates the backend anomaly workflow and the response shape consumed by the application.
+- HDFS (Small): predicted lines sample = [421, 422, 423, 424, 425, 426, 427, 428, 429, 430]; This run validates the backend anomaly workflow and the response shape consumed by the application.
+- BGL (Small): predicted lines sample = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; This run validates the backend anomaly workflow and the response shape consumed by the application.
 - BGL (Large): predicted lines sample = [4901, 4902, 4903, 4904, 4905, 4906, 4907, 4908, 4909, 4910]; This run validates the backend anomaly workflow and the response shape consumed by the application.
+
+## Vyhodnocení kvality anomaly modelů
+
+### Srovnání modelů vůči dostupné etalonní anotaci
+
+Profil parametrů: custom; threshold=0.6; step_size=20; min_region_lines=1.
+
+Souhrn běhu: total=2; completed=2; failed=0.
+
+| Dataset | Status | Model | Unit | Total units | Precision | Recall | F1 | Predict ms |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BGL (Large) | completed | bgl | line | 4747963 | 0.2352 | 0.999983 | 0.380828 | 1949539.032 |
+| HDFS (Large) | completed | hdfs | block | 575061 | 0.031316 | 0.600962 | 0.05953 | 4431283.587 |
+
+### Detail poznámek
+
+- BGL (Large): ground truth source = BGL prefix token: '-' means normal, any other prefix means anomaly class; TP=348454, FP=1133069, FN=6, TN=3266434
+- HDFS (Large): ground truth source = D:\Documents\Univerzita\CVUT\luvo-log-viewer\log-samples\Large\anomaly_label.csv; TP=10119, FP=313005, FN=6719, TN=245218

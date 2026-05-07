@@ -14,9 +14,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-url", default="http://127.0.0.1:8001", help="Backend base URL")
     parser.add_argument("--backend-config", type=Path, help="Path to backend large-file dataset config JSON")
     parser.add_argument("--anomaly-config", type=Path, help="Path to anomaly dataset config JSON")
+    parser.add_argument("--anomaly-eval-config", type=Path, help="Path to anomaly evaluation dataset config JSON")
+    parser.add_argument(
+        "--custom-anomaly-eval-profile",
+        action="store_true",
+        help="Run anomaly model evaluation with the application default profile instead of the ASE 2021-aligned profile",
+    )
     parser.add_argument("--skip-functional", action="store_true", help="Skip functional tests")
     parser.add_argument("--skip-performance", action="store_true", help="Skip performance tests")
     parser.add_argument("--skip-anomaly", action="store_true", help="Skip anomaly integration validation")
+    parser.add_argument("--skip-anomaly-eval", action="store_true", help="Skip anomaly model quality evaluation")
     parser.add_argument("--skip-summary", action="store_true", help="Skip summary report generation")
     parser.add_argument("--warmup", action="store_true", help="Warm up anomaly models before integration validation")
     return parser
@@ -37,6 +44,7 @@ def main() -> int:
     args = build_parser().parse_args()
     python = sys.executable
     failures = 0
+    use_paper_ase2021 = not args.custom_anomaly_eval_profile
 
     steps: list[tuple[str, list[str]]] = []
     if not args.skip_functional:
@@ -56,11 +64,22 @@ def main() -> int:
         if args.warmup:
             anomaly_command.append("--warmup")
         steps.append(("backend-anomaly", anomaly_command))
+    if not args.skip_anomaly_eval:
+        anomaly_eval_command = [python, str(TESTING_ROOT / "run_anomaly_evaluation.py"), "--base-url", args.base_url]
+        if args.anomaly_eval_config:
+            anomaly_eval_command.extend(["--config", str(args.anomaly_eval_config)])
+        if use_paper_ase2021:
+            anomaly_eval_command.append("--paper-ase2021")
+        if args.warmup:
+            anomaly_eval_command.append("--warmup")
+        steps.append(("backend-anomaly-eval", anomaly_eval_command))
 
     print("[INFO] aggregate test run started")
     print(f"[INFO] base URL: {args.base_url}")
     print(f"[INFO] backend config: {args.backend_config if args.backend_config else 'default testing/config/backend-large-datasets.json'}")
     print(f"[INFO] anomaly config: {args.anomaly_config if args.anomaly_config else 'default testing/config/anomaly-datasets.json'}")
+    print(f"[INFO] anomaly eval config: {args.anomaly_eval_config if args.anomaly_eval_config else 'default testing/config/anomaly-evaluation-datasets.json'}")
+    print(f"[INFO] anomaly eval profile: {'ASE 2021' if use_paper_ase2021 else 'custom/default'}")
     print(f"[INFO] selected steps: {', '.join(label for label, _command in steps)}")
 
     for index, (label, command) in enumerate(steps, start=1):

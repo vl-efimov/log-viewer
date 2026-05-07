@@ -1,13 +1,13 @@
 {
   "datasets": [
     {
-      "name": "HDFS (Anomaly)",
+      "name": "HDFS (Small)",
       "file": "log-samples/HDFS_2k.log",
       "format_id": "hdfs",
       "model_id": "hdfs"
     },
     {
-      "name": "BGL (Anomaly)",
+      "name": "BGL (Small)",
       "file": "log-samples/BGL_2k.log",
       "format_id": "bgl",
       "model_id": "bgl"

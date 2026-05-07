@@ -4,7 +4,7 @@
   "datasets": [
     {
       "dataset": "Web Access (Large)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\Large\\access.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\lluvo-log-viewer\\log-samples\\Large\\access.log",
       "status": "completed",
       "line_count": 10365152,
       "timings_ms": {
@@ -23,7 +23,7 @@
     },
     {
       "dataset": "HDFS (Large)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\Large\\HDFS.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\Large\\HDFS.log",
       "status": "completed",
       "line_count": 11175629,
       "timings_ms": {
@@ -42,7 +42,7 @@
     },
     {
       "dataset": "BGL (Large)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\Large\\BGL.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\Large\\BGL.log",
       "status": "completed",
       "line_count": 4747963,
       "timings_ms": {

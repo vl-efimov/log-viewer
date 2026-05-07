@@ -1,0 +1,19 @@
+{
+  "datasets": [
+    {
+      "name": "BGL (Large)",
+      "file": "log-samples/Large/BGL.log",
+      "format_id": "bgl",
+      "model_id": "bgl",
+      "label_strategy": "bgl_prefix"
+    },
+    {
+      "name": "HDFS (Large)",
+      "file": "log-samples/Large/HDFS.log",
+      "format_id": "hdfs",
+      "model_id": "hdfs",
+      "label_strategy": "hdfs_block_csv",
+      "label_file": "log-samples/Large/anomaly_label.csv"
+    }
+  ]
+}

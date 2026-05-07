@@ -4,11 +4,12 @@ Tento dokument shrnuje testovací strategii projektu, používané datasety, zp�
 
 ## 1. Rozdělení testování
 
-Testování je rozděleno do čtyř samostatných částí:
+Testování je rozděleno do pěti samostatných částí:
 
 - frontendové manuální testování menších souborů a uživatelských workflow,
 - backendové automatické testy pro velké soubory,
 - backendové automatické testy detekce anomálií,
+- backendové vyhodnocení kvality anomaly modelů,
 - samostatné manuální ověření online a offline režimu.
 
 Toto rozdělení odpovídá skutečnému chování aplikace:
@@ -44,10 +45,13 @@ Hlavní soubory a jejich role:
 - `run_functional_tests.py`: backendové funkční testy pro velké soubory,
 - `run_performance_tests.py`: backendové výkonové testy pro velké soubory,
 - `run_anomaly_integration.py`: backendové integrační testy detekce anomálií,
-- `run_all_tests.py`: hromadné spuštění backendových automatických testů a generování summary,
+- `run_anomaly_evaluation.py`: backendové vyhodnocení kvality anomaly modelů vůči dostupné etalonní anotaci,
+- `run_all_tests.py`: agregovaný běh dostupných backendových testů a generování summary; spouští funkční testy, výkonové testy, integrační testy detekce anomálií, vyhodnocení kvality anomaly modelů a následně summary report,
 - `build_test_summary.py`: vytvoření souhrnného Markdown reportu,
 - `config/backend-large-datasets.json`: výchozí datasety pro backend large-file testy,
 - `config/anomaly-datasets.json`: výchozí datasety pro backend anomaly testy,
+- `config/anomaly-evaluation-datasets.json`: výchozí datasety pro vyhodnocení kvality anomaly modelů,
+- `log-samples/Large/anomaly_label.csv`: etalonní anotace pro HDFS large dataset; CSV soubor s klasifikací jednotlivých `BlockId` jako `Normal` nebo `Anomaly`,
 - `reports/`: výstupní JSON a Markdown reporty.
 
 ## 4. Použité datasety
@@ -83,6 +87,17 @@ Tyto soubory se používají pro integrační ověření backendové detekce ano
 | HDFS (Small) | `log-samples/HDFS_2k.log` | `hdfs` | [Loghub](https://github.com/logpai/loghub) |
 | BGL (Small) | `log-samples/BGL_2k.log` | `bgl` | [Loghub](https://github.com/logpai/loghub) |
 | BGL (Large) | `log-samples/Large/BGL.log` | `bgl` | [Zenodo](https://zenodo.org/records/8196385) |
+
+### 4.4 Datasety pro vyhodnocení kvality anomaly modelů
+
+Tyto soubory se používají pro porovnání predikcí modelů s dostupnou etalonní anotací v rámci `run_anomaly_evaluation.py`.
+
+Součástí této sady je také soubor `log-samples/Large/anomaly_label.csv`. Nejde o vstupní log, ale o referenční CSV anotaci pro dataset `HDFS (Large)`, která mapuje hodnoty `BlockId` na třídy `Normal` a `Anomaly`. Skript `run_anomaly_evaluation.py` tento soubor používá při block-level vyhodnocení HDFS modelu.
+
+| Dataset | Soubor | Model | Etalonní anotace | Zdroj |
+| --- | --- | --- | --- | --- |
+| HDFS (Large) | `log-samples/Large/HDFS.log` | `hdfs` | `log-samples/Large/anomaly_label.csv` na úrovni `BlockId` | [Zenodo](https://zenodo.org/records/8196385) |
+| BGL (Large) | `log-samples/Large/BGL.log` | `bgl` | prefix v raw logu, kde `-` znamená normální řádek | [Zenodo](https://zenodo.org/records/8196385) |
 
 ## 5. Co je testováno
 
@@ -126,7 +141,20 @@ Tato část ověřuje backendovou integraci detekce anomálií. Automaticky se k
 - přítomnost očekávaných polí ve výsledku,
 - použitelnost vrácené struktury pro další práci v aplikaci.
 
-### 5.4 Plán manuálního testování online a offline režimu
+### 5.4 Backendové vyhodnocení kvality anomaly modelů
+
+Tato část porovnává predikce modelů s dostupnou etalonní anotací.
+
+Automaticky se kontroluje zejména:
+
+- výběr správného modelu pro daný dataset,
+- spuštění predikce nad ingestovaným datasetem,
+- převod výstupu modelu na srovnatelnou vyhodnocovací jednotku,
+- výpočet metrik `precision`, `recall`, `F1` a `accuracy`,
+- uložení confusion matrix `TP`, `FP`, `FN`, `TN`,
+- zaznamenání použitých parametrů inference pro reprodukovatelnost výsledků.
+
+### 5.5 Plán manuálního testování online a offline režimu
 
 Online a offline chování není součástí automatických backendových běhů. Ověřuje se samostatně manuálně.
 
@@ -142,18 +170,18 @@ Kontrolované oblasti:
 
 ### 6.1 Spuštění všech backendových automatických testů
 
-Pro backendové testy velkých souborů je navíc nutné mít rozbalené velké datasety ve složce `log-samples/Large`. Pokud jsou soubory dostupné pouze v archivu `log-samples/Large.zip`, je třeba tento archiv před spuštěním testů rozbalit tak, aby ve složce `log-samples/Large` byly dostupné soubory `access.log`, `HDFS.log` a `BGL.log`.
+Pro backendové testy velkých souborů je navíc nutné mít rozbalené velké datasety ve složce `log-samples/Large`. Pokud jsou soubory dostupné pouze v archivu `log-samples/Large.zip`, je třeba tento archiv před spuštěním testů rozbalit tak, aby ve složce `log-samples/Large` byly dostupné soubory `access.log`, `HDFS.log`,`BGL.log` a `anomaly_label.csv`.
 
 ```bash
 python testing/run_all_tests.py --warmup
 ```
 
 Tento příkaz postupně spustí:
-
 1. backendové funkční testy velkých souborů,
 2. backendové výkonové testy velkých souborů,
-3. backendové anomaly integrační testy,
-4. generování souhrnného Markdown reportu.
+3. backendové integrační testy detekce anomálií,
+4. backendové vyhodnocení kvality anomaly modelů,
+5. generování souhrnného Markdown reportu.
 
 ### 6.2 Spuštění jednotlivých backendových částí
 
@@ -175,6 +203,12 @@ Backendové anomaly testy:
 python testing/run_anomaly_integration.py --warmup
 ```
 
+Backendové vyhodnocení kvality anomaly modelů:
+
+```bash
+python testing/run_anomaly_evaluation.py --paper-ase2021 --warmup
+```
+
 Generování summary reportu:
 
 ```bash
@@ -190,6 +224,7 @@ Hlavní reporty:
 - `functional-report.json`: backendové funkční testy velkých souborů,
 - `performance-report.json`: backendové výkonové testy velkých souborů,
 - `anomaly-report.json`: backendové anomaly integrační testy,
+- `anomaly-eval-report.json`: vyhodnocení kvality anomaly modelů,
 - `testing-summary-report.md`: souhrnný report kombinující manuální části a automatické výsledky.
 
 ## 8. Jak interpretovat výsledky automatických testů
@@ -235,18 +270,36 @@ Důležité položky:
 
 Tento report nehodnotí kvalitu modelu, ale správnost backendové integrace.
 
-### 8.4 `testing-summary-report.md`
+### 8.4 `anomaly-eval-report.json`
+
+Tento report slouží pro srovnání kvality modelů vůči dostupné etalonní anotaci.
+
+Důležité položky:
+
+- `evaluation.evaluation_unit`: vyhodnocovací jednotka, typicky `line` nebo `block`,
+- `evaluation.total_units`: celkový počet porovnávaných jednotek,
+- `evaluation.metrics.precision`,
+- `evaluation.metrics.recall`,
+- `evaluation.metrics.f1`,
+- `evaluation.metrics.accuracy`,
+- `evaluation.metrics.tp`, `fp`, `fn`, `tn`.
+
+Vyšší hodnoty `precision`, `recall` a `F1` znamenají lepší kvalitu modelu.
+
+### 8.5 `testing-summary-report.md`
 
 Souhrnný Markdown report kombinuje:
 
 - stručný odkaz na manuální části testování,
 - výsledky backendových large-file testů,
-- výsledky backendových anomaly testů.
+- výsledky backendových anomaly testů,
+- výsledky vyhodnocení kvality anomaly modelů.
 
 ## 9. Omezení testovací strategie
 
 - frontendové workflow nad malými soubory není součástí backendových automatických běhů,
 - online/offline scénáře zůstávají manuální,
 - anomaly testy ověřují integraci, nikoli kvalitu modelu,
+- quality evaluation slouží k ověření, zda implementace dosahuje výsledků srovnatelných s článkem NeuralLog při obdobném nastavení inference a vyhodnocení,
 - výsledky výkonu závisí na konkrétním hardwaru a provozním zatížení.
 

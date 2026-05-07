@@ -72,6 +72,16 @@ def _build_window_batch(
     return batch
 
 
+def _build_position_weights(length: int) -> np.ndarray:
+    if length <= 0:
+        return np.zeros((0,), dtype=np.float32)
+
+    center = (length - 1) / 2.0
+    positions = np.arange(length, dtype=np.float32)
+    weights = 1.0 + (center - np.abs(positions - center))
+    return weights.astype(np.float32)
+
+
 def _build_regions(flags: np.ndarray, min_region_lines: int) -> list[Region]:
     regions: list[Region] = []
     start: int | None = None
@@ -136,17 +146,16 @@ class NeuralLogAnomalyService:
     def __init__(self, model_id: str = DEFAULT_MODEL_ID) -> None:
         self.model_id = model_id
         self.runtime = get_runtime(model_id)
-        self._embedding_cache: dict[str, np.ndarray] = {}
 
     def warmup(self) -> None:
         """Load model assets into memory."""
         self.runtime.load()
 
-    def _embed(self, text: str) -> np.ndarray:
-        if text in self._embedding_cache:
-            return self._embedding_cache[text]
+    def _embed(self, text: str, embedding_cache: dict[str, np.ndarray]) -> np.ndarray:
+        if text in embedding_cache:
+            return embedding_cache[text]
         vector = self.runtime.encode_text(text)
-        self._embedding_cache[text] = vector
+        embedding_cache[text] = vector
         return vector
 
     def predict_rows(
@@ -221,6 +230,7 @@ class NeuralLogAnomalyService:
                 stage="embedding",
             )
 
+            embedding_cache: dict[str, np.ndarray] = {}
             embeddings: list[np.ndarray] = []
             embedding_report_every = 256
             for idx, item in enumerate(processed, start=1):
@@ -228,7 +238,7 @@ class NeuralLogAnomalyService:
                 if not item:
                     embeddings.append(np.zeros((EMBED_DIM,), dtype=np.float32))
                 else:
-                    embeddings.append(self._embed(item))
+                    embeddings.append(self._embed(item, embedding_cache))
 
                 if idx % embedding_report_every == 0 or idx == len(processed):
                     self.runtime.update_prediction_progress(
@@ -248,8 +258,10 @@ class NeuralLogAnomalyService:
                 stage="scoring",
             )
 
-            line_scores = np.zeros((len(rows),), dtype=np.float32)
+            line_score_sums = np.zeros((len(rows),), dtype=np.float32)
+            line_weight_sums = np.zeros((len(rows),), dtype=np.float32)
             line_hits = np.zeros((len(rows),), dtype=np.int32)
+            position_weights_cache: dict[int, np.ndarray] = {}
 
             windows_out: list[dict[str, Any]] = []
             window_batch_size = 256
@@ -261,8 +273,13 @@ class NeuralLogAnomalyService:
 
                 for i, (start, end, _length) in enumerate(chunk_spans):
                     score = float(chunk_scores[i])
+                    weights = position_weights_cache.get(_length)
+                    if weights is None:
+                        weights = _build_position_weights(_length)
+                        position_weights_cache[_length] = weights
 
-                    line_scores[start:end] = np.maximum(line_scores[start:end], score)
+                    line_score_sums[start:end] += score * weights
+                    line_weight_sums[start:end] += weights
                     line_hits[start:end] += 1
 
                     if include_windows:
@@ -285,7 +302,14 @@ class NeuralLogAnomalyService:
                     total_rows=len(rows),
                 )
 
+            line_scores = np.divide(
+                line_score_sums,
+                line_weight_sums,
+                out=np.zeros_like(line_score_sums),
+                where=line_weight_sums > 0,
+            )
             line_flags = line_scores >= threshold
+            anomaly_lines = (np.flatnonzero(line_flags) + 1).astype(int).tolist()
             regions_raw = _build_regions(line_flags, min_region_lines=min_region_lines)
 
             region_items: list[dict[str, Any]] = []
@@ -329,6 +353,7 @@ class NeuralLogAnomalyService:
                     "min_region_lines": min_region_lines,
                     "model_id": self.model_id,
                 },
+                "anomaly_lines": anomaly_lines,
                 "rows": rows_out if include_rows else None,
                 "windows": windows_out if include_windows else None,
                 "anomaly_regions": region_items,

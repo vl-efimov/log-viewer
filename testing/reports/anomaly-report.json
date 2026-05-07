@@ -7,7 +7,7 @@
   "datasets": [
     {
       "dataset": "HDFS (Small)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\HDFS_2k.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\HDFS_2k.log",
       "model_id": "hdfs",
       "status": "completed",
       "upload_ms": 84.58,
@@ -63,7 +63,7 @@
     },
     {
       "dataset": "BGL (Small)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\BGL_2k.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\BGL_2k.log",
       "model_id": "bgl",
       "status": "completed",
       "upload_ms": 91.258,
@@ -119,7 +119,7 @@
     },
     {
       "dataset": "BGL (Large)",
-      "file": "D:\\Documents\\Univerzita\\CVUT\\log-viewer\\log-samples\\Large\\BGL.log",
+      "file": "D:\\Documents\\Univerzita\\CVUT\\luvo-log-viewer\\log-samples\\Large\\BGL.log",
       "model_id": "bgl",
       "status": "completed",
       "upload_ms": 95554.69,

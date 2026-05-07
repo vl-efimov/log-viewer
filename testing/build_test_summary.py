@@ -241,6 +241,83 @@ def anomaly_section(report: dict[str, Any] | None) -> str:
     return "\n".join(lines)
 
 
+# Build the anomaly model evaluation section of the summary.
+def anomaly_eval_section(report: dict[str, Any] | None) -> str:
+
+    if not report:
+        return "## Vyhodnocení kvality anomaly modelů\n\n_No anomaly evaluation report available._"
+
+    rows = []
+    notes: list[str] = []
+    for item in report.get("datasets") or []:
+        evaluation = item.get("evaluation") or {}
+        metrics = evaluation.get("metrics") or {}
+        rows.append([
+            item.get("dataset", "-"),
+            item.get("status", "-"),
+            item.get("model_id", "-"),
+            evaluation.get("evaluation_unit", "-"),
+            evaluation.get("total_units", "-"),
+            metrics.get("precision", "-"),
+            metrics.get("recall", "-"),
+            metrics.get("f1", "-"),
+            item.get("predict_ms", "-"),
+        ])
+        if item.get("status") == "completed":
+            notes.append(
+                f"- {item.get('dataset', '-')}: ground truth source = {evaluation.get('ground_truth_source', '-')}; TP={metrics.get('tp', '-')}, FP={metrics.get('fp', '-')}, FN={metrics.get('fn', '-')}, TN={metrics.get('tn', '-')}"
+            )
+        elif item.get("status") == "failed":
+            notes.append(
+                f"- {item.get('dataset', '-')}: failed during phase = {item.get('phase', '-')}; error = {item.get('error', 'Unknown error')}"
+            )
+
+    lines = [
+        "",
+        "## Vyhodnocení kvality anomaly modelů",
+        "",
+        "### Srovnání modelů vůči dostupné etalonní anotaci",
+        "",
+    ]
+
+    parameter_profile = report.get("parameter_profile")
+    threshold = report.get("threshold")
+    step_size = report.get("step_size")
+    min_region_lines = report.get("min_region_lines")
+    summary = report.get("summary") or {}
+    if parameter_profile:
+        lines.extend(
+            [
+                f"Profil parametrů: {parameter_profile}; threshold={threshold}; step_size={step_size}; min_region_lines={min_region_lines}.",
+                "",
+            ]
+        )
+
+    if summary:
+        lines.extend(
+            [
+                f"Souhrn běhu: total={summary.get('total', '-')}; completed={summary.get('completed', '-')}; failed={summary.get('failed', '-')}.",
+                "",
+            ]
+        )
+
+    paper_alignment_note = report.get("paper_alignment_note")
+    if isinstance(paper_alignment_note, str) and paper_alignment_note.strip():
+        lines.extend([paper_alignment_note.strip(), ""])
+
+    lines.extend([
+        md_table(
+            ["Dataset", "Status", "Model", "Unit", "Total units", "Precision", "Recall", "F1", "Predict ms"],
+            rows,
+        ),
+        "",
+        "### Detail poznámek",
+        "",
+    ])
+    lines.extend(notes or ["- No completed anomaly evaluation runs available."])
+    return "\n".join(lines)
+
+
 # Load individual JSON reports and generate one combined Markdown file.
 def main() -> int:
 
@@ -253,6 +330,7 @@ def main() -> int:
     functional_report = load_json(reports_dir / "functional-report.json")
     performance_report = load_json(reports_dir / "performance-report.json")
     anomaly_report = load_json(reports_dir / "anomaly-report.json")
+    anomaly_eval_report = load_json(reports_dir / "anomaly-eval-report.json")
 
     print("[stage] merging manual, backend, and anomaly reports")
 
@@ -266,6 +344,7 @@ def main() -> int:
             performance_section(performance_report),
             dataset_section(functional_report, performance_report),
             anomaly_section(anomaly_report),
+            anomaly_eval_section(anomaly_eval_report),
             "",
         ]
     )

@@ -12,7 +12,7 @@
     },
     {
       "name": "BGL (Large)",
-      "file": "log-samples/LargeBGL.log",
+      "file": "log-samples/Large/BGL.log",
       "format_id": "bgl"
     }
   ]
